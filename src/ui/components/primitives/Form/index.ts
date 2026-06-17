@@ -5,3 +5,6 @@ export * from "./FormControl";
 export * from "./FormMessage";
 export * from "./FormSubmit";
 export * from "./FormAlert";
+export * from "./FormSectionTitle";
+export * from "./FormDescription";
+export * from "./FormHint";
