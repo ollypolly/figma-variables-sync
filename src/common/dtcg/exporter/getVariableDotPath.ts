@@ -1,4 +1,4 @@
-import { sanitizeName } from "../utils/sanitizeName";
+import { getVariablePath } from "../utils/getVariablePath";
 
 // Resolve dynamic variable reference path using local cache or API fallback.
 export function getVariableDotPath(
@@ -15,9 +15,7 @@ export function getVariableDotPath(
       const refVar = figmaInstance.variables.getVariableById(varId);
       if (refVar) {
         const col = figmaInstance.variables.getVariableCollectionById(refVar.variableCollectionId);
-        const colName = col ? sanitizeName(col.name) : "library";
-        const varName = refVar.name.split("/").map(sanitizeName).join(".");
-        const dotPath = `${colName}.${varName}`;
+        const dotPath = getVariablePath(col?.name, refVar.name);
         variableMap.set(varId, dotPath); // cache it
         return dotPath;
       }

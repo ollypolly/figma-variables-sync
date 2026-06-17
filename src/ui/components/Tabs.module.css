@@ -35,3 +35,8 @@
   overflow: hidden;
   outline: none;
 }
+
+.content[data-state="inactive"] {
+  display: none;
+}
+

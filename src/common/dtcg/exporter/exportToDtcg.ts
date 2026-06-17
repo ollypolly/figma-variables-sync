@@ -3,6 +3,8 @@ import { figmaColorToHex } from "../color/figmaColorToHex";
 import { figmaTypeToDtcg } from "../utils/figmaTypeToDtcg";
 import { setPath } from "../utils/setPath";
 import { getVariableDotPath } from "./getVariableDotPath";
+import { getVariablePath } from "../utils/getVariablePath";
+
 
 // Export Figma local variables to DTCG JSON format.
 export function exportToDtcg(
@@ -21,9 +23,8 @@ export function exportToDtcg(
   for (const variable of variables) {
     const col = collectionMap.get(variable.variableCollectionId);
     if (!col) continue;
-    const colName = sanitizeName(col.name);
-    const varName = variable.name.split("/").map(sanitizeName).join(".");
-    variableMap.set(variable.id, `${colName}.${varName}`);
+    const dotPath = getVariablePath(col.name, variable.name);
+    variableMap.set(variable.id, dotPath);
   }
 
   // 2. Build DTCG structure

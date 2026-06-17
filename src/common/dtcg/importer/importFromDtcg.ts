@@ -3,6 +3,8 @@ import { sanitizeName } from "../utils/sanitizeName";
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
 import { parseDtcg } from "../parser/parseDtcg";
 import { resolveDtcgValue } from "./resolveDtcgValue";
+import { getVariablePath } from "../utils/getVariablePath";
+
 
 // Import W3C DTCG JSON back into native Figma variables.
 export async function importFromDtcg(
@@ -31,9 +33,8 @@ export async function importFromDtcg(
   for (const variable of existingVariables) {
     const col = existingCollections.find((c) => c.id === variable.variableCollectionId);
     if (!col) continue;
-    const colName = sanitizeName(col.name);
-    const varName = variable.name.split("/").map(sanitizeName).join(".");
-    pathToVariableIdMap.set(`${colName}.${varName}`, variable.id);
+    const dotPath = getVariablePath(col.name, variable.name);
+    pathToVariableIdMap.set(dotPath, variable.id);
   }
 
   // --- PASS 1: Create/verify all Collections, Modes, and Variables.
@@ -78,7 +79,7 @@ export async function importFromDtcg(
     // 3. Find/create/verify variable instances
     for (const t of colTokens) {
       const varName = t.path.slice(1).map(sanitizeName).join("/");
-      const dotPath = `${colName}.${t.path.slice(1).map(sanitizeName).join(".")}`;
+      const dotPath = getVariablePath(t.path[0], varName);
       const targetType = dtcgTypeToFigma(t.type);
 
       let variable = existingVariables.find(
@@ -108,7 +109,7 @@ export async function importFromDtcg(
     const modesInFigma = collection.modes;
 
     for (const t of colTokens) {
-      const dotPath = `${colName}.${t.path.slice(1).map(sanitizeName).join(".")}`;
+      const dotPath = getVariablePath(t.path[0], t.path.slice(1).join("/"));
       const variable = variableInstances.get(dotPath);
       if (!variable) continue;
 
