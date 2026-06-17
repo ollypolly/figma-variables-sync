@@ -57,19 +57,24 @@ A custom translator mapping Figma variables to W3C DTCG format and vice versa:
   - Resolves dot-notation aliases back into local Figma variable references.
   - Compares and updates native variables (value, name, type) per mode.
 
-### 3. React UI Components (`src/ui/pages/`)
-A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dialogs) styled with custom vanilla CSS targeting Figma's native theme variables (e.g., `--figma-color-bg`, `--figma-color-text`, `--figma-color-border`) for automatic, seamless light/dark mode adaptation.
-- **Design Aesthetic Goals**:
+### 3. Proposed React UI Components & Strategy (Under Review/Discussion)
+
+> [!NOTE]
+> All UI/UX libraries, layout structures, styling methods, and terminology naming conventions described below are **proposed recommendations**. The final design system alignment, naming, and presentation screens are open for debate and will be iterated on with the user before code is implemented.
+
+#### Proposed UI Libraries & Frameworks
+- **Base Components**: Utilizing **Radix UI primitives** (e.g., tabs, dialogs) styled with custom vanilla CSS targeting Figma's native theme variables (e.g., `--figma-color-bg`, `--figma-color-text`, `--figma-color-border`) for automatic light/dark mode adaptation.
+- **Proposed Design Aesthetic Goals**:
   - Replicate the layout, typography, and spacing of Figma's native **Local Variables dialog** (compact list items, grid-like columns for variable names/types/values, subtle border dividers, and distinct styling for modes).
   - Match Figma UI aesthetics using custom styles mapping to native `--figma-color-*` design tokens (for panels, inputs, tags, hover states, and button components).
-- **UX Strategy (Git Abstraction)**:
+- **Proposed UX Strategy (Git Abstraction)**:
   - Completely hide developer-centric terms like "Git", "GitHub", "Pull Request", "Merge Conflict", "Branch", "Commit", "Push", and "Pull".
   - Use designer-facing terms: "Updates" (incoming changes), "Propose Changes" (outgoing proposals), and "Proposal Status" (Pending, Approved, Merged).
   - The designer works in a simplified "Sync" workspace and is never exposed to the mechanics of git branching and PRs.
-- **Pages Directory**: Structured under `src/ui/pages/`.
-- **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch. (Kept as a setup/admin panel).
-- **`Updates.tsx`**: Displays a visual changelog of incoming changes (e.g. `primary: #000 → #111`) with an "Accept Updates" button.
-- **`Proposals.tsx`**: Displays outgoing variable edits, accepts a brief description of "what changed", triggers proposal creation under the hood, and tracks status of existing proposals.
+- **Proposed Directory Structure**: `src/ui/pages/` containing:
+  - **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch. (Setup/admin panel).
+  - **`Updates.tsx`**: Displays a visual changelog of incoming changes (e.g. `primary: #000 → #111`) with an "Accept Updates" button.
+  - **`Proposals.tsx`**: Displays outgoing variable edits, accepts a brief description of "what changed", triggers proposal creation under the hood, and tracks status of existing proposals.
 
 ---
 
