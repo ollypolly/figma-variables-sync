@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useGitHub } from "@ui/services/GitHubProvider";
+import React from "react";
 import {
   Form,
   FormSectionTitle,
@@ -14,47 +13,25 @@ import {
 import { Button, ButtonGroup } from "@ui/components/Button";
 import { PageContainer, PageContent, PageHeader } from "@ui/components/Layout";
 import { Group } from "@ui/components/primitives/Flex/Flex";
+import { useSettingsForm } from "./useSettingsForm";
 
 export const Settings: React.FC = () => {
-  const { config, saveConfig, service } = useGitHub();
-  const [pat, setPat] = useState(config?.pat || "");
-  const [owner, setOwner] = useState(config?.owner || "");
-  const [repo, setRepo] = useState(config?.repo || "");
-  const [filePath, setFilePath] = useState(config?.filePath || "tokens/design-tokens.json");
-  const [branch, setBranch] = useState(config?.branch || "main");
-
-  const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    saveConfig({ pat, owner, repo, filePath, branch });
-    setTestResult({ success: true, message: "Settings saved successfully!" });
-  };
-
-  const handleTestConnection = async () => {
-    if (!pat || !owner || !repo) {
-      setTestResult({ success: false, message: "Please fill in Token, Owner, and Repository coordinates." });
-      return;
-    }
-
-    setTesting(true);
-    setTestResult(null);
-
-    try {
-      const testService = service || new (await import("@ui/services/github")).GitHubService(pat);
-      const isConnected = await testService.verifyConnection(owner, repo);
-      if (isConnected) {
-        setTestResult({ success: true, message: "Connected successfully to GitHub!" });
-      } else {
-        setTestResult({ success: false, message: "Failed to connect. Check repository permissions." });
-      }
-    } catch (e: any) {
-      setTestResult({ success: false, message: e.message || "Connection failed. Please check your PAT and settings." });
-    } finally {
-      setTesting(false);
-    }
-  };
+  const {
+    pat,
+    setPat,
+    owner,
+    setOwner,
+    repo,
+    setRepo,
+    filePath,
+    setFilePath,
+    branch,
+    setBranch,
+    testing,
+    testResult,
+    handleSave,
+    handleTestConnection,
+  } = useSettingsForm();
 
   return (
     <PageContainer>

@@ -1,9 +1,9 @@
 import React from "react";
 import { GitHubProvider } from "@ui/services/GitHubProvider";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ui/components/Tabs";
-import { Updates } from "@ui/pages/Updates";
-import { Proposals } from "@ui/pages/Proposals";
-import { Settings } from "@ui/pages/Settings";
+import { Updates } from "@ui/tabs/Updates/Updates";
+import { Proposals } from "@ui/tabs/Proposals/Proposals";
+import { Settings } from "@ui/tabs/Settings/Settings";
 import "@ui/styles/main.css";
 
 function App() {
