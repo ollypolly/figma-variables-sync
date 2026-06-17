@@ -62,10 +62,14 @@ A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dia
 - **Design Aesthetic Goals**:
   - Replicate the layout, typography, and spacing of Figma's native **Local Variables dialog** (compact list items, grid-like columns for variable names/types/values, subtle border dividers, and distinct styling for modes).
   - Match Figma UI aesthetics using custom styles mapping to native `--figma-color-*` design tokens (for panels, inputs, tags, hover states, and button components).
+- **UX Strategy (Git Abstraction)**:
+  - Completely hide developer-centric terms like "Git", "GitHub", "Pull Request", "Merge Conflict", "Branch", "Commit", "Push", and "Pull".
+  - Use designer-facing terms: "Updates" (incoming changes), "Propose Changes" (outgoing proposals), and "Proposal Status" (Pending, Approved, Merged).
+  - The designer works in a simplified "Sync" workspace and is never exposed to the mechanics of git branching and PRs.
 - **Pages Directory**: Structured under `src/ui/pages/`.
-- **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch.
-- **`Pull.tsx`**: Compares remote and local variables and presents a visual changelog with an "Accept & Sync" button.
-- **`Push.tsx`**: Highlights pending modifications, accepts a PR description from the designer, and triggers the Pull Request creation process.
+- **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch. (Kept as a setup/admin panel).
+- **`Updates.tsx`**: Displays a visual changelog of incoming changes (e.g. `primary: #000 → #111`) with an "Accept Updates" button.
+- **`Proposals.tsx`**: Displays outgoing variable edits, accepts a brief description of "what changed", triggers proposal creation under the hood, and tracks status of existing proposals.
 
 ---
 
@@ -74,4 +78,4 @@ A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dia
 1. **Core Translation Engine**: Write the Figma variables exporter/importer logic in `src/common/dtcg.ts`.
 2. **GitHub Network Service**: Create the HTTP REST client integration in `src/ui/services/github.ts` and verify connection using a test PAT.
 3. **Figma Main-UI Bridge**: Wire up `postMessage` handlers in `src/plugin/plugin.ts` and `src/ui/app.tsx` to pass parsed variables between threads.
-4. **React Screens**: Build the Settings, Pull, and Push screens, and test the complete end-to-end sync loop.
+4. **React Screens**: Build the Settings, Updates, and Proposals screens under `src/ui/pages/`, and test the complete end-to-end sync loop.
