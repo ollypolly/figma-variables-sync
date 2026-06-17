@@ -46,18 +46,22 @@
 body {
   margin: 0;
   padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
+  width: 100%;
+  height: 100vh;
   box-sizing: border-box;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-base);
+  overflow: hidden;
 }
 
 #root {
   width: 100%;
-  max-width: 480px;
-  padding: 24px;
-  text-align: center;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Typography */
@@ -103,3 +107,15 @@ code {
   gap: 8px;
   justify-content: center;
 }
+
+/* Layout helpers for pages/tabs */
+.divider {
+  border-top: 1px solid var(--figma-color-border);
+  padding-top: 16px;
+}
+
+.loadingText {
+  text-align: center;
+  padding: 40px 0;
+}
+

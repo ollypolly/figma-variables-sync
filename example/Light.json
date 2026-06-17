@@ -1,0 +1,101 @@
+{
+  "colors": {
+    "bg-base": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [1.0, 1.0, 1.0],
+        "alpha": 1,
+        "hex": "#FFFFFF"
+      }
+    },
+    "bg-surface": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.960784, 0.960784, 0.960784],
+        "alpha": 1,
+        "hex": "#F5F5F5"
+      }
+    },
+    "text-primary": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.066667, 0.066667, 0.066667],
+        "alpha": 1,
+        "hex": "#111111"
+      }
+    },
+    "text-secondary": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.4, 0.4, 0.4],
+        "alpha": 1,
+        "hex": "#666666"
+      }
+    },
+    "brand": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.094118, 0.627451, 0.984314],
+        "alpha": 1,
+        "hex": "#18A0FB"
+      }
+    },
+    "border": {
+      "$type": "color",
+      "$value": {
+        "colorSpace": "srgb",
+        "components": [0.878431, 0.878431, 0.878431],
+        "alpha": 1,
+        "hex": "#E0E0E0"
+      }
+    },
+    "interactive-active": {
+      "$type": "color",
+      "$value": "{colors.brand}"
+    }
+  },
+  "dimensions": {
+    "spacing-sm": {
+      "$type": "dimension",
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "spacing-md": {
+      "$type": "dimension",
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "spacing-lg": {
+      "$type": "dimension",
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    },
+    "radius-round": {
+      "$type": "dimension",
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    }
+  },
+  "flags": {
+    "is-dark-theme": {
+      "$type": "number",
+      "$value": 0,
+      "$extensions": {
+        "com.figma.type": "boolean"
+      }
+    }
+  }
+}

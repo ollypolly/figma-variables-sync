@@ -4,6 +4,7 @@
   "version": "1.2.0",
   "type": "module",
   "scripts": {
+    "test": "vitest run",
     "start": "run-s dev",
     "dev": "run-s watch",
     "dev:ui-only": "vite -c ./vite.config.ui.ts",
@@ -20,6 +21,9 @@
     "build:plugin": "vite build -c ./vite.config.plugin.ts"
   },
   "dependencies": {
+    "@octokit/core": "^7.0.6",
+    "@radix-ui/react-form": "^0.1.10",
+    "@radix-ui/react-tabs": "^1.1.15",
     "monorepo-networker": "^2.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
@@ -39,6 +43,7 @@
     "vite": "^7.3.5",
     "vite-plugin-generate-file": "^0.3.1",
     "vite-plugin-react-rich-svg": "^1.3.0",
-    "vite-plugin-singlefile": "^2.3.3"
+    "vite-plugin-singlefile": "^2.3.3",
+    "vitest": "^4.1.9"
   }
 }

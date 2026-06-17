@@ -1,4 +1,5 @@
 import { PLUGIN, UI } from "@common/networkSides";
+import { exportToDtcg, importFromDtcg } from "@common/dtcg";
 
 export const PLUGIN_CHANNEL = PLUGIN.channelBuilder()
   .emitsTo(UI, (message) => {
@@ -58,3 +59,23 @@ PLUGIN_CHANNEL.registerMessageHandler("exportSelection", async () => {
 
   return "data:image/png;base64," + figma.base64Encode(bytes);
 });
+
+PLUGIN_CHANNEL.registerMessageHandler("loadSettings", async () => {
+  const data = await figma.clientStorage.getAsync("github_config");
+  return data || null;
+});
+
+PLUGIN_CHANNEL.registerMessageHandler("saveSettings", async (config) => {
+  await figma.clientStorage.setAsync("github_config", config);
+});
+
+PLUGIN_CHANNEL.registerMessageHandler("exportLocalVariables", async () => {
+  const collections = figma.variables.getLocalVariableCollections();
+  const variables = figma.variables.getLocalVariables();
+  return exportToDtcg(collections, variables, figma);
+});
+
+PLUGIN_CHANNEL.registerMessageHandler("importLocalVariables", async (jsonStr) => {
+  await importFromDtcg(jsonStr, figma);
+});
+

@@ -1,51 +1,35 @@
-import { PLUGIN } from "@common/networkSides";
-import { UI_CHANNEL } from "@ui/app.network";
-import { Button } from "@ui/components/Button";
-import { useEffect, useState } from "react";
-
+import React from "react";
+import { GitHubProvider } from "@ui/services/GitHubProvider";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ui/components/primitives/Tabs";
+import { Updates } from "@ui/tabs/Updates/Updates";
+import { Proposals } from "@ui/tabs/Proposals/Proposals";
+import { Settings } from "@ui/tabs/Settings/Settings";
 import "@ui/styles/main.css";
 
 function App() {
-  const [pingCount, setPingCount] = useState(0);
-
-  useEffect(() => {
-    UI_CHANNEL.subscribe("ping", () => {
-      setPingCount((cnt) => cnt + 1);
-    });
-  }, []);
-
   return (
-    <div className="container">
-      <h1>Figma Variables Sync</h1>
-      <p>
-        A serverless sync plugin styled with Radix Primitives and native CSS.
-      </p>
+    <GitHubProvider>
+      <Tabs
+        defaultValue="updates"
+        style={{ display: "flex", flexDirection: "column", height: "100%" }}
+      >
+        <TabsList>
+          <TabsTrigger value="updates">Updates</TabsTrigger>
+          <TabsTrigger value="proposals">Proposals</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
 
-      <div className="button-group">
-        <Button
-          onClick={async () => {
-            console.log("Pinging plugin side...");
-            const response = await UI_CHANNEL.request(PLUGIN, "ping", []);
-            console.log("Response:", response);
-          }}
-        >
-          Ping Plugin Backend
-        </Button>
-
-        <Button
-          onClick={() => {
-            console.log("Creating a rectangle...");
-            UI_CHANNEL.emit(PLUGIN, "createRect", [100, 100]);
-          }}
-        >
-          Create Square
-        </Button>
-      </div>
-
-      <p style={{ marginTop: 24, fontSize: "11px" }}>
-        Backend pinged us <strong>{pingCount}</strong> times.
-      </p>
-    </div>
+        <TabsContent value="updates">
+          <Updates />
+        </TabsContent>
+        <TabsContent value="proposals">
+          <Proposals />
+        </TabsContent>
+        <TabsContent value="settings">
+          <Settings />
+        </TabsContent>
+      </Tabs>
+    </GitHubProvider>
   );
 }
 
