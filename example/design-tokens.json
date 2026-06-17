@@ -1,0 +1,89 @@
+{
+  "$modes": {
+    "Light": {},
+    "Dark": { "$fallback": "Light" }
+  },
+  "BrandTokens": {
+    "colors": {
+      "bg-base": {
+        "$type": "color",
+        "$value": "#ffffff",
+        "$modes": {
+          "Dark": "#1e1e1e"
+        }
+      },
+      "bg-surface": {
+        "$type": "color",
+        "$value": "#f5f5f5",
+        "$modes": {
+          "Dark": "#2d2d2d"
+        }
+      },
+      "text-primary": {
+        "$type": "color",
+        "$value": "#111111",
+        "$modes": {
+          "Dark": "#eeeeee"
+        }
+      },
+      "text-secondary": {
+        "$type": "color",
+        "$value": "#666666",
+        "$modes": {
+          "Dark": "#aaaaaa"
+        }
+      },
+      "brand": {
+        "$type": "color",
+        "$value": "#18a0fb",
+        "$modes": {
+          "Dark": "#38b6ff"
+        }
+      },
+      "border": {
+        "$type": "color",
+        "$value": "#e0e0e0",
+        "$modes": {
+          "Dark": "#3d3d3d"
+        }
+      },
+      "interactive-active": {
+        "$type": "color",
+        "$value": "{BrandTokens.colors.brand}",
+        "$modes": {
+          "Dark": "{BrandTokens.colors.brand}"
+        }
+      }
+    },
+    "dimensions": {
+      "spacing-sm": {
+        "$type": "number",
+        "$value": 8
+      },
+      "spacing-md": {
+        "$type": "number",
+        "$value": 16
+      },
+      "spacing-lg": {
+        "$type": "number",
+        "$value": 24
+      },
+      "radius-round": {
+        "$type": "number",
+        "$value": 8,
+        "$modes": {
+          "Dark": 8
+        }
+      }
+    },
+    "flags": {
+      "is-dark-theme": {
+        "$type": "boolean",
+        "$value": false,
+        "$modes": {
+          "Dark": true
+        }
+      }
+    }
+  }
+}
