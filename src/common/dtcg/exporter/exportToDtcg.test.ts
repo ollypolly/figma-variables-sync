@@ -45,7 +45,7 @@ function createMockFigma() {
           name,
           variableCollectionId: collectionId,
           resolvedType,
-          valuesByMode: {},
+          valuesByMode: {} as Record<string, any>,
           setValueForMode(modeId: string, value: any) {
             this.valuesByMode[modeId] = value;
           },
