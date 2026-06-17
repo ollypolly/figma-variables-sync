@@ -15,7 +15,7 @@ The gap is specifically **Figma → Code PR** with fine-grained repo-scoped auth
 
 Start lean — Figma → Code direction only (opens PRs). Use Token Nexus for the other direction (Code → Figma) initially. Later, add Code → Figma pulling into the same plugin so we own both sides and can drop Token Nexus — one tool, fully open-source, no external dependencies.
 
-For the detailed implementation plan and architecture checklist of the serverless MVP, see the [Phase 1 Plan](file:///Users/olly/dev/figma-variables-sync/plans/phase-1-plan.md).
+For the detailed implementation plan and architecture checklist of the serverless MVP, see the [Phase 1 Plan](file:///Users/olly/dev/figma-variables-sync/plans/phase-1-plan.md). For the UX improvements, default landing tab, sticky tab memory, and background update notifications, see the [Phase 2 Plan](file:///Users/olly/dev/figma-variables-sync/plans/phase-2-plan.md).
 
 ## Goals
 
