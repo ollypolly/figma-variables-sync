@@ -58,7 +58,10 @@ A custom translator mapping Figma variables to W3C DTCG format and vice versa:
   - Compares and updates native variables (value, name, type) per mode.
 
 ### 3. React UI Components (`src/ui/pages/`)
-A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dialogs) styled with custom vanilla CSS targeting Figma's native theme variables (e.g., `--figma-color-bg`, `--figma-color-text`, `--figma-color-border`) for automatic, seamless light/dark mode adaptation:
+A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dialogs) styled with custom vanilla CSS targeting Figma's native theme variables (e.g., `--figma-color-bg`, `--figma-color-text`, `--figma-color-border`) for automatic, seamless light/dark mode adaptation.
+- **Design Aesthetic Goals**:
+  - Replicate the layout, typography, and spacing of Figma's native **Local Variables dialog** (compact list items, grid-like columns for variable names/types/values, subtle border dividers, and distinct styling for modes).
+  - Match Figma UI aesthetics using custom styles mapping to native `--figma-color-*` design tokens (for panels, inputs, tags, hover states, and button components).
 - **Pages Directory**: Structured under `src/ui/pages/`.
 - **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch.
 - **`Pull.tsx`**: Compares remote and local variables and presents a visual changelog with an "Accept & Sync" button.
