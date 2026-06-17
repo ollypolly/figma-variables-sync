@@ -1,11 +1,24 @@
-import { classes } from "@ui/utils/classes.util";
 import { ComponentProps } from "react";
 import styles from "./Button.module.css";
 
-type Props = ComponentProps<"button">;
+interface ButtonProps extends ComponentProps<"button"> {
+  variant?: "primary" | "secondary";
+}
 
-export const Button = (props: Props) => {
+export const Button = ({ variant = "secondary", className, ...props }: ButtonProps) => {
+  const variantClass = variant === "primary" ? styles.primary : styles.secondary;
   return (
-    <button {...props} className={classes(props.className, styles.button)} />
+    <button
+      {...props}
+      className={`${styles.button} ${variantClass} ${className || ""}`}
+    />
+  );
+};
+
+export const ButtonGroup = ({ children, className, ...props }: ComponentProps<"div">) => {
+  return (
+    <div {...props} className={`${styles.buttonGroup} ${className || ""}`}>
+      {children}
+    </div>
   );
 };

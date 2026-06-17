@@ -1,33 +1,45 @@
 .button {
   border-radius: 6px;
-  border: 1px solid var(--color-border);
   padding: 8px 16px;
-  font-size: 0.85rem;
+  font-size: 11px;
   font-weight: 500;
   font-family: inherit;
-  background-color: var(--color-bg-hover);
-  color: var(--color-text-base);
   cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    border-color: var(--color-brand);
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-
-  &:focus,
-  &:focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 2px;
-  }
-
-  &:active {
-    transform: scale(0.98);
-  }
+  outline: none;
+  transition: opacity 0.1s ease, background-color 0.1s ease, border-color 0.1s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-@media (prefers-color-scheme: light) {
-  .button:hover {
-    background-color: rgba(0, 0, 0, 0.08);
-  }
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary {
+  background-color: var(--color-brand);
+  color: #ffffff;
+  border: none;
+}
+
+.primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.secondary {
+  background-color: transparent;
+  color: var(--figma-color-text);
+  border: 1px solid var(--figma-color-border);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-bg-hover);
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
