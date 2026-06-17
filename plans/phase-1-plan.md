@@ -31,15 +31,16 @@ Phase 1 operates entirely within the Figma plugin sandbox:
 
 1. **Credentials**: The user supplies a Fine-Grained PAT, restricted to a single specific repository (with `Contents: write` and `Pull requests: write` scopes).
 2. **Storage**: The token and repo configuration are stored locally and securely using `figma.clientStorage`.
-3. **CORS Requests**: The React UI thread makes direct `fetch` calls to `https://api.github.com` using the PAT in the authorization headers. No relay backend is used.
+3. **CORS Requests**: The React UI thread makes direct API calls to `https://api.github.com` using the Octokit client with the PAT in the authorization headers. No relay backend is used.
 
 ---
 
 ## 🛠️ Components to Build
 
 ### 1. GitHub API Service (`src/ui/services/github.ts`)
-A service using native `fetch` (or a lightweight request helper) to perform the following operations:
-- **`getFile(config)`**: Fetches the current `design-tokens.json` file content and its target `sha`.
+A service utilizing the official **Octokit SDK (`@octokit/core`)** to execute REST requests:
+- **Client Instantiation**: Integrated inside a React Context (`GitHubProvider` and `useGitHub` hook) which instantiates a cached Octokit instance with the saved PAT settings.
+- **`getFile(config)`**: Fetches the current `design-tokens.json` file content, its base64 body, and its target `sha`.
 - **`createBranch(config, newBranchName)`**: Finds the latest commit of the base branch and creates a new branch pointer.
 - **`updateFile(config, commitMessage, contentBase64, currentSha, branchName)`**: Commits the updated tokens file to the new branch.
 - **`createPullRequest(config, prTitle, prBody, headBranch)`**: Creates a Pull Request from the new branch back to the base branch.
