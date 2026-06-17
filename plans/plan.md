@@ -27,6 +27,24 @@ Start lean — Figma → Code direction only (opens PRs). Use Token Nexus for th
 
 ## Architecture Sketch
 
+### Phase 1: MVP (Direct PAT Architecture - Serverless)
+```
+┌─────────────────────────────────────────┐
+│ Figma Plugin (TypeScript + React UI)    │
+│                                         │
+│  ┌───────────┐  ┌───────────────────┐   │
+│  │ Variables │  │ Sync Engine       │   │
+│  │ API       │◄►│ (diff/merge/stage)│   │
+│  └───────────┘  └────────┬──────────┘   │
+│                           │              │
+└───────────────────────────┼──────────────┘
+                            │ HTTPS (Direct REST API)
+                            ▼
+                    GitHub Repository
+                    (tokens/*.json)
+```
+
+### Phase 2: Future (GitHub App + Relay Architecture)
 ```
 ┌─────────────────────────────────────────┐
 │ Figma Plugin (TypeScript + React UI)    │
@@ -53,16 +71,13 @@ Start lean — Figma → Code direction only (opens PRs). Use Token Nexus for th
                     (tokens/*.json)
 ```
 
-### Why a relay?
+### Why skip the relay for MVP?
 
-Figma plugins run in a browser sandbox — no direct git access. A relay service handles GitHub API calls with scoped credentials. Could be:
-- A free Cloudflare Worker (low traffic, small payloads)
-- Self-hosted for orgs that need it on-prem
-- A hosted free tier for indie users (like Gitfig does)
+Figma plugins run in a browser sandbox and can make standard HTTP `fetch()` requests. To minimize deployment complexity and maintenance overhead for the MVP, the plugin makes direct API calls to GitHub using a **Fine-Grained Personal Access Token (PAT)**. 
 
-### Why a GitHub App (not OAuth)?
+Since GitHub's Fine-Grained PATs allow users to limit authorization to a **single specific repository** and specify exact scopes (`Contents: write`, `Pull requests: write`), we achieve our goal of scoped repository permissions without needing any server infrastructure. 
 
-GitHub Apps can be installed per-repo with granular permissions (just `contents: write` + `pull_requests: write`). No global account access. This is the key differentiator vs Gitfig.
+A relay service and a GitHub App installation flow can be introduced in Phase 2 to optimize the user onboarding flow (replacing the manual PAT generation).
 
 ## MVP (keep it ruthlessly lean)
 
@@ -74,7 +89,7 @@ Three actions. That's it.
 
 Plus:
 - **Modes** — Figma modes map to separate files per mode (Option A: `color.dark.json`). One format, no config.
-- **Scoped auth** — GitHub App installed per-repo. No global permissions.
+- **Scoped auth** — Fine-Grained PAT restricted to a single repository (Contents: read/write, Pull Requests: read/write).
 
 ### What's explicitly NOT in v1
 
@@ -129,9 +144,9 @@ File-level `$modes` declares available modes + fallbacks. Per-token `$modes` ove
 
 ## Tech Stack
 
-- **Plugin:** TypeScript, Preact (smaller bundle than React for plugin sandbox), Figma Plugin API
-- **Relay:** TypeScript, Hono (lightweight), Cloudflare Workers (free tier covers it)
-- **Auth:** GitHub App installation flow (scoped per-repo)
+- **Plugin:** TypeScript, React, Figma Plugin API
+- **Relay:** None for MVP (Direct client-to-GitHub API). Phase 2: TypeScript, Hono, Cloudflare Workers
+- **Auth:** Fine-Grained PAT scoped to a single repo (MVP). Phase 2: GitHub App installation flow
 - **Format:** DTCG JSON (W3C spec), with Style Dictionary compatibility tested
 
 ## What Makes It Attractive for Contributors
