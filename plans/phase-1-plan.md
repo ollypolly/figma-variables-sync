@@ -57,11 +57,12 @@ A custom translator mapping Figma variables to W3C DTCG format and vice versa:
   - Resolves dot-notation aliases back into local Figma variable references.
   - Compares and updates native variables (value, name, type) per mode.
 
-### 3. React UI Components (`src/ui/`)
-A clean, tabbed panel dashboard:
-- **Settings Panel**: Form to input/edit PAT, repository owner/name, file path, and base branch.
-- **Pull Panel**: Displays a changelog of differences between remote tokens and local variables, with an "Accept & Sync" button.
-- **Push Panel**: Summarizes local changes, takes a PR description, and initiates the "Propose Changes" workflow.
+### 3. React UI Components (`src/ui/pages/`)
+A clean, accessible dashboard utilizing **Radix UI primitives** (e.g., tabs, dialogs) styled with custom vanilla CSS targeting Figma's native theme variables (e.g., `--figma-color-bg`, `--figma-color-text`, `--figma-color-border`) for automatic, seamless light/dark mode adaptation:
+- **Pages Directory**: Structured under `src/ui/pages/`.
+- **`Settings.tsx`**: Form to configure and store the GitHub PAT, repository coordinates (owner/name), tokens file path, and target branch.
+- **`Pull.tsx`**: Compares remote and local variables and presents a visual changelog with an "Accept & Sync" button.
+- **`Push.tsx`**: Highlights pending modifications, accepts a PR description from the designer, and triggers the Pull Request creation process.
 
 ---
 
