@@ -1,12 +1,12 @@
 import React from "react";
-import { PageContainer, PageHeader, PageContent } from "@ui/components/Layout";
-import { DiffTable } from "@ui/components/DiffTable";
-import { EmptyState } from "@ui/components/EmptyState";
+import { PageContainer, PageHeader, PageContent } from "@ui/components/primitives/Layout";
+import { DiffTable } from "@ui/components/business/DiffTable";
+import { EmptyState } from "@ui/components/primitives/EmptyState";
 import { Form, FormField, FormLabel, FormControl, FormMessage, FormAlert } from "@ui/components/primitives/Form";
-import { Button } from "@ui/components/Button";
-import { ProposalList } from "@ui/components/ProposalList";
-import { Stack } from "@ui/components/primitives/Flex/Flex";
-import { Text } from "@ui/components/primitives/Text/Text";
+import { Button } from "@ui/components/primitives/Button";
+import { ProposalList } from "@ui/components/business/ProposalList";
+import { Stack } from "@ui/components/primitives/Flex";
+import { Text } from "@ui/components/primitives/Text";
 import { useProposals } from "./useProposals";
 
 export const Proposals: React.FC = () => {

@@ -3,7 +3,7 @@ import { useGitHub } from "@ui/services/GitHubProvider";
 import { PLUGIN } from "@common/networkSides";
 import { UI_CHANNEL } from "@ui/app.network";
 import { computeDiff, DiffItem } from "@ui/utils/diff";
-import { Proposal } from "@ui/components/ProposalList";
+import { Proposal } from "@ui/components/business/ProposalList";
 
 export function useProposals() {
   const { config, service } = useGitHub();

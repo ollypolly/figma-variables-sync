@@ -1,6 +1,6 @@
 import React from "react";
 import { GitHubProvider } from "@ui/services/GitHubProvider";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ui/components/Tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@ui/components/primitives/Tabs";
 import { Updates } from "@ui/tabs/Updates/Updates";
 import { Proposals } from "@ui/tabs/Proposals/Proposals";
 import { Settings } from "@ui/tabs/Settings/Settings";

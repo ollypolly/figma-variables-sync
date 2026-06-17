@@ -10,9 +10,9 @@ import {
   FormHint,
   FormAlert,
 } from "@ui/components/primitives/Form";
-import { Button, ButtonGroup } from "@ui/components/Button";
-import { PageContainer, PageContent, PageHeader } from "@ui/components/Layout";
-import { Group } from "@ui/components/primitives/Flex/Flex";
+import { Button, ButtonGroup } from "@ui/components/primitives/Button";
+import { PageContainer, PageContent, PageHeader } from "@ui/components/primitives/Layout";
+import { Group } from "@ui/components/primitives/Flex";
 import { useSettingsForm } from "./useSettingsForm";
 
 export const Settings: React.FC = () => {

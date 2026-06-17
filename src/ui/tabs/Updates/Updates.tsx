@@ -1,11 +1,11 @@
 import React from "react";
-import { PageContainer, PageHeader, PageContent, PageFooter } from "@ui/components/Layout";
-import { DiffTable } from "@ui/components/DiffTable";
-import { EmptyState } from "@ui/components/EmptyState";
+import { PageContainer, PageHeader, PageContent, PageFooter } from "@ui/components/primitives/Layout";
+import { DiffTable } from "@ui/components/business/DiffTable";
+import { EmptyState } from "@ui/components/primitives/EmptyState";
 import { FormAlert } from "@ui/components/primitives/Form";
-import { Button } from "@ui/components/Button";
-import { Stack } from "@ui/components/primitives/Flex/Flex";
-import { Text } from "@ui/components/primitives/Text/Text";
+import { Button } from "@ui/components/primitives/Button";
+import { Stack } from "@ui/components/primitives/Flex";
+import { Text } from "@ui/components/primitives/Text";
 import { useUpdates } from "./useUpdates";
 
 export const Updates: React.FC = () => {
