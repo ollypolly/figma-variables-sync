@@ -1,67 +1,77 @@
-# Phase 2 Plan: UX Enhancements
+# Phase 2 Plan: Design System Integration & Dogfooding
 
-This document outlines the detailed plan, architecture, and task list for Phase 2 of the Figma Variables Sync plugin, focusing on designer workflow optimizations, sticky tab memory, and conflict prevention.
+This document outlines the architectural plan and checkpoints for integrating a localized design system (Storybook + Style Dictionary) into the Figma Variables Sync plugin repository, enabling us to dogfood the plugin with its own design variables.
 
 ---
 
 ## 🎯 Goal
-Improve the everyday usability of the plugin for designers by making the **Proposals** tab the default view, adding **Sticky Tab Memory** to persist state across sessions, and introducing **Background Sync Check Notifications** with warning alerts to proactively prevent Git merge conflicts.
+Create a localized design system for the plugin's UI primitives. We will define the variables inside Figma, use a Figma MCP to automate variable structure creation, export them using this sync plugin, compile them using **Style Dictionary** into native CSS variables, and render/test the components using **Storybook**.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Dogfooding Workflow
 
-Phase 2 introduces shared sync state and persistent storage access:
+The system is a closed loop of token generation, synchronization, and component consumption:
 
 ```
-┌────────────────────────────────────────────────────────┐
-│                      Figma Plugin                      │
-│                                                        │
-│  ┌───────────────────────┐      ┌───────────────────┐  │
-│  │ Plugin Sandbox (Main) │      │ React UI (Iframe) │  │
-│  │                       │      │                   │  │
-│  │ - Load/Save Active Tab│◄────►│ - Sync Context    │  │
-│  │ - clientStorage       │      │ - Badge Trigger   │  │
-│  └───────────────────────┘      └───────────────────┘  │
-└────────────────────────────────────────────────────────┘
+                  ┌──────────────────────┐
+                  │   Figma UI (Canvas)  │
+                  └──────────┬───────────┘
+                             ▲ (Automated via Figma MCP)
+                             │
+                  ┌──────────┴───────────┐
+                  │ Figma Local Variables│
+                  └──────────┬───────────┘
+                             │
+            Export           ▼ (via Sync Plugin Proposals)
+    ┌─────────────────────────────────────────────────┐
+    │              GitHub Repository                  │
+    │                                                 │
+    │   ┌─────────────────┐     ┌─────────────────┐   │
+    │   │  Tokens JSON    │────►│Style Dictionary │   │
+    │   │  (W3C DTCG Format)    │ (Token compiler)│   │
+    │   └─────────────────┘     └────────┬────────┘   │
+    │                                    │            │
+    │                                    ▼            │
+    │   ┌─────────────────┐     ┌─────────────────┐   │
+    │   │   Storybook     │◄────│ CSS Variables   │   │
+    │   │ (Visual Preview)│     │ (Plugin Styles) │   │
+    │   └─────────────────┘     └─────────────────┘   │
+    └─────────────────────────────────────────────────┘
 ```
 
-1.  **Context-Aware Defaults**: Default the landing page to the **Proposals** view.
-2.  **State Persistence**: Store the last active tab in `figma.clientStorage` via message handlers on `UI_CHANNEL` / `PLUGIN_CHANNEL`.
-3.  **Proactive Sync Check**: On plugin load, execute a silent background fetch-and-diff. If incoming updates are found on Git that are missing locally in Figma, display tab notification badges and warning banners.
-
 ---
 
-## 🛠️ Components to Build
+## 🛠️ Architectural Stages & Checkpoints
 
-### 1. Active Tab Storage Interface (`src/plugin/plugin.network.ts` & `src/ui/app.tsx`)
-Add request handlers to save and retrieve the user's active tab choice:
-*   **Main Thread**: Add handlers for `loadActiveTab` and `saveActiveTab` using `figma.clientStorage.getAsync("active_tab")` and `figma.clientStorage.setAsync("active_tab", tab)`.
-*   **UI Thread**: Retrieve the stored tab on mount and dynamically update the active tab state of the Radix Tabs component.
+To ensure high-quality and collaborative execution, we will halt and check in at each of the following architectural stages. **We will not proceed to the next stage until the current checkpoint is approved by the user.**
 
-### 2. Unification of Sync State (`src/ui/contexts/SyncContext.tsx` or `GitHubProvider`)
-Abstract diff logic out of page/tab views into a central provider to prevent duplicate remote queries:
-*   **Sync State**: Tracks `loading`, `incomingDiff` (remote vs. local), `outgoingDiff` (local vs. remote), and `lastChecked`.
-*   **Trigger**: Fetches and performs diff comparison immediately when credentials are loaded.
+### 1. Stage 2.1: Style Dictionary Setup & Token Spec
+*   **Tasks**:
+    *   Install and configure **Style Dictionary** (v4).
+    *   Set up a `sd.config.js` in the project root.
+    *   Define token folder structure (e.g. `tokens/design-tokens.json` mapped to W3C format).
+    *   Configure Style Dictionary to compile the W3C JSON into native CSS variables (e.g. `src/ui/styles/variables.css`).
+*   🛑 **Checkpoint 2.1**: Present the Style Dictionary configuration, directory structures, and sample output CSS variable mappings to the user for review and improvement.
 
-### 3. Notifications & Banner UI (`src/ui/components/primitives/`)
-*   **Tabs Header Badge**: Add CSS styles to render a small red notification indicator on the **Updates** tab trigger if `incomingDiff.length > 0`.
-*   **Proposals Page Alert Banner**: If remote updates exist, display a warning banner in `Proposals.tsx` advising the designer to pull incoming updates first before making a proposal, preventing merge conflicts.
+### 2. Stage 2.2: Component Migration & Storybook Setup
+*   **Tasks**:
+    *   Install and configure **Storybook** (latest React-Vite setup).
+    *   Refactor current primitives (`Button`, `Flex`, `Text`, `Layout`, `Tabs`, `Form`) to consume the compiled Style Dictionary CSS variables.
+    *   Write Storybook stories for each of these primitive components.
+*   🛑 **Checkpoint 2.2**: Present the Storybook preview configuration, component directory bindings, and story layouts to the user.
 
-### 4. Integration Testing Strategy (`src/ui/integration-tests/`)
-Before building the visual layers, we will establish integration tests for the core Phase 2 mechanisms:
-*   **Storage Channel Integration**: Test that the `loadActiveTab` and `saveActiveTab` handlers correctly communicate across the `UI_CHANNEL`/`PLUGIN_CHANNEL` boundary and write to/read from a mocked `figma.clientStorage`.
-*   **Sync Provider Integration**: Test the `SyncProvider` context by mocking network responses (Octokit returning modified DTCG JSON) and local variables data, asserting that:
-    *   The correct diff lists (`incomingDiff` and `outgoingDiff`) are generated and populated in the context.
-    *   No duplicate API requests are triggered when multiple components consume the context.
-    *   Alert flags (`remoteUpdatesExist`) are correctly toggled.
+### 3. Stage 2.3: Figma Variables & Components Creation via MCP
+*   **Tasks**:
+    *   Design the collection structure for the plugin's own theme (colors, spacing scales, border-radii).
+    *   Use the **Figma MCP** to construct the collections and variables natively inside a Figma draft file.
+    *   Create corresponding Figma component frames (Buttons, Layout blocks, Text instances) using the MCP, ensuring they consume and are styled by these native variables.
+    *   Align the React UI primitive structures and properties to these Figma components, styling them using the exported CSS variables compiled via Style Dictionary.
+*   🛑 **Checkpoint 2.3**: Present the created Figma variables, matching Figma components, and the React primitive mappings to the user before exporting/dogfooding.
 
----
-
-## 📈 Implementation Order
-
-1.  **Test Infrastructure & Mocks**: Set up the initial UI integration testing harness, mocking `figma.clientStorage` and background network fetch-and-diff cycles.
-2.  **Storage Handlers**: Implement and test the message-passing storage logic via `figma.clientStorage` for `active_tab` values.
-3.  **Shared State Refactoring**: Wrap the app in the global sync status context and write integration tests verifying diff calculation and single-fetch guarantees.
-4.  **Default Landing & Sticky Tab**: Wire up and test tab restoration logic on initialization.
-5.  **Badging and Warning Banners**: Build the visual notifications for the tabs header and Proposals tab, backed by integration tests confirming warning visibility conditions.
+### 4. Stage 2.4: End-to-End Dogfooding Validation
+*   **Tasks**:
+    *   Open our plugin inside the draft file.
+    *   Use the **Proposals** tab to export the plugin's design system variables to the repository.
+    *   Verify that Style Dictionary compiles them correctly, Storybook renders them, and the plugin's own UI automatically styles itself using its own design tokens!
+*   🛑 **Checkpoint 2.4**: Final review of the dogfooding cycle, verification of compiler outputs, and staging for main merge.
