@@ -1,0 +1,6 @@
+.message {
+  font-size: 10px;
+  color: var(--figma-color-text-danger, #f24822);
+  line-height: 14px;
+  margin-top: 2px;
+}
