@@ -6,6 +6,8 @@ export interface FlexProps extends React.HTMLAttributes<HTMLDivElement> {
   gap?: number | string;
   align?: React.CSSProperties["alignItems"];
   justify?: React.CSSProperties["justifyContent"];
+  grow?: boolean;
+  width?: string | number;
   children?: React.ReactNode;
 }
 
@@ -14,6 +16,8 @@ export const Flex: React.FC<FlexProps> = ({
   gap = 8,
   align,
   justify,
+  grow,
+  width,
   style,
   className,
   children,
@@ -24,6 +28,8 @@ export const Flex: React.FC<FlexProps> = ({
     gap: typeof gap === "number" ? `${gap}px` : gap,
     alignItems: align,
     justifyContent: justify,
+    flexGrow: grow ? 1 : undefined,
+    width: typeof width === "number" ? `${width}px` : width,
     ...style,
   };
 

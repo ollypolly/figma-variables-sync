@@ -4,15 +4,16 @@ import {
   Form,
   FormSectionTitle,
   FormDescription,
-  FormGroup,
-  FormRow,
+  FormField,
   FormLabel,
-  FormInput,
+  FormControl,
+  FormMessage,
   FormHint,
   FormAlert,
-} from "@ui/components/Form";
+} from "@ui/components/primitives/Form";
 import { Button, ButtonGroup } from "@ui/components/Button";
 import { PageContainer, PageContent, PageHeader } from "@ui/components/Layout";
+import { Group } from "@ui/components/primitives/Flex/Flex";
 
 export const Settings: React.FC = () => {
   const { config, saveConfig, service } = useGitHub();
@@ -68,65 +69,70 @@ export const Settings: React.FC = () => {
             Configure your GitHub Fine-Grained Personal Access Token (PAT) and target repository coordinates to sync design variables.
           </FormDescription>
 
-          <FormGroup>
+          <FormField name="pat">
             <FormLabel>Personal Access Token (PAT)</FormLabel>
-            <FormInput
+            <FormControl
               type="password"
               value={pat}
               onChange={(e) => setPat(e.target.value)}
               placeholder="github_pat_..."
               required
             />
+            <FormMessage match="valueMissing">Personal Access Token is required</FormMessage>
             <FormHint>
               Requires `Contents: write` and `Pull requests: write` scopes for the selected repository.
             </FormHint>
-          </FormGroup>
+          </FormField>
 
-          <FormRow>
-            <FormGroup>
+          <Group gap={12} align="flex-start" width="100%">
+            <FormField name="owner" grow>
               <FormLabel>Repository Owner</FormLabel>
-              <FormInput
+              <FormControl
                 type="text"
                 value={owner}
                 onChange={(e) => setOwner(e.target.value)}
                 placeholder="e.g. facebook"
                 required
               />
-            </FormGroup>
+              <FormMessage match="valueMissing">Repository owner is required</FormMessage>
+            </FormField>
 
-            <FormGroup>
+            <FormField name="repo" grow>
               <FormLabel>Repository Name</FormLabel>
-              <FormInput
+              <FormControl
                 type="text"
                 value={repo}
                 onChange={(e) => setRepo(e.target.value)}
                 placeholder="e.g. design-system"
                 required
               />
-            </FormGroup>
-          </FormRow>
+              <FormMessage match="valueMissing">Repository name is required</FormMessage>
+            </FormField>
+          </Group>
 
-          <FormGroup>
+          <FormField name="filePath">
             <FormLabel>Tokens File Path</FormLabel>
-            <FormInput
+            <FormControl
               type="text"
               value={filePath}
               onChange={(e) => setFilePath(e.target.value)}
               placeholder="tokens/design-tokens.json"
               required
             />
-          </FormGroup>
+            <FormMessage match="valueMissing">Tokens file path is required</FormMessage>
+          </FormField>
 
-          <FormGroup>
+          <FormField name="branch">
             <FormLabel>Sync Target Branch</FormLabel>
-            <FormInput
+            <FormControl
               type="text"
               value={branch}
               onChange={(e) => setBranch(e.target.value)}
               placeholder="main"
               required
             />
-          </FormGroup>
+            <FormMessage match="valueMissing">Sync target branch is required</FormMessage>
+          </FormField>
 
           <ButtonGroup>
             <Button type="submit" variant="primary">

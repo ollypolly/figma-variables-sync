@@ -6,7 +6,7 @@ import { computeDiff, DiffItem } from "@ui/utils/diff";
 import { PageContainer, PageHeader, PageContent, PageFooter } from "@ui/components/Layout";
 import { DiffTable } from "@ui/components/DiffTable";
 import { EmptyState } from "@ui/components/EmptyState";
-import { Form, FormGroup, FormLabel, FormTextArea, FormAlert } from "@ui/components/Form";
+import { Form, FormField, FormLabel, FormControl, FormMessage, FormAlert } from "@ui/components/primitives/Form";
 import { Button } from "@ui/components/Button";
 import { ProposalList, Proposal } from "@ui/components/ProposalList";
 
@@ -200,9 +200,10 @@ export const Proposals: React.FC = () => {
                 </div>
 
                 <Form onSubmit={handleSubmitProposal}>
-                  <FormGroup>
+                  <FormField name="description">
                     <FormLabel htmlFor="description">What changed in this proposal?</FormLabel>
-                    <FormTextArea
+                    <FormControl
+                      as="textarea"
                       id="description"
                       value={prDescription}
                       onChange={(e) => setPrDescription(e.target.value)}
@@ -210,12 +211,11 @@ export const Proposals: React.FC = () => {
                       required
                       disabled={submitting}
                     />
-                  </FormGroup>
-                  <div>
-                    <Button type="submit" variant="primary" disabled={submitting}>
-                      {submitting ? "Submitting Proposal..." : "Propose Changes"}
-                    </Button>
-                  </div>
+                    <FormMessage match="valueMissing">Please enter a description for your proposal.</FormMessage>
+                  </FormField>
+                  <Button type="submit" variant="primary" disabled={submitting}>
+                    {submitting ? "Submitting Proposal..." : "Propose Changes"}
+                  </Button>
                 </Form>
               </div>
             )}
