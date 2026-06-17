@@ -48,11 +48,20 @@ Abstract diff logic out of page/tab views into a central provider to prevent dup
 *   **Tabs Header Badge**: Add CSS styles to render a small red notification indicator on the **Updates** tab trigger if `incomingDiff.length > 0`.
 *   **Proposals Page Alert Banner**: If remote updates exist, display a warning banner in `Proposals.tsx` advising the designer to pull incoming updates first before making a proposal, preventing merge conflicts.
 
+### 4. Integration Testing Strategy (`src/ui/integration-tests/`)
+Before building the visual layers, we will establish integration tests for the core Phase 2 mechanisms:
+*   **Storage Channel Integration**: Test that the `loadActiveTab` and `saveActiveTab` handlers correctly communicate across the `UI_CHANNEL`/`PLUGIN_CHANNEL` boundary and write to/read from a mocked `figma.clientStorage`.
+*   **Sync Provider Integration**: Test the `SyncProvider` context by mocking network responses (Octokit returning modified DTCG JSON) and local variables data, asserting that:
+    *   The correct diff lists (`incomingDiff` and `outgoingDiff`) are generated and populated in the context.
+    *   No duplicate API requests are triggered when multiple components consume the context.
+    *   Alert flags (`remoteUpdatesExist`) are correctly toggled.
+
 ---
 
 ## 📈 Implementation Order
 
-1.  **Storage Handlers**: Implement the message-passing logic for saving and loading the active tab via `figma.clientStorage`.
-2.  **Shared State Refactoring**: Wrap the app in a sync status context to load and hold diff states globally.
-3.  **Default Landing & Sticky Tab**: Implement tab restoration logic on app initialization.
-4.  **Badging and Warning Banners**: Build the visual notifications for the tabs header and Proposals tab.
+1.  **Test Infrastructure & Mocks**: Set up the initial UI integration testing harness, mocking `figma.clientStorage` and background network fetch-and-diff cycles.
+2.  **Storage Handlers**: Implement and test the message-passing storage logic via `figma.clientStorage` for `active_tab` values.
+3.  **Shared State Refactoring**: Wrap the app in the global sync status context and write integration tests verifying diff calculation and single-fetch guarantees.
+4.  **Default Landing & Sticky Tab**: Wire up and test tab restoration logic on initialization.
+5.  **Badging and Warning Banners**: Build the visual notifications for the tabs header and Proposals tab, backed by integration tests confirming warning visibility conditions.
