@@ -1,0 +1,28 @@
+{
+  "colors": {
+    "bg-base": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "bg-surface": {
+      "$type": "color",
+      "$value": "#f5f5f5"
+    },
+    "text-primary": {
+      "$type": "color",
+      "$value": "#111111"
+    },
+    "text-secondary": {
+      "$type": "color",
+      "$value": "#666666"
+    },
+    "brand": {
+      "$type": "color",
+      "$value": "#18a0fb"
+    },
+    "border": {
+      "$type": "color",
+      "$value": "#e0e0e0"
+    }
+  }
+}
