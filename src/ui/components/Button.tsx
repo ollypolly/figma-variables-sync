@@ -1,6 +1,6 @@
 import { classes } from "@ui/utils/classes.util";
 import { ComponentProps } from "react";
-import styles from "./Button.module.scss";
+import styles from "./Button.module.css";
 
 type Props = ComponentProps<"button">;
 
