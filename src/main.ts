@@ -2,17 +2,18 @@ import { emit, on, showUI } from "@create-figma-plugin/utilities";
 import { exportToDtcg } from "@common/dtcg";
 import { importFromDtcg } from "@common/dtcg";
 
-import type {
-  RequestExportHandler,
-  RequestImportHandler,
-  ExportResultHandler,
-  ImportResultHandler,
-  LoadSettingsHandler,
-  SaveSettingsHandler,
-  SettingsLoadedHandler,
-  SettingsSavedHandler,
-  PluginSettings,
-  ResizeWindowHandler,
+import {
+  DEFAULT_SETTINGS,
+  type RequestExportHandler,
+  type RequestImportHandler,
+  type ExportResultHandler,
+  type ImportResultHandler,
+  type LoadSettingsHandler,
+  type SaveSettingsHandler,
+  type SettingsLoadedHandler,
+  type SettingsSavedHandler,
+  type PluginSettings,
+  type ResizeWindowHandler,
 } from "./types";
 
 const SETTINGS_KEY = "figma-variables-sync-settings";
@@ -37,13 +38,7 @@ export default function () {
 
   on<LoadSettingsHandler>("LOAD_SETTINGS", async function () {
     const stored = await figma.clientStorage.getAsync(SETTINGS_KEY);
-    const settings: PluginSettings = stored || {
-      pat: "",
-      owner: "",
-      repo: "",
-      filePath: "tokens/design-tokens.json",
-      branch: "main",
-    };
+    const settings: PluginSettings = { ...DEFAULT_SETTINGS, ...stored };
     emit<SettingsLoadedHandler>("SETTINGS_LOADED", settings);
   });
 
