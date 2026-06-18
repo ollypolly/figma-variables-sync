@@ -86,15 +86,22 @@ export function exportToDtcg(
       $value: valToDtcg(defaultValue, variable.resolvedType, isDim),
     };
 
-    // If there are other modes, add them to $modes object
+    // If there are other modes, add them to $modes object only if they differ from the default
     if (colModes.length > 1) {
       const modesOverrides: Record<string, any> = {};
+      let hasOverride = false;
       for (let i = 1; i < colModes.length; i++) {
         const otherMode = colModes[i];
         const otherVal = variable.valuesByMode[otherMode.modeId];
-        modesOverrides[sanitizeName(otherMode.name)] = valToDtcg(otherVal, variable.resolvedType, isDim);
+        const otherValDtcg = valToDtcg(otherVal, variable.resolvedType, isDim);
+        if (otherValDtcg !== tokenObject.$value) {
+          modesOverrides[sanitizeName(otherMode.name)] = otherValDtcg;
+          hasOverride = true;
+        }
       }
-      tokenObject.$modes = modesOverrides;
+      if (hasOverride) {
+        tokenObject.$modes = modesOverrides;
+      }
     }
 
     setPath(root, fullPath, tokenObject);

@@ -16,7 +16,7 @@
       "resolvedType": "COLOR",
       "scopes": ["FRAME_FILL", "SHAPE_FILL"],
       "valuesByMode": {
-        "8:0": { "r": 0.007843137718737125, "g": 0.5176470875740051, "b": 0.7803921699523926, "a": 1 }
+        "8:0": { "r": 0.7137254901960784, "g": 0.1607843137254902, "b": 0.09803921568627451, "a": 1 }
       }
     },
     {
@@ -79,7 +79,7 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["CORNER_RADIUS"],
-      "valuesByMode": { "8:0": 4 }
+      "valuesByMode": { "8:0": 20 }
     },
     {
       "id": "VariableID:8:11",
