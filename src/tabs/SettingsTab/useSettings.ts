@@ -1,34 +1,24 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { GitHubService } from "@services/github";
-import {
-  DEFAULT_SETTINGS,
-  type LoadSettingsHandler,
-  type PluginSettings,
-  type SaveSettingsHandler,
-  type SettingsLoadedHandler,
-  type SettingsSavedHandler,
+import { useGitHub } from "../../hooks/useGitHub";
+import { usePluginSettings } from "../../hooks/usePluginSettings";
+import type {
+  PluginSettings,
+  SaveSettingsHandler,
+  SettingsSavedHandler,
 } from "../../types";
 
 export function useSettings() {
-  const [settings, setSettings] = useState<PluginSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  const { settings, setSettings, loading } = usePluginSettings();
+  const github = useGitHub(settings);
+
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState<{
     success: boolean;
     text: string;
   } | null>(null);
-
-  useEffect(() => {
-    const cleanup = on<SettingsLoadedHandler>("SETTINGS_LOADED", (loaded) => {
-      setSettings(loaded);
-      setLoading(false);
-    });
-    emit<LoadSettingsHandler>("LOAD_SETTINGS");
-    return cleanup;
-  }, []);
 
   useEffect(() => {
     return on<SettingsSavedHandler>("SETTINGS_SAVED", () => {
@@ -57,11 +47,12 @@ export function useSettings() {
       return;
     }
 
+    if (!github) return;
+
     setTesting(true);
     setStatus(null);
 
     try {
-      const github = new GitHubService(pat);
       const connected = await github.verifyConnection(owner, repo);
       setStatus(
         connected
@@ -74,7 +65,7 @@ export function useSettings() {
     } finally {
       setTesting(false);
     }
-  }, [settings]);
+  }, [settings, github]);
 
   return {
     settings,

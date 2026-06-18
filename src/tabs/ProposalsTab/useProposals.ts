@@ -1,16 +1,9 @@
-import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
-import { GitHubService } from "@services/github";
-import {
-  DEFAULT_SETTINGS,
-  type ExportResultHandler,
-  type LoadSettingsHandler,
-  type PluginSettings,
-  type RequestExportHandler,
-  type SettingsLoadedHandler,
-} from "../../types";
+import { useGitHub } from "../../hooks/useGitHub";
+import { usePluginSettings } from "../../hooks/usePluginSettings";
+import { requestExport } from "@services/figmaMessages";
 
 export interface Proposal {
   number: number;
@@ -20,19 +13,9 @@ export interface Proposal {
   head_ref: string;
 }
 
-function requestExport(): Promise<string> {
-  return new Promise((resolve) => {
-    const cleanup = on<ExportResultHandler>("EXPORT_RESULT", (json) => {
-      cleanup();
-      resolve(json);
-    });
-    emit<RequestExportHandler>("REQUEST_EXPORT");
-  });
-}
-
 export function useProposals() {
-  const [settings, setSettings] = useState<PluginSettings>(DEFAULT_SETTINGS);
-  const [settingsLoading, setSettingsLoading] = useState(true);
+  const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
+  const github = useGitHub(settings);
 
   const [checking, setChecking] = useState(false);
   const [diffItems, setDiffItems] = useState<DiffItem[]>([]);
@@ -46,28 +29,13 @@ export function useProposals() {
     text: string;
   } | null>(null);
 
-  useEffect(() => {
-    const cleanup = on<SettingsLoadedHandler>("SETTINGS_LOADED", (loaded) => {
-      setSettings(loaded);
-      setSettingsLoading(false);
-    });
-    emit<LoadSettingsHandler>("LOAD_SETTINGS");
-    return cleanup;
-  }, []);
-
-  const isConfigured = Boolean(
-    settings.pat && settings.owner && settings.repo
-  );
-
   const checkForChanges = useCallback(async () => {
-    if (!isConfigured) return;
+    if (!isConfigured || !github) return;
     setChecking(true);
     setStatus(null);
     setDiffItems([]);
 
     try {
-      const github = new GitHubService(settings.pat);
-
       const fileData = await github.getFile({
         owner: settings.owner,
         repo: settings.repo,
@@ -95,7 +63,7 @@ export function useProposals() {
     } finally {
       setChecking(false);
     }
-  }, [settings, isConfigured]);
+  }, [settings, isConfigured, github]);
 
   useEffect(() => {
     if (!settingsLoading && isConfigured) {
@@ -104,7 +72,7 @@ export function useProposals() {
   }, [settingsLoading]);
 
   const submitProposal = useCallback(async () => {
-    if (!figmaJson || !description.trim()) {
+    if (!figmaJson || !description.trim() || !github) {
       setStatus({ success: false, text: "Please enter a description." });
       return;
     }
@@ -113,7 +81,6 @@ export function useProposals() {
     setStatus(null);
 
     try {
-      const github = new GitHubService(settings.pat);
       const config = {
         owner: settings.owner,
         repo: settings.repo,
@@ -150,7 +117,7 @@ export function useProposals() {
     } finally {
       setSubmitting(false);
     }
-  }, [figmaJson, description, settings, checkForChanges]);
+  }, [figmaJson, description, settings, github, checkForChanges]);
 
   return {
     settingsLoading,
