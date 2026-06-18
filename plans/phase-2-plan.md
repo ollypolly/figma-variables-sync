@@ -86,7 +86,14 @@ A step-by-step checklist for testing the plugin:
 - [x] Auto-refresh Updates and Proposals tabs on tab switch (no manual "Check" click needed)
 - [x] Full QA round-trip validated: change `brand/primary` to red in Figma → create proposal PR → merge → pull → rebuild tokens → confirm red value in CSS and preview.html
 
-### Stage 2.4: Package and publish [IN PROGRESS]
+### Stage 2.4: Integration tests [TODO]
+Write integration tests that mock the GitHub API and Figma plugin API to exercise the full plugin flow without real services:
+- [ ] **Updates flow**: mock `getFile` returning token JSON + mock `exportToDtcg` producing matching/differing output → assert `computeDiff` returns correct diffs, assert `requestImport` triggers `importFromDtcg`
+- [ ] **Proposals flow**: mock `getFile` + `exportToDtcg` → assert diff detection, assert `createBranch` / `updateFile` / `createPullRequest` are called with correct args
+- [ ] **Settings edge cases**: test `trimSettings` on load/save, test 404 error message when file missing, test empty repo (no file yet → proposals show all as added)
+- [ ] **Export round-trip**: expand snapshot test to cover multi-mode tokens (Light/Dark), alias references, and edge cases (zero values, long floats)
+
+### Stage 2.5: Package and publish [TODO]
 - [x] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
 - [x] Add setup instructions to the plugin [README.md](file:///Users/olly/dev/figma-variables-sync/README.md)
 - [ ] Tag a release in the repository
