@@ -15,7 +15,7 @@ import {
 } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
-import { DiffList } from "../components/DiffList";
+import { DiffList } from "@components/DiffList";
 import { useProposals, type Proposal } from "./useProposals";
 
 export function ProposalsTab() {

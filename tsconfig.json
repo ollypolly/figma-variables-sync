@@ -7,7 +7,9 @@
     "ignoreDeprecations": "6.0",
     "paths": {
       "@common/*": ["./src/common/*"],
-      "@services/*": ["./src/services/*"]
+      "@components/*": ["./src/components/*"],
+      "@services/*": ["./src/services/*"],
+      "@tabs/*": ["./src/tabs/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

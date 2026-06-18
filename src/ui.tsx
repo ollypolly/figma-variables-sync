@@ -3,9 +3,10 @@ import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 
-import { ProposalsTab } from "./tabs/ProposalsTab";
-import { SettingsTab } from "./tabs/SettingsTab";
-import { UpdatesTab } from "./tabs/UpdatesTab";
+import { ProposalsTab } from "@tabs/ProposalsTab";
+import { SettingsTab } from "@tabs/SettingsTab";
+import { UpdatesTab } from "@tabs/UpdatesTab";
+
 import { ResizeWindowHandler } from "./types";
 import "!./output.css";
 

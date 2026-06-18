@@ -1,7 +1,7 @@
 import { Bold, Divider, Muted, Text, VerticalSpace } from "@create-figma-plugin/ui";
 import { h } from "preact";
 
-import type { DiffItem } from "../common/diff";
+import type { DiffItem } from "@common/diff";
 
 interface DiffListProps {
   items: DiffItem[];

@@ -1,8 +1,8 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { computeDiff, type DiffItem } from "../common/diff";
-import { GitHubService } from "../services/github";
+import { computeDiff, type DiffItem } from "@common/diff";
+import { GitHubService } from "@services/github";
 import {
   DEFAULT_SETTINGS,
   type ExportResultHandler,
@@ -10,7 +10,7 @@ import {
   type PluginSettings,
   type RequestExportHandler,
   type SettingsLoadedHandler,
-} from "../types";
+} from "../../types";
 
 export interface Proposal {
   number: number;

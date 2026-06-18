@@ -1,7 +1,7 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { GitHubService } from "../services/github";
+import { GitHubService } from "@services/github";
 import {
   DEFAULT_SETTINGS,
   type LoadSettingsHandler,
@@ -9,7 +9,7 @@ import {
   type SaveSettingsHandler,
   type SettingsLoadedHandler,
   type SettingsSavedHandler,
-} from "../types";
+} from "../../types";
 
 export function useSettings() {
   const [settings, setSettings] = useState<PluginSettings>(DEFAULT_SETTINGS);
