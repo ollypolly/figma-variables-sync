@@ -1,9 +1,9 @@
 import { useCallback, useEffect } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
-import { useAsync } from "../../hooks/useAsync";
-import { useGitHub } from "../../hooks/useGitHub";
-import { usePluginSettings } from "../../hooks/usePluginSettings";
+import { useAsync } from "@hooks/useAsync";
+import { useGitHub } from "@hooks/useGitHub";
+import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport, requestImport } from "@services/figmaMessages";
 
 interface CheckResult {

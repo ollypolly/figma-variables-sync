@@ -8,6 +8,7 @@
     "paths": {
       "@common/*": ["./src/common/*"],
       "@components/*": ["./src/components/*"],
+      "@hooks/*": ["./src/hooks/*"],
       "@services/*": ["./src/services/*"],
       "@tabs/*": ["./src/tabs/*"]
     }

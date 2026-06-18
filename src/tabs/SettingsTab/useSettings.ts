@@ -1,9 +1,9 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { useAsync } from "../../hooks/useAsync";
-import { useGitHub } from "../../hooks/useGitHub";
-import { usePluginSettings } from "../../hooks/usePluginSettings";
+import { useAsync } from "@hooks/useAsync";
+import { useGitHub } from "@hooks/useGitHub";
+import { usePluginSettings } from "@hooks/usePluginSettings";
 import type {
   PluginSettings,
   SaveSettingsHandler,
