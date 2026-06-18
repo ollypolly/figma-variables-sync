@@ -68,7 +68,7 @@ A step-by-step checklist for testing the plugin:
 
 ### Stage 2.2: Build the Figma test file [IN PROGRESS - CLAUDE HANDOVER]
 - [x] Configure figma MCP server in user's dotfiles (`config/dot_claude/dot_mcp.json.tmpl` and `config/dot_gemini/`) and apply configuration
-- [ ] Connect to Figma file `FN7FDpzw6DpZJeibayDH2K` via Figma MCP server (using the active `FIGMA_API_KEY` token)
+- [ ] Connect to Figma file `FN7FDpzw6DpZJeibayDH2K` via the Figma plugin/MCP interface
 - [ ] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
 - [ ] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
 - [ ] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
