@@ -24,33 +24,32 @@ npm install
 
 ### 🖱️ Developing
 
-Run the watch task to compile code changes as you work:
+Run the watch task to compile code and CSS changes automatically as you work:
 
 ```bash
-npm run dev
+npm run watch
 ```
 
-This builds the files into the `dist/` directory. You can load it in Figma by right-clicking in a design file and selecting `Plugins > Development > Import plugin from manifest...` and selecting `dist/manifest.json`.
+This builds the files into the `manifest.json` referenced outputs. You can load it in the Figma Desktop App by going to **Plugins > Development > Import plugin from manifest...** and selecting the root `manifest.json`.
 
 > [!TIP]
 > Turn on the **Hot reload plugin** option in Figma's developer menu to automatically reload when files change.
 
-### 🦴 UI-only Mode
+### 🧪 QA Test Kit
 
-To build and iterate on the UI inside a normal browser window without the Figma sandbox constraints:
+We provide a portable QA test kit for validating the plugin end-to-end (import, export, diffs, and GitHub PR proposals).
 
-```bash
-npm run dev:ui-only
-```
+See the [QA Checklist & Setup Guide](test-kit/QA.md) for details on how to configure and run tests using [design-tokens.json](test-kit/tokens/design-tokens.json) against this repository.
 
 ---
 
 ## 🏗️ Project Structure
 
 - `src/common/` : Code shared between the UI and the Plugin contexts.
-- `src/plugin/` : Code interacting directly with the Figma Plugin API.
-- `src/ui/` : React + Vite interface.
+- `src/services/` : Services for GitHub API and Figma interactions.
+- `src/tabs/` : Plugin tab view screens (Settings, Updates, Proposals).
 - `plans/` : Reference roadmaps and architecture design details.
+- `test-kit/` : Self-contained end-to-end QA token set and testing checklist.
 
 ---
 
