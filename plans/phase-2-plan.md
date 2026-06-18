@@ -60,23 +60,25 @@ A step-by-step checklist for testing the plugin:
 
 ## Stages
 
-### Stage 2.1: Create the token set
-- Write the DTCG JSON with all token types and Light/Dark modes
-- Push to the test repo
-- Verify it round-trips through the DTCG parser (unit test)
+### Stage 2.1: Create the token set [COMPLETE]
+- [x] Write the DTCG JSON with all token types and Light/Dark modes ([design-tokens.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens.json))
+- [x] Add single-mode token set for Free plan compatibility ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
+- [x] Verify it round-trips through the DTCG parser (written [roundtrip.test.ts](file:///Users/olly/dev/figma-variables-sync/src/common/dtcg/roundtrip.test.ts) unit test)
+- [x] Build robust unit-dimension parsing (pixels, nested values) and Starter plan single-mode fallback in importer
 
-### Stage 2.2: Build the Figma test file
-- Create variables matching the token set
-- Build the button component consuming those variables
-- Set up Light/Dark mode variants on a test page
+### Stage 2.2: Build the Figma test file [IN PROGRESS - CLAUDE HANDOVER]
+- [x] Configure figma MCP server in user's dotfiles (`config/dot_claude/dot_mcp.json.tmpl` and `config/dot_gemini/`) and apply configuration
+- [ ] Connect to Figma file `FN7FDpzw6DpZJeibayDH2K` via Figma MCP server (using the active `FIGMA_API_KEY` token)
+- [ ] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
+- [ ] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
+- [ ] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
 
-### Stage 2.3: End-to-end QA (includes deferred phase 1.5 integration test)
-- Load the plugin in Figma dev mode, verify build output works
-- Run through the full QA script
-- Document any issues found
-- Write up the QA checklist as `test-kit/QA.md`
+### Stage 2.3: End-to-end QA [IN PROGRESS]
+- [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
+- [ ] Run through the full QA script
+- [x] Write up the step-by-step QA checklist as [QA.md](file:///Users/olly/dev/figma-variables-sync/test-kit/QA.md)
 
-### Stage 2.4: Package and publish
-- Publish the Figma file (community or shareable link)
-- Add setup instructions to the plugin README
-- Tag a test-kit release in the test repo
+### Stage 2.4: Package and publish [IN PROGRESS]
+- [ ] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
+- [x] Add setup instructions to the plugin [README.md](file:///Users/olly/dev/figma-variables-sync/README.md)
+- [ ] Tag a release in the repository
