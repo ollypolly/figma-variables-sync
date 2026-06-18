@@ -6,17 +6,16 @@ import {
   Divider,
   IconCheck16,
   IconWarning16,
-  Link,
   LoadingIndicator,
   Muted,
   Text,
-  TextboxMultiline,
   VerticalSpace,
 } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
-import { DiffList } from "@components/DiffList";
-import { useProposals, type Proposal } from "./useProposals";
+import { ProposalForm } from "./ProposalForm";
+import { ProposalList } from "./ProposalList";
+import { useProposals } from "./useProposals";
 
 export function ProposalsTab() {
   const {
@@ -100,37 +99,13 @@ export function ProposalsTab() {
           <Muted>No local changes to propose.</Muted>
         </Text>
       ) : (
-        <Fragment>
-          <Text>
-            <Muted>
-              <Bold>{String(diffItems.length)}</Bold> change
-              {diffItems.length === 1 ? "" : "s"} to propose:
-            </Muted>
-          </Text>
-          <VerticalSpace space="small" />
-          <DiffList items={diffItems} mode="proposals" />
-
-          <VerticalSpace space="medium" />
-          <Text>
-            <Muted>Description</Muted>
-          </Text>
-          <VerticalSpace space="extraSmall" />
-          <TextboxMultiline
-            value={description}
-            onValueInput={setDescription}
-            placeholder="What changed in this proposal?"
-            rows={3}
-          />
-          <VerticalSpace space="small" />
-          <Button
-            onClick={submitProposal}
-            loading={submitting}
-            disabled={!description.trim()}
-            fullWidth
-          >
-            Propose Changes
-          </Button>
-        </Fragment>
+        <ProposalForm
+          diffItems={diffItems}
+          description={description}
+          onDescriptionChange={setDescription}
+          onSubmit={submitProposal}
+          submitting={submitting}
+        />
       )}
 
       {proposals.length > 0 && (
@@ -148,35 +123,5 @@ export function ProposalsTab() {
 
       <VerticalSpace space="medium" />
     </Container>
-  );
-}
-
-function ProposalList({ proposals }: { proposals: Proposal[] }) {
-  return (
-    <div>
-      {proposals.map((pr, i) => (
-        <div key={pr.number}>
-          {i > 0 && <Divider />}
-          <div style={{ padding: "6px 0" }}>
-            <Text>
-              <Link href={pr.html_url} target="_blank">
-                #{pr.number}
-              </Link>{" "}
-              {pr.title}
-            </Text>
-            <VerticalSpace space="extraSmall" />
-            <Text>
-              <Muted>
-                {pr.state === "merged"
-                  ? "Merged"
-                  : pr.state === "open"
-                    ? "Open"
-                    : "Closed"}
-              </Muted>
-            </Text>
-          </div>
-        </div>
-      ))}
-    </div>
   );
 }
