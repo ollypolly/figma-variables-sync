@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Figma Sync Test Kit — Token Preview</title>
+  <link rel="stylesheet" href="build/tokens.css">
+  <style>
+    .btn {
+      background-color: var(--tokens-brand-primary);
+      color: var(--tokens-surface-foreground);
+      padding: var(--tokens-spacing-medium) var(--tokens-spacing-large);
+      border-radius: var(--tokens-radius-small);
+      font-family: Inter, system-ui, sans-serif;
+      font-size: var(--tokens-font-size-body);
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+    .btn:hover, .btn.btn--hover {
+      background-color: var(--tokens-brand-secondary);
+    }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background: #f8f9fa;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      gap: 2rem;
+    }
+    h1 { font-size: 1.5rem; color: #0f172a; }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      min-width: 320px;
+    }
+    .variant-row {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-end;
+    }
+    .variant-label {
+      font-size: 0.75rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
+    .token-list {
+      font-size: 0.75rem;
+      color: #999;
+      line-height: 1.6;
+    }
+    .token-list code {
+      background: #f1f5f9;
+      padding: 0.1em 0.4em;
+      border-radius: 3px;
+      font-size: 0.7rem;
+    }
+  </style>
+</head>
+<body>
+  <h1>Figma Sync Test Kit — Token Preview</h1>
+  <div class="card">
+    <div class="variant-row">
+      <div>
+        <div class="variant-label">Default</div>
+        <button class="btn">Button</button>
+      </div>
+      <div>
+        <div class="variant-label">Hover (inspect)</div>
+        <button class="btn btn--hover">Button</button>
+      </div>
+    </div>
+    <div class="token-list">
+      <strong>Bound tokens:</strong><br>
+      Fill → <code>--brand-primary</code> / <code>--brand-secondary</code><br>
+      Text → <code>--surface-foreground</code><br>
+      Padding → <code>--spacing-medium</code> / <code>--spacing-large</code><br>
+      Radius → <code>--radius-small</code>
+    </div>
+  </div>
+</body>
+</html>

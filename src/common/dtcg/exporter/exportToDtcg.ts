@@ -1,6 +1,6 @@
 import { sanitizeName } from "../utils/sanitizeName";
 import { figmaColorToHex } from "../color/figmaColorToHex";
-import { figmaTypeToDtcg } from "../utils/figmaTypeToDtcg";
+import { figmaTypeToDtcg, isDimensionVariable } from "../utils/figmaTypeToDtcg";
 import { setPath } from "../utils/setPath";
 import { getVariableDotPath } from "./getVariableDotPath";
 import { getVariablePath } from "../utils/getVariablePath";
@@ -49,13 +49,16 @@ export function exportToDtcg(
   }
 
   // Helper to convert variable value to DTCG representation.
-  const valToDtcg = (val: VariableValue, type: VariableResolvedDataType): any => {
+  const valToDtcg = (val: VariableValue, type: VariableResolvedDataType, isDimension: boolean): any => {
     if (val && typeof val === "object" && "type" in val && val.type === "VARIABLE_ALIAS") {
       const refPath = getVariableDotPath(val.id, variableMap, figmaInstance);
       return `{${refPath}}`;
     }
     if (type === "COLOR") {
       return figmaColorToHex(val as { r: number; g: number; b: number; a?: number });
+    }
+    if (type === "FLOAT" && isDimension && typeof val === "number") {
+      return `${val}px`;
     }
     return val;
   };
@@ -76,21 +79,29 @@ export function exportToDtcg(
     const defaultMode = colModes[0];
     const defaultValue = variable.valuesByMode[defaultMode.modeId];
 
+    const isDim = variable.resolvedType === "FLOAT" && isDimensionVariable(variable.scopes);
+
     const tokenObject: any = {
-      $type: figmaTypeToDtcg(variable.resolvedType),
-      $value: valToDtcg(defaultValue, variable.resolvedType),
+      $type: figmaTypeToDtcg(variable.resolvedType, variable.scopes),
+      $value: valToDtcg(defaultValue, variable.resolvedType, isDim),
     };
 
-    // If there are other modes, add them to $modes object
+    // If there are other modes, add them to $modes object only if they differ from the default
     if (colModes.length > 1) {
       const modesOverrides: Record<string, any> = {};
+      let hasOverride = false;
       for (let i = 1; i < colModes.length; i++) {
         const otherMode = colModes[i];
         const otherVal = variable.valuesByMode[otherMode.modeId];
-        // We can write it explicitly so importer can map it back
-        modesOverrides[sanitizeName(otherMode.name)] = valToDtcg(otherVal, variable.resolvedType);
+        const otherValDtcg = valToDtcg(otherVal, variable.resolvedType, isDim);
+        if (otherValDtcg !== tokenObject.$value) {
+          modesOverrides[sanitizeName(otherMode.name)] = otherValDtcg;
+          hasOverride = true;
+        }
       }
-      tokenObject.$modes = modesOverrides;
+      if (hasOverride) {
+        tokenObject.$modes = modesOverrides;
+      }
     }
 
     setPath(root, fullPath, tokenObject);

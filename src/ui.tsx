@@ -27,17 +27,19 @@ function Plugin() {
   );
 
   const tabOptions = [
-    { value: "Updates", children: <UpdatesTab /> },
-    { value: "Proposals", children: <ProposalsTab /> },
+    { value: "Updates", children: <UpdatesTab active={tabValue === "Updates"} /> },
+    { value: "Proposals", children: <ProposalsTab active={tabValue === "Proposals"} /> },
     { value: "Settings", children: <SettingsTab /> },
   ];
 
   return (
-    <Tabs
-      options={tabOptions}
-      value={tabValue}
-      onValueChange={setTabValue}
-    />
+    <div class="flex flex-col h-screen overflow-hidden">
+      <Tabs
+        options={tabOptions}
+        value={tabValue}
+        onValueChange={setTabValue}
+      />
+    </div>
   );
 }
 

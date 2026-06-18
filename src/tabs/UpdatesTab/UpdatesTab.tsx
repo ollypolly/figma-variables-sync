@@ -14,7 +14,7 @@ import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { useUpdates } from "./useUpdates";
 
-export function UpdatesTab() {
+export function UpdatesTab({ active }: { active: boolean }) {
   const {
     settingsLoading,
     isConfigured,
@@ -24,7 +24,7 @@ export function UpdatesTab() {
     status,
     checkForUpdates,
     acceptUpdates,
-  } = useUpdates();
+  } = useUpdates(active);
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
@@ -36,7 +36,7 @@ export function UpdatesTab() {
             <Bold>Incoming Updates</Bold>
           </Text>
           <Button onClick={checkForUpdates} disabled={checking || importing} secondary>
-            {checking ? "Checking…" : "Check for Updates"}
+            {checking ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
 

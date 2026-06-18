@@ -1,4 +1,4 @@
-import { parseDtcg, ParsedToken } from "@common/dtcg";
+import { parseDtcg, ParsedToken } from "./dtcg";
 
 export interface DiffItem {
   path: string[];

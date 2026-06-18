@@ -1,1 +1,8 @@
 @import "tailwindcss";
+@source not "../test-kit";
+
+/* Make tab content scroll while keeping the tab bar fixed */
+.flex.h-screen > div:last-child {
+  flex: 1;
+  overflow-y: auto;
+}

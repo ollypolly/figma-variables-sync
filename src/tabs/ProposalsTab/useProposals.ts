@@ -20,7 +20,7 @@ interface CheckResult {
   proposals: Proposal[];
 }
 
-export function useProposals() {
+export function useProposals(active: boolean) {
   const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
   const github = useGitHub(settings);
 
@@ -86,10 +86,10 @@ export function useProposals() {
   );
 
   useEffect(() => {
-    if (!settingsLoading && isConfigured) {
+    if (!settingsLoading && isConfigured && active) {
       check.execute();
     }
-  }, [settingsLoading]);
+  }, [settingsLoading, active]);
 
   const status = submit.error
     ? { success: false, text: submit.error }

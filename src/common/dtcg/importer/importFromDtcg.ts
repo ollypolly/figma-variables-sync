@@ -64,13 +64,27 @@ export async function importFromDtcg(
     const neededModeNames = Array.from(neededModes);
     const existingModes = collection.modes;
 
+    let hitModeLimit = false;
     for (let i = 0; i < neededModeNames.length; i++) {
       const modeName = neededModeNames[i];
       if (i < existingModes.length) {
         collection.renameMode(existingModes[i].modeId, modeName);
       } else {
-        collection.addMode(modeName);
+        try {
+          collection.addMode(modeName);
+        } catch (e: any) {
+          console.warn(`Could not add mode "${modeName}":`, e);
+          hitModeLimit = true;
+          break; // Stop adding more modes since the plan limit is reached
+        }
       }
+    }
+
+    if (hitModeLimit && typeof figmaInstance.notify === "function") {
+      figmaInstance.notify(
+        "Figma plan limit: Only the default mode was imported. Upgrade your Figma plan to import multiple modes.",
+        { timeout: 6000 }
+      );
     }
 
     // Refresh collection references after mode adjustments
@@ -93,6 +107,9 @@ export async function importFromDtcg(
 
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
+        if (targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
+          variable.scopes = ["WIDTH_HEIGHT"];
+        }
       }
 
       pathToVariableIdMap.set(dotPath, variable.id);

@@ -16,7 +16,7 @@ import { ProposalForm } from "./ProposalForm";
 import { ProposalList } from "./ProposalList";
 import { useProposals } from "./useProposals";
 
-export function ProposalsTab() {
+export function ProposalsTab({ active }: { active: boolean }) {
   const {
     settingsLoading,
     isConfigured,
@@ -29,7 +29,7 @@ export function ProposalsTab() {
     status,
     checkForChanges,
     submitProposal,
-  } = useProposals();
+  } = useProposals(active);
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
@@ -41,7 +41,7 @@ export function ProposalsTab() {
             <Bold>Outgoing Changes</Bold>
           </Text>
           <Button onClick={checkForChanges} disabled={checking || submitting} secondary>
-            {checking ? "Checking…" : "Check Changes"}
+            {checking ? "Refreshing…" : "Refresh"}
           </Button>
         </div>
 

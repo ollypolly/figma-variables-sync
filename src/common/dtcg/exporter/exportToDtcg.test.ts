@@ -102,10 +102,10 @@ describe("exportToDtcg", () => {
     expect(result.Tokens.colors.primary.$value).toBe("#ffffff");
     expect(result.Tokens.colors.primary.$modes.Dark).toBe("#000000");
 
-    // Assert surface color reference alias
+    // Assert surface color reference alias (optimized: no override since it matches the default)
     expect(result.Tokens.colors.surface.$type).toBe("color");
     expect(result.Tokens.colors.surface.$value).toBe("{Tokens.colors.primary}");
-    expect(result.Tokens.colors.surface.$modes.Dark).toBe("{Tokens.colors.primary}");
+    expect(result.Tokens.colors.surface.$modes).toBeUndefined();
 
     // Assert width float dimension
     expect(result.Tokens.sizes.width.$type).toBe("number");

@@ -139,4 +139,57 @@ describe("importFromDtcg", () => {
     expect(widthVar.valuesByMode[modeIds[0]]).toBe(16);
     expect(widthVar.valuesByMode[modeIds[1]]).toBe(24);
   });
+
+  it("should handle Figma Starter plan limits gracefully by falling back to a single mode if addMode throws", async () => {
+    const { figmaMock } = createMockFigma();
+    
+    let notifiedMsg = "";
+    figmaMock.notify = (msg: string) => {
+      notifiedMsg = msg;
+    };
+
+    const originalCreateCollection = figmaMock.variables.createVariableCollection;
+    figmaMock.variables.createVariableCollection = (name: string) => {
+      const col = originalCreateCollection.call(figmaMock.variables, name);
+      col.addMode = () => {
+        throw new Error("addMode: Limited to 1 modes only");
+      };
+      return col;
+    };
+
+    const dtcgJson = {
+      "$modes": {
+        "Light": {},
+        "Dark": { "$fallback": "Light" }
+      },
+      "Tokens": {
+        "colors": {
+          "primary": {
+            "$type": "color",
+            "$value": "#ffffff",
+            "$modes": {
+              "Dark": "#000000"
+            }
+          }
+        }
+      }
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const collections = figmaMock.variables.getLocalVariableCollections();
+    const variables = figmaMock.variables.getLocalVariables();
+
+    expect(collections.length).toBe(1);
+    expect(collections[0].modes.map((m: any) => m.name)).toEqual(["Light"]);
+
+    expect(variables.length).toBe(1);
+    const primaryVar = variables[0];
+    expect(primaryVar.name).toBe("colors/primary");
+
+    const modeId = collections[0].modes[0].modeId;
+    expect(primaryVar.valuesByMode[modeId]).toEqual({ r: 1, g: 1, b: 1, a: 1 });
+
+    expect(notifiedMsg).toContain("Figma plan limit: Only the default mode was imported");
+  });
 });
