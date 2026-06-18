@@ -1,29 +1,14 @@
 {
+  "extends": "@create-figma-plugin/tsconfig",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ES2022",
-    "moduleResolution": "Node",
-    "ignoreDeprecations": "6.0",
-    "useDefineForClassFields": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "isolatedModules": false,
-    "noEmit": true,
-    "jsx": "react-jsx",
-    "typeRoots": ["./node_modules/@types", "./node_modules/@figma"],
+    "typeRoots": ["node_modules/@figma", "node_modules/@types"],
     "types": ["plugin-typings"],
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0",
     "paths": {
       "@common/*": ["./src/common/*"],
-      "@ui/*": ["./src/ui/*"],
-      "@plugin/*": ["./src/plugin/*"]
+      "@services/*": ["./src/services/*"]
     }
   },
-  "include": [
-    "src/**/*.d.ts",
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }
