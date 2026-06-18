@@ -83,50 +83,95 @@ These flows carry over 1:1 — only the component layer changes.
 
 ## Migration plan
 
-### Step 1: Scaffold with create-figma-plugin
+### Step 1: Scaffold with create-figma-plugin — DONE
 
-Initialize the project using the toolkit's CLI. This gives us:
-- `package.json` with Figma plugin metadata fields
-- esbuild-based build via `build-figma-plugin`
-- Preact + `@create-figma-plugin/ui` ready to use
+Merged three `create-figma-plugin` templates (preact-rectangles, preact-resizable, preact-tailwindcss) into the existing repo on branch `feature/phase-1.5-replatform`. This gives us:
+- `package.json` with `figma-plugin` metadata fields (id `1222852692367737510`)
+- esbuild-based build via `build-figma-plugin` (patched for Node v26 — see `patches/`)
+- Preact + `@create-figma-plugin/ui` for components
+- Tailwind v4 with `darkMode: ['class', '.figma-dark']` for auto Figma dark theme
+- `useWindowResize` for resizable plugin window
 - Typed messaging via `@create-figma-plugin/utilities`
 
-### Step 2: Port the DTCG engine
+Build pipeline: `@tailwindcss/cli` → `build-figma-plugin` → outputs `build/main.js` + `build/ui.js`
 
-Copy `src/common/dtcg/` wholesale. These files have no framework dependency. Run existing tests with vitest to confirm they pass in the new project.
+### Step 2: Port the DTCG engine — DONE
 
-### Step 3: Port GitHubService
+`src/common/dtcg/` copied in place (no changes needed). All 14 tests pass via vitest.
 
-Move `GitHubService` class and config types. Add `@octokit/core` as a dependency.
+### Step 3: Port GitHubService — DONE
 
-### Step 4: Wire up the main thread
+Moved from `src/ui/services/github.ts` → `src/services/github.ts`. No code changes — it's pure Octokit with no framework dependency. Diff utility moved from `src/ui/utils/diff.ts` → `src/common/diff.ts`.
 
-Build `plugin.ts` properly this time:
-- Export variables via `exportToDtcg()`
-- Import variables via `importFromDtcg()`
-- Persist settings via `figma.clientStorage`
-- Communicate with UI via `emit`/`on`
+### Step 4: Wire up the main thread — DONE
 
-### Step 5: Rebuild the UI
+`src/main.ts` now handles:
+- `REQUEST_EXPORT` → calls `exportToDtcg()` with `figma.variables` data → emits `EXPORT_RESULT`
+- `REQUEST_IMPORT` → calls `importFromDtcg()` → emits `IMPORT_RESULT`
+- `LOAD_SETTINGS` / `SAVE_SETTINGS` → reads/writes `figma.clientStorage`
+- `RESIZE_WINDOW` → calls `figma.ui.resize()`
 
-Recreate the three tabs using `@create-figma-plugin/ui` components. The business logic from the hooks ports with minimal changes (Preact hooks are API-compatible). The component layer is new but the UX patterns are established.
+All event types are defined in `src/types.ts` using `EventHandler` interface pattern.
 
-### Step 6: Integration test
+### Step 5: Rebuild the UI — DONE
 
-Load the plugin in Figma, connect to a test repo, verify the full loop:
-1. Create variables in Figma → export → PR opens correctly
-2. Merge a change in the repo → plugin detects diff → accept updates variables
+Three tabs rebuilt with `@create-figma-plugin/ui` components + Preact hooks + Tailwind:
 
-## Dependencies (new project)
+- **Settings tab** (`src/tabs/SettingsTab.tsx` + `useSettings.ts`): PAT, owner, repo, filePath, branch fields. Test Connection + Save buttons. Loads/saves via `emit`/`on` to main thread's `figma.clientStorage`.
+- **Updates tab** (`src/tabs/UpdatesTab.tsx` + `useUpdates.ts`): Fetches remote DTCG from GitHub, requests local export from main thread, runs `computeDiff()`, shows diff list. Accept button triggers `REQUEST_IMPORT`.
+- **Proposals tab** (`src/tabs/ProposalsTab.tsx` + `useProposals.ts`): Same fetch+diff in "proposals" mode. Description field + submit creates branch → commit → PR via `GitHubService`. Shows existing PRs.
+- **Shared** (`src/components/DiffList.tsx`): Renders diff items for both tabs.
+
+### Step 6: Integration test — deferred to Phase 2
+
+Manual Figma integration testing moved to Phase 2 alongside test infrastructure setup.
+
+## Current file structure
+
+```
+src/
+  main.ts              — plugin main thread (Figma API + settings)
+  ui.tsx               — UI entry point (Preact, tab routing)
+  types.ts             — typed event definitions (EventHandler interfaces)
+  css.d.ts             — declaration for !*.css imports
+  input.css            — Tailwind entry point
+  tabs/
+    SettingsTab.tsx     — Settings tab component
+    useSettings.ts     — Settings form state + save/load/test connection
+    UpdatesTab.tsx     — Updates tab component
+    useUpdates.ts      — Fetch remote, diff, accept updates
+    ProposalsTab.tsx   — Proposals tab component
+    useProposals.ts    — Fetch remote, diff, create PR
+  components/
+    DiffList.tsx       — Shared diff item renderer
+  common/
+    diff.ts            — computeDiff() — framework-agnostic
+    dtcg/              — DTCG engine (exporter, importer, parser, color, utils)
+  services/
+    github.ts          — GitHubService class (Octokit)
+patches/
+  @create-figma-plugin+build+4.0.3.patch — skips typed-css-modules on Node v26
+```
+
+## Known issues
+
+See `ISSUES.md` — resize behavior is buggy.
+
+## Dependencies
 
 ### Runtime
-- `@create-figma-plugin/utilities` — messaging, settings storage
-- `@create-figma-plugin/ui` — Preact UI components
-- `preact` — UI framework (pulled in by the toolkit)
-- `@octokit/core` — GitHub API client
+- `@create-figma-plugin/ui` ^4.0.3 — Preact UI components
+- `@create-figma-plugin/utilities` ^4.0.3 — messaging, settings
+- `preact` >=10 — UI framework
+- `@octokit/core` ^7.0.6 — GitHub API client
 
 ### Dev
-- `@create-figma-plugin/build` — esbuild-based build
-- `@figma/plugin-typings` — Figma API types
-- `typescript`
-- `vitest` — tests for the DTCG engine
+- `@create-figma-plugin/build` ^4.0.3 — esbuild-based build (patched)
+- `@create-figma-plugin/tsconfig` ^4.0.3 — base tsconfig
+- `@figma/plugin-typings` ^1.129.0 — Figma API types
+- `@tailwindcss/cli` >=4 — Tailwind CSS compiler
+- `tailwindcss` >=4 — Tailwind core
+- `concurrently` >=9 — parallel watch scripts
+- `patch-package` ^8.0.1 — applies build patch on install
+- `typescript` >=5
+- `vitest` ^4.1.9 — tests for DTCG engine

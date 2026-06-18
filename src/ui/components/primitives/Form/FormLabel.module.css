@@ -1,8 +1,0 @@
-.label {
-  font-size: 10px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--figma-color-text-secondary);
-  user-select: none;
-}

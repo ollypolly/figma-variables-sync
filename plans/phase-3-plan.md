@@ -56,6 +56,13 @@ Before building the visual layers, we will establish integration tests for the c
     *   No duplicate API requests are triggered when multiple components consume the context.
     *   Alert flags (`remoteUpdatesExist`) are correctly toggled.
 
+### 5. Multi-File Token Support
+Currently the plugin syncs a single `filePath` to one JSON file. In practice, DTCG token repos often split tokens across multiple files — by category (`colors.json`, `typography.json`, `spacing.json`), by theme/mode (`light.json`, `dark.json`), by brand, or by Figma collection. Need to research:
+*   What does a typical Figma variables export look like when mapped to files? (collections × modes → files?)
+*   What does the average DTCG token spec setup look like in the wild? (single file vs. directory tree)
+*   How do popular tools (Style Dictionary, Tokens Studio) expect tokens to be organized?
+*   What changes are needed in the plugin to support syncing a directory of token files rather than a single file path?
+
 ---
 
 ## 📈 Implementation Order

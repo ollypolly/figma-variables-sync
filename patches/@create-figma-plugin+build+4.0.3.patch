@@ -1,0 +1,15 @@
+diff --git a/node_modules/@create-figma-plugin/build/lib/utilities/build-css-modules-typings-async.js b/node_modules/@create-figma-plugin/build/lib/utilities/build-css-modules-typings-async.js
+index ce9f6d0..51cd8b2 100644
+--- a/node_modules/@create-figma-plugin/build/lib/utilities/build-css-modules-typings-async.js
++++ b/node_modules/@create-figma-plugin/build/lib/utilities/build-css-modules-typings-async.js
+@@ -7,6 +7,10 @@ import { findUp } from 'find-up';
+ import { globby } from 'globby';
+ const __dirname = dirname(fileURLToPath(import.meta.url));
+ export async function buildCssModulesTypingsAsync(esmModule) {
++    const cssModuleFiles = await globby(join(constants.build.srcDirectoryName, '**', '*.module.css'));
++    if (cssModuleFiles.length === 0) {
++        return;
++    }
+     const tcm = await findUp(join('node_modules', 'typed-css-modules', 'lib', 'cli.js'), { cwd: __dirname });
+     if (typeof tcm === 'undefined') {
+         throw new Error('Cannot find `tcm`');

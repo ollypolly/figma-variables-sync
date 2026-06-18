@@ -1,77 +1,82 @@
-# Phase 2 Plan: Design System Integration & Dogfooding
+# Phase 2 Plan: Portable QA Test Kit
 
-This document outlines the architectural plan and checkpoints for integrating a localized design system (Storybook + Style Dictionary) into the Figma Variables Sync plugin repository, enabling us to dogfood the plugin with its own design variables.
+## Prerequisites
 
----
+Phase 1.5 (replatform) is complete. The plugin is rebuilt on `create-figma-plugin` (Preact + esbuild + Tailwind) with all three UI tabs (Settings, Updates, Proposals) wired up. Integration testing in Figma was deferred from phase 1.5 step 6 to this phase (Stage 2.3).
 
-## 🎯 Goal
-Create a localized design system for the plugin's UI primitives. We will define the variables inside Figma, use a Figma MCP to automate variable structure creation, export them using this sync plugin, compile them using **Style Dictionary** into native CSS variables, and render/test the components using **Storybook**.
+## Goal
 
----
+Create a small, self-contained design system test that exercises the full plugin sync loop. Instead of dogfooding with the plugin's own UI (which is now built with `@create-figma-plugin/ui` rather than custom primitives), we provide a portable test fixture that anyone can use to QA the plugin end-to-end.
 
-## 🏗️ Architecture & Dogfooding Workflow
+## What's in the test kit
 
-The system is a closed loop of token generation, synchronization, and component consumption:
+### 1. Token set (`test-kit/tokens/design-tokens.json`)
 
-```
-                  ┌──────────────────────┐
-                  │   Figma UI (Canvas)  │
-                  └──────────┬───────────┘
-                             ▲ (Automated via Figma MCP)
-                             │
-                  ┌──────────┴───────────┐
-                  │ Figma Local Variables│
-                  └──────────┬───────────┘
-                             │
-            Export           ▼ (via Sync Plugin Proposals)
-    ┌─────────────────────────────────────────────────┐
-    │              GitHub Repository                  │
-    │                                                 │
-    │   ┌─────────────────┐     ┌─────────────────┐   │
-    │   │  Tokens JSON    │────►│Style Dictionary │   │
-    │   │  (W3C DTCG Format)    │ (Token compiler)│   │
-    │   └─────────────────┘     └────────┬────────┘   │
-    │                                    │            │
-    │                                    ▼            │
-    │   ┌─────────────────┐     ┌─────────────────┐   │
-    │   │   Storybook     │◄────│ CSS Variables   │   │
-    │   │ (Visual Preview)│     │ (Plugin Styles) │   │
-    │   └─────────────────┘     └─────────────────┘   │
-    └─────────────────────────────────────────────────┘
-```
+A minimal DTCG token file with enough variety to exercise every token type the plugin supports:
 
----
+- **Colors**: `brand/primary`, `brand/secondary`, `surface/background`, `surface/foreground`
+- **Spacing**: `spacing/small`, `spacing/medium`, `spacing/large`
+- **Border radius**: `radius/small`, `radius/full`
+- **Typography** (if supported): `font/size/body`, `font/weight/bold`
+- **Modes**: Light and Dark mode overrides for colors
 
-## 🛠️ Architectural Stages & Checkpoints
+This token set is the source of truth — it lives in a test GitHub repo and maps 1:1 to the Figma variables in the test file.
 
-To ensure high-quality and collaborative execution, we will halt and check in at each of the following architectural stages. **We will not proceed to the next stage until the current checkpoint is approved by the user.**
+### 2. Test Figma file
 
-### 1. Stage 2.1: Style Dictionary Setup & Token Spec
-*   **Tasks**:
-    *   Install and configure **Style Dictionary** (v4).
-    *   Set up a `sd.config.js` in the project root.
-    *   Define token folder structure (e.g. `tokens/design-tokens.json` mapped to W3C format).
-    *   Configure Style Dictionary to compile the W3C JSON into native CSS variables (e.g. `src/ui/styles/variables.css`).
-*   🛑 **Checkpoint 2.1**: Present the Style Dictionary configuration, directory structures, and sample output CSS variable mappings to the user for review and improvement.
+A portable `.fig` file (or a community-publishable file) containing:
 
-### 2. Stage 2.2: Component Migration & Storybook Setup
-*   **Tasks**:
-    *   Install and configure **Storybook** (latest React-Vite setup).
-    *   Refactor current primitives (`Button`, `Flex`, `Text`, `Layout`, `Tabs`, `Form`) to consume the compiled Style Dictionary CSS variables.
-    *   Write Storybook stories for each of these primitive components.
-*   🛑 **Checkpoint 2.2**: Present the Storybook preview configuration, component directory bindings, and story layouts to the user.
+- A **variable collection** matching the token set above, with Light/Dark modes
+- A **Button component** that consumes those variables:
+  - Background → `brand/primary`
+  - Text color → `surface/foreground`
+  - Padding → `spacing/medium`
+  - Border radius → `radius/small`
+  - Hover state variant using `brand/secondary`
+- A **test page** showing the button in both Light and Dark modes, so the tester can visually confirm variables are applied
 
-### 3. Stage 2.3: Figma Variables & Components Creation via MCP
-*   **Tasks**:
-    *   Design the collection structure for the plugin's own theme (colors, spacing scales, border-radii).
-    *   Use the **Figma MCP** to construct the collections and variables natively inside a Figma draft file.
-    *   Create corresponding Figma component frames (Buttons, Layout blocks, Text instances) using the MCP, ensuring they consume and are styled by these native variables.
-    *   Align the React UI primitive structures and properties to these Figma components, styling them using the exported CSS variables compiled via Style Dictionary.
-*   🛑 **Checkpoint 2.3**: Present the created Figma variables, matching Figma components, and the React primitive mappings to the user before exporting/dogfooding.
+The file is intentionally minimal — just enough to validate the sync round-trip without being a real design system.
 
-### 4. Stage 2.4: End-to-End Dogfooding Validation
-*   **Tasks**:
-    *   Open our plugin inside the draft file.
-    *   Use the **Proposals** tab to export the plugin's design system variables to the repository.
-    *   Verify that Style Dictionary compiles them correctly, Storybook renders them, and the plugin's own UI automatically styles itself using its own design tokens!
-*   🛑 **Checkpoint 2.4**: Final review of the dogfooding cycle, verification of compiler outputs, and staging for main merge.
+### 3. QA script
+
+A step-by-step checklist for testing the plugin:
+
+1. **Import the test file** into your Figma drafts
+2. **Install the plugin** in dev mode
+3. **Configure settings**: point at the test repo + token path
+4. **Test Updates flow**: tokens already exist in the repo → plugin should show "no changes" (everything in sync)
+5. **Modify a variable in Figma** (e.g., change `brand/primary` to a new color)
+6. **Test Proposals flow**: plugin detects the diff → create a PR → verify PR contents on GitHub
+7. **Modify the token file on GitHub** (e.g., change `spacing/medium` from `16px` to `20px`)
+8. **Test Updates flow**: plugin detects incoming change → accept → verify Figma variable updated
+9. **Verify button component** visually reflects the new spacing
+
+## How it ships
+
+- The token set lives in a dedicated test repo (e.g., `ollypolly/figma-sync-test-tokens`)
+- The Figma file is shared via a Figma community link or included as a downloadable `.fig` in the repo
+- The QA script lives in `test-kit/QA.md`
+- Contributors and beta testers can clone the test repo, import the Figma file, and run through the checklist in under 10 minutes
+
+## Stages
+
+### Stage 2.1: Create the token set
+- Write the DTCG JSON with all token types and Light/Dark modes
+- Push to the test repo
+- Verify it round-trips through the DTCG parser (unit test)
+
+### Stage 2.2: Build the Figma test file
+- Create variables matching the token set
+- Build the button component consuming those variables
+- Set up Light/Dark mode variants on a test page
+
+### Stage 2.3: End-to-end QA (includes deferred phase 1.5 integration test)
+- Load the plugin in Figma dev mode, verify build output works
+- Run through the full QA script
+- Document any issues found
+- Write up the QA checklist as `test-kit/QA.md`
+
+### Stage 2.4: Package and publish
+- Publish the Figma file (community or shareable link)
+- Add setup instructions to the plugin README
+- Tag a test-kit release in the test repo

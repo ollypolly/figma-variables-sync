@@ -1,0 +1,1 @@
+export { ProposalsTab } from "./ProposalsTab";
