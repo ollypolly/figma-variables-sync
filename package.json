@@ -37,6 +37,7 @@
     "@create-figma-plugin/build": "^4.0.3",
     "@create-figma-plugin/tsconfig": "^4.0.3",
     "@figma/plugin-typings": "^1.129.0",
+    "@parcel/watcher": "^2.5.6",
     "@tailwindcss/cli": ">=4",
     "concurrently": ">=9",
     "patch-package": "^8.0.1",
