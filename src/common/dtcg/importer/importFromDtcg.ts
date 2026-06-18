@@ -107,6 +107,9 @@ export async function importFromDtcg(
 
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
+        if (targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
+          variable.scopes = ["WIDTH_HEIGHT"];
+        }
       }
 
       pathToVariableIdMap.set(dotPath, variable.id);

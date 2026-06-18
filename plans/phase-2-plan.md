@@ -76,11 +76,17 @@ A step-by-step checklist for testing the plugin:
 
 ### Stage 2.3: End-to-end QA [IN PROGRESS]
 - [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
-- [ ] Run through the full QA script
 - [x] Write up the step-by-step QA checklist as [QA.md](file:///Users/olly/dev/figma-variables-sync/test-kit/QA.md)
+- [x] Add Style Dictionary token build + HTML preview page (`test-kit/build-tokens.js`, `test-kit/preview.html`)
+- [x] Fix Tailwind watcher picking up test-kit files (`@source not` directive)
+- [x] Fix exporter dimension/number round-trip: FLOAT variables with dimension scopes now export as `$type: "dimension"` with `px` suffix; importer sets `WIDTH_HEIGHT` scope on new dimension-type variables
+- [ ] **BLOCKED**: Updates tab still shows 11 updates when Figma vars and Git tokens should be in sync
+- [ ] Write a snapshot test that: (1) takes the actual Figma variable state (pulled via MCP — collection, name, type, scopes, values), (2) feeds it through `exportToDtcg`, (3) compares the exported DTCG against the Git token file (`design-tokens-single-mode.json`) to pinpoint every mismatch
+- [ ] Fix the remaining round-trip mismatches identified by the snapshot test
+- [ ] Run through the full QA script
 
 ### Stage 2.4: Package and publish [IN PROGRESS]
-- [ ] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
+- [x] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
 - [x] Add setup instructions to the plugin [README.md](file:///Users/olly/dev/figma-variables-sync/README.md)
 - [ ] Tag a release in the repository
 

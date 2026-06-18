@@ -196,29 +196,29 @@ describe("DTCG Roundtrip integration test", () => {
     expect(tokens.surface.foreground.$value).toBe("#0f172a");
     expect(tokens.surface.foreground.$modes.Dark).toBe("#f8fafc");
 
-    // Spacing: spacing/small (which is exported as type 'number' and value as number)
-    expect(tokens.spacing.small.$type).toBe("number");
-    expect(tokens.spacing.small.$value).toBe(8);
+    // Spacing: spacing/small (dimension type round-trips with px suffix)
+    expect(tokens.spacing.small.$type).toBe("dimension");
+    expect(tokens.spacing.small.$value).toBe("8px");
 
     // Spacing: spacing/medium
-    expect(tokens.spacing.medium.$type).toBe("number");
-    expect(tokens.spacing.medium.$value).toBe(16);
+    expect(tokens.spacing.medium.$type).toBe("dimension");
+    expect(tokens.spacing.medium.$value).toBe("16px");
 
     // Spacing: spacing/large
-    expect(tokens.spacing.large.$type).toBe("number");
-    expect(tokens.spacing.large.$value).toBe(24);
+    expect(tokens.spacing.large.$type).toBe("dimension");
+    expect(tokens.spacing.large.$value).toBe("24px");
 
     // Radius: radius/small
-    expect(tokens.radius.small.$type).toBe("number");
-    expect(tokens.radius.small.$value).toBe(4);
+    expect(tokens.radius.small.$type).toBe("dimension");
+    expect(tokens.radius.small.$value).toBe("4px");
 
     // Radius: radius/full
-    expect(tokens.radius.full.$type).toBe("number");
-    expect(tokens.radius.full.$value).toBe(9999);
+    expect(tokens.radius.full.$type).toBe("dimension");
+    expect(tokens.radius.full.$value).toBe("9999px");
 
     // Font size: font/size/body
-    expect(tokens.font.size.body.$type).toBe("number");
-    expect(tokens.font.size.body.$value).toBe(16);
+    expect(tokens.font.size.body.$type).toBe("dimension");
+    expect(tokens.font.size.body.$value).toBe("16px");
 
     // Font weight: font/weight/bold
     expect(tokens.font.weight.bold.$type).toBe("string");
