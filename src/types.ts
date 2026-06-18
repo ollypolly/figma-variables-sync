@@ -63,3 +63,9 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   filePath: "tokens/design-tokens.json",
   branch: "main",
 };
+
+export function trimSettings(settings: PluginSettings): PluginSettings {
+  return Object.fromEntries(
+    Object.entries(settings).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
+  ) as PluginSettings;
+}

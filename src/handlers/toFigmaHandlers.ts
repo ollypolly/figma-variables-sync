@@ -1,12 +1,13 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { importFromDtcg } from "@common/dtcg";
 
-import type {
-  ImportResultHandler,
-  RequestImportHandler,
-  ResizeWindowHandler,
-  SaveSettingsHandler,
-  SettingsSavedHandler,
+import {
+  trimSettings,
+  type ImportResultHandler,
+  type RequestImportHandler,
+  type ResizeWindowHandler,
+  type SaveSettingsHandler,
+  type SettingsSavedHandler,
 } from "../types";
 
 const SETTINGS_KEY = "figma-variables-sync-settings";
@@ -23,7 +24,7 @@ export function registerToFigmaHandlers() {
   });
 
   on<SaveSettingsHandler>("SAVE_SETTINGS", async function (settings) {
-    await figma.clientStorage.setAsync(SETTINGS_KEY, settings);
+    await figma.clientStorage.setAsync(SETTINGS_KEY, trimSettings(settings));
     emit<SettingsSavedHandler>("SETTINGS_SAVED");
   });
 

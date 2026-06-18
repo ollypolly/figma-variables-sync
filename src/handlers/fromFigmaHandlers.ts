@@ -3,6 +3,7 @@ import { exportToDtcg } from "@common/dtcg";
 
 import {
   DEFAULT_SETTINGS,
+  trimSettings,
   type ExportResultHandler,
   type LoadSettingsHandler,
   type PluginSettings,
@@ -22,7 +23,7 @@ export function registerFromFigmaHandlers() {
 
   on<LoadSettingsHandler>("LOAD_SETTINGS", async function () {
     const stored = await figma.clientStorage.getAsync(SETTINGS_KEY);
-    const settings: PluginSettings = { ...DEFAULT_SETTINGS, ...stored };
+    const settings = trimSettings({ ...DEFAULT_SETTINGS, ...stored });
     emit<SettingsLoadedHandler>("SETTINGS_LOADED", settings);
   });
 }
