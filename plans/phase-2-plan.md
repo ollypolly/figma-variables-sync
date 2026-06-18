@@ -72,6 +72,7 @@ A step-by-step checklist for testing the plugin:
 - [ ] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
 - [ ] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
 - [ ] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
+- [ ] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints)
 
 ### Stage 2.3: End-to-end QA [IN PROGRESS]
 - [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
