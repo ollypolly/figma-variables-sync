@@ -93,10 +93,39 @@ Write integration tests that mock the GitHub API and Figma plugin API to exercis
 - [ ] **Settings edge cases**: test `trimSettings` on load/save, test 404 error message when file missing, test empty repo (no file yet → proposals show all as added)
 - [ ] **Export round-trip**: expand snapshot test to cover multi-mode tokens (Light/Dark), alias references, and edge cases (zero values, long floats)
 
-### Stage 2.5: Package and publish [TODO]
+#### Implementation notes (from code exploration)
+
+**Test runner:** Vitest (`vitest run`). No `vitest.config.ts` — config inferred from `tsconfig.json` path aliases. Must run tests from the user's terminal (Claude's shell has Node v26 which causes rolldown native binding errors).
+
+**Existing test files:**
+- `src/common/dtcg/roundtrip.test.ts` — imports → exports → asserts equivalence, has a reusable `createMockFigma()` that stubs `figma.variables.*`
+- `src/common/dtcg/snapshot.test.ts` — loads real Figma snapshot fixture + token file, asserts zero diffs
+- `src/common/dtcg/importer/importFromDtcg.test.ts`, `exporter/exportToDtcg.test.ts`, `color/parseColor.test.ts`, `color/figmaColorToHex.test.ts`, `utils/sanitizeName.test.ts`, `utils/getVariablePath.test.ts`
+
+**New test files to create:**
+1. `src/common/diff.test.ts` — unit tests for `computeDiff(figmaJson, gitJson, mode)`. Pure function, no mocks needed — just construct DTCG JSON strings and assert `DiffItem[]` output. Test: matching tokens → empty diff, modified values → "modified" items, added/deleted tokens, direction flip between "proposals" and "updates" modes, multi-mode tokens, empty Git JSON (the 404 bug scenario).
+2. `src/services/github.test.ts` — mock `Octokit` via `vi.mock("@octokit/core")`. Test each method: `getFile` (success, 404→null, directory error), `createBranch` (calls getLatestCommitSha then POST refs), `updateFile` (base64 encodes content), `createPullRequest` (returns number+url), `listPullRequests` (maps merged_at to "merged" state), `verifyConnection` (true/false).
+3. `src/types.test.ts` — test `trimSettings`: trims whitespace from all string fields, preserves non-string fields, round-trips with DEFAULT_SETTINGS.
+4. Expand `src/common/dtcg/snapshot.test.ts` — add multi-mode round-trip using `test-kit/tokens/design-tokens.json` (Light/Dark), zero values (`0px`), long floats.
+
+**Key interfaces for mocking:**
+- `GitHubService` (`src/services/github.ts`): wraps `Octokit`, constructor takes PAT string. Methods take `Omit<GitHubConfig, "pat">` config.
+- `GitHubConfig` (`src/services/github.ts`): `{ pat, owner, repo, filePath, branch }`
+- `PluginSettings` (`src/types.ts`): `{ pat, owner, repo, filePath, branch }`
+- `trimSettings` (`src/types.ts`): pure function, `Object.fromEntries` with `.trim()` on string values
+- `computeDiff` (`src/common/diff.ts`): pure function, takes two JSON strings + mode, returns `DiffItem[]`
+- `createMockFigma()` in `roundtrip.test.ts`: stubs `figma.variables.{getLocalVariableCollections, getLocalVariables, getVariableCollectionById, getVariableById, createVariableCollection, createVariable}`
+- `DiffItem` (`src/common/diff.ts`): `{ path: string[], dotPath: string, type: "added"|"modified"|"deleted", figmaVal: string, gitVal: string }`
+
+**Test fixture files:**
+- `test-kit/tokens/design-tokens.json` — multi-mode (Light/Dark) with colors, spacing, radius, font
+- `test-kit/tokens/design-tokens-single-mode.json` — single "Value" mode variant
+- `test-kit/figma/figma-variable-snapshot.json` — real Figma variable dump from MCP
+
+### Stage 2.5: Merge to main [TODO]
 - [x] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
 - [x] Add setup instructions to the plugin [README.md](file:///Users/olly/dev/figma-variables-sync/README.md)
-- [ ] Tag a release in the repository
+- [ ] Merge `feature/phase-2-qa-test-kit` → `main`
 
 ---
 

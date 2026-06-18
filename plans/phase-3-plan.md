@@ -85,3 +85,19 @@ Two UX pain points around echo/duplicate diffs:
 3.  **Shared State Refactoring**: Wrap the app in the global sync status context and write integration tests verifying diff calculation and single-fetch guarantees.
 4.  **Default Landing & Sticky Tab**: Wire up and test tab restoration logic on initialization.
 5.  **Badging and Warning Banners**: Build the visual notifications for the tabs header and Proposals tab, backed by integration tests confirming warning visibility conditions.
+6.  **Release**: Version bump, GitHub tag/release, and Figma Community publish (see release process below).
+
+---
+
+## 🚀 Release Process (post-Phase 3)
+
+1. **Bump version** in `package.json` (currently `0.1.0`)
+2. **Build production bundle**: `npm run build` — produces `build/main.js` and `build/ui.js` (paths declared in `manifest.json`)
+3. **Verify locally**: open Figma Desktop → Plugins → Development → "Variables Sync" → run full QA checklist (`test-kit/QA.md`)
+4. **Merge to main** and tag: `git tag v0.x.0 && git push --tags`, create release via `gh release create`
+5. **Publish to Figma Community**:
+   - In Figma Desktop: Plugins → Development → "Variables Sync" → `…` menu → "Publish new release" (or "Publish" if first time)
+   - Fill in release notes, screenshots, and description
+   - Figma reviews the submission (usually a few hours to a couple of days)
+   - Plugin ID: `1222852692367737510` (registered in `manifest.json`)
+6. **Post-publish**: verify the plugin appears on the Figma Community page and can be installed by other users
