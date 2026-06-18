@@ -24,7 +24,12 @@ export function useUpdates() {
         filePath: settings.filePath,
         branch: settings.branch,
       });
-      const gitContent = fileData?.content ?? "{}";
+      if (!fileData) {
+        throw new Error(
+          `Token file not found at ${settings.filePath} on branch "${settings.branch}". Push the file to GitHub first.`
+        );
+      }
+      const gitContent = fileData.content;
       const figmaContent = await requestExport();
       const diffs = computeDiff(figmaContent, gitContent, "updates");
       return { diffs, gitContent };
