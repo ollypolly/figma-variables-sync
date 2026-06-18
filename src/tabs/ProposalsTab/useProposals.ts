@@ -128,7 +128,7 @@ export function useProposals() {
       await github.updateFile(
         config,
         description,
-        btoa(figmaJson),
+        figmaJson,
         fileData?.sha,
         branchName
       );

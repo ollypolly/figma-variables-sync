@@ -1,5 +1,18 @@
 import { Octokit } from "@octokit/core";
 
+function utf8ToBase64(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+function base64ToUtf8(base64: string): string {
+  const binary = atob(base64);
+  const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+  return new TextDecoder().decode(bytes);
+}
+
 export interface GitHubConfig {
   pat: string;
   owner: string;
@@ -35,7 +48,7 @@ export class GitHubService {
 
       const contentBase64 = response.data.content || "";
       const contentClean = contentBase64.replace(/\s/g, "");
-      const content = atob(contentClean);
+      const content = base64ToUtf8(contentClean);
 
       return {
         content,
@@ -74,7 +87,7 @@ export class GitHubService {
   async updateFile(
     config: Omit<GitHubConfig, "pat">,
     commitMessage: string,
-    contentBase64: string,
+    content: string,
     currentSha: string | undefined,
     branchName: string
   ): Promise<string> {
@@ -83,7 +96,7 @@ export class GitHubService {
       repo: config.repo,
       path: config.filePath,
       message: commitMessage,
-      content: contentBase64,
+      content: utf8ToBase64(content),
       sha: currentSha,
       branch: branchName,
     });
