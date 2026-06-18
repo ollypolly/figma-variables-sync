@@ -5,6 +5,7 @@ import {
   Container,
   IconCheck16,
   IconWarning16,
+  Link,
   Muted,
   Text,
   Textbox,
@@ -42,7 +43,16 @@ export function SettingsTab() {
       <VerticalSpace space="medium" />
 
       <Text>
-        <Muted>Personal Access Token</Muted>
+        <Muted>
+          Personal Access Token{" "}
+          <Link href="https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens" target="_blank">
+            (how to create one)
+          </Link>
+        </Muted>
+      </Text>
+      <VerticalSpace space="extraSmall" />
+      <Text>
+        <Muted>Needs Contents read/write and Pull requests read/write scopes.</Muted>
       </Text>
       <VerticalSpace space="extraSmall" />
       <Textbox
