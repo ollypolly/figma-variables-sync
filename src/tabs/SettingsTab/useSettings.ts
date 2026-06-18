@@ -1,6 +1,7 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
+import { useAsync } from "../../hooks/useAsync";
 import { useGitHub } from "../../hooks/useGitHub";
 import { usePluginSettings } from "../../hooks/usePluginSettings";
 import type {
@@ -14,8 +15,7 @@ export function useSettings() {
   const github = useGitHub(settings);
 
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [status, setStatus] = useState<{
+  const [saveStatus, setSaveStatus] = useState<{
     success: boolean;
     text: string;
   } | null>(null);
@@ -23,58 +23,54 @@ export function useSettings() {
   useEffect(() => {
     return on<SettingsSavedHandler>("SETTINGS_SAVED", () => {
       setSaving(false);
-      setStatus({ success: true, text: "Settings saved." });
+      setSaveStatus({ success: true, text: "Settings saved." });
     });
   }, []);
 
   const updateField = useCallback((key: keyof PluginSettings) => {
     return (value: string) => {
       setSettings((s) => ({ ...s, [key]: value }));
-      setStatus(null);
+      setSaveStatus(null);
     };
   }, []);
 
   const handleSave = useCallback(() => {
     setSaving(true);
-    setStatus(null);
+    setSaveStatus(null);
     emit<SaveSettingsHandler>("SAVE_SETTINGS", settings);
   }, [settings]);
 
-  const handleTestConnection = useCallback(async () => {
-    const { pat, owner, repo } = settings;
-    if (!pat || !owner || !repo) {
-      setStatus({ success: false, text: "PAT, owner, and repository are required." });
-      return;
-    }
+  const testConnection = useAsync<string>(
+    useCallback(async () => {
+      const { pat, owner, repo } = settings;
+      if (!pat || !owner || !repo) {
+        throw new Error("PAT, owner, and repository are required.");
+      }
+      if (!github) throw new Error("Not configured.");
 
-    if (!github) return;
-
-    setTesting(true);
-    setStatus(null);
-
-    try {
       const connected = await github.verifyConnection(owner, repo);
-      setStatus(
-        connected
-          ? { success: true, text: "Connected to GitHub." }
-          : { success: false, text: "Could not access repository. Check permissions." }
-      );
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : "Connection failed.";
-      setStatus({ success: false, text: message });
-    } finally {
-      setTesting(false);
-    }
-  }, [settings, github]);
+      if (!connected) {
+        throw new Error("Could not access repository. Check permissions.");
+      }
+      return "Connected to GitHub.";
+    }, [settings, github])
+  );
+
+  const status = saveStatus
+    ?? (testConnection.error
+      ? { success: false, text: testConnection.error }
+      : testConnection.data
+        ? { success: true, text: testConnection.data }
+        : null);
 
   return {
     settings,
     loading,
     saving,
-    testing,
+    testing: testConnection.loading,
     status,
     updateField,
     handleSave,
-    handleTestConnection,
+    handleTestConnection: testConnection.execute,
   };
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
+import { useAsync } from "../../hooks/useAsync";
 import { useGitHub } from "../../hooks/useGitHub";
 import { usePluginSettings } from "../../hooks/usePluginSettings";
 import { requestExport } from "@services/figmaMessages";
@@ -13,29 +14,21 @@ export interface Proposal {
   head_ref: string;
 }
 
+interface CheckResult {
+  diffs: DiffItem[];
+  figmaContent: string;
+  proposals: Proposal[];
+}
+
 export function useProposals() {
   const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
   const github = useGitHub(settings);
 
-  const [checking, setChecking] = useState(false);
-  const [diffItems, setDiffItems] = useState<DiffItem[]>([]);
-  const [figmaJson, setFigmaJson] = useState<string | null>(null);
-
-  const [proposals, setProposals] = useState<Proposal[]>([]);
   const [description, setDescription] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState<{
-    success: boolean;
-    text: string;
-  } | null>(null);
 
-  const checkForChanges = useCallback(async () => {
-    if (!isConfigured || !github) return;
-    setChecking(true);
-    setStatus(null);
-    setDiffItems([]);
-
-    try {
+  const check = useAsync<CheckResult>(
+    useCallback(async () => {
+      if (!github) throw new Error("Not configured.");
       const fileData = await github.getFile({
         owner: settings.owner,
         repo: settings.repo,
@@ -43,44 +36,23 @@ export function useProposals() {
         branch: settings.branch,
       });
       const gitContent = fileData?.content ?? "{}";
-
       const figmaContent = await requestExport();
-      setFigmaJson(figmaContent);
-
       const diffs = computeDiff(figmaContent, gitContent, "proposals");
-      setDiffItems(diffs);
-
-      const prList = await github.listPullRequests(
+      const proposals = await github.listPullRequests(
         settings.owner,
         settings.repo,
         settings.branch
       );
-      setProposals(prList);
-    } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Failed to check for changes.";
-      setStatus({ success: false, text: message });
-    } finally {
-      setChecking(false);
-    }
-  }, [settings, isConfigured, github]);
+      return { diffs, figmaContent, proposals };
+    }, [settings, github])
+  );
 
-  useEffect(() => {
-    if (!settingsLoading && isConfigured) {
-      checkForChanges();
-    }
-  }, [settingsLoading]);
+  const submit = useAsync<string>(
+    useCallback(async () => {
+      if (!check.data?.figmaContent || !description.trim() || !github) {
+        throw new Error("Please enter a description.");
+      }
 
-  const submitProposal = useCallback(async () => {
-    if (!figmaJson || !description.trim() || !github) {
-      setStatus({ success: false, text: "Please enter a description." });
-      return;
-    }
-
-    setSubmitting(true);
-    setStatus(null);
-
-    try {
       const config = {
         owner: settings.owner,
         repo: settings.repo,
@@ -95,7 +67,7 @@ export function useProposals() {
       await github.updateFile(
         config,
         description,
-        figmaJson,
+        check.data.figmaContent,
         fileData?.sha,
         branchName
       );
@@ -107,29 +79,37 @@ export function useProposals() {
         branchName
       );
 
-      setStatus({ success: true, text: `PR #${pr.number} created.` });
       setDescription("");
-      await checkForChanges();
-    } catch (e: unknown) {
-      const message =
-        e instanceof Error ? e.message : "Failed to create proposal.";
-      setStatus({ success: false, text: message });
-    } finally {
-      setSubmitting(false);
+      await check.execute();
+      return `PR #${pr.number} created.`;
+    }, [check.data, description, settings, github, check.execute])
+  );
+
+  useEffect(() => {
+    if (!settingsLoading && isConfigured) {
+      check.execute();
     }
-  }, [figmaJson, description, settings, github, checkForChanges]);
+  }, [settingsLoading]);
+
+  const status = submit.error
+    ? { success: false, text: submit.error }
+    : submit.data
+      ? { success: true, text: submit.data }
+      : check.error
+        ? { success: false, text: check.error }
+        : null;
 
   return {
     settingsLoading,
     isConfigured,
-    checking,
-    diffItems,
-    proposals,
+    checking: check.loading,
+    diffItems: check.data?.diffs ?? [],
+    proposals: check.data?.proposals ?? [],
     description,
     setDescription,
-    submitting,
+    submitting: submit.loading,
     status,
-    checkForChanges,
-    submitProposal,
+    checkForChanges: check.execute,
+    submitProposal: submit.execute,
   };
 }
