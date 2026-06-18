@@ -21,5 +21,23 @@ export function resolveDtcgValue(
     return parseColor(val);
   }
 
+  if (figmaType === "FLOAT") {
+    if (typeof val === "string") {
+      const parsed = parseFloat(val);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+    }
+    if (val && typeof val === "object" && typeof val.value === "number") {
+      return val.value;
+    }
+    if (val && typeof val === "object" && typeof val.value === "string") {
+      const parsed = parseFloat(val.value);
+      if (!isNaN(parsed)) {
+        return parsed;
+      }
+    }
+  }
+
   return val;
 }
