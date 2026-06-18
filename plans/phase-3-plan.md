@@ -28,7 +28,9 @@ Phase 3 introduces shared sync state and persistent storage access:
 
 1.  **Context-Aware Defaults**: Default the landing page to the **Proposals** view.
 2.  **State Persistence**: Store the last active tab in `figma.clientStorage` via message handlers on `UI_CHANNEL` / `PLUGIN_CHANNEL`.
-3.  **Proactive Sync Check**: On plugin load, execute a silent background fetch-and-diff. If incoming updates are found on Git that are missing locally in Figma, display tab notification badges and warning banners.
+3.  **Proactive Sync Check & Auto-Apply**: On plugin load, execute a silent background fetch-and-diff. If incoming updates are found on Git that are missing locally in Figma:
+    *   If there are **no unproposed local changes**, automatically apply the updates to Figma variables immediately.
+    *   If there **are unproposed local changes**, do not auto-apply. Display tab notification badges, show a warning banner, and prompt the designer for confirmation before applying.
 
 ---
 
@@ -100,7 +102,7 @@ Two UX pain points around echo/duplicate diffs:
 2.  **Storage Handlers**: Implement and test the message-passing storage logic via `figma.clientStorage` for `active_tab` values.
 3.  **Shared State Refactoring**: Wrap the app in the global sync status context and write integration tests verifying diff calculation and single-fetch guarantees.
 4.  **Default Landing & Sticky Tab**: Wire up and test tab restoration logic on initialization.
-5.  **Badging and Warning Banners**: Build the visual notifications for the tabs header and Proposals tab, backed by integration tests confirming warning visibility conditions.
+5.  **Badging, Warning Banners & Auto-Apply**: Build the visual notifications for the tabs header and Proposals tab, implement the auto-apply logic on open (silently applying if there are no unproposed local changes, otherwise asking first), backed by integration tests verifying warning visibility and auto-apply conditions.
 6.  **Release**: Version bump, GitHub tag/release, and Figma Community publish (see release process below).
 
 ---
