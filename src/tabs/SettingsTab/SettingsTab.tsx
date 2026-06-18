@@ -1,17 +1,16 @@
 import {
-  Banner,
   Button,
   Columns,
   Container,
-  IconCheck16,
-  IconWarning16,
   Link,
   Muted,
   Text,
   Textbox,
   VerticalSpace,
 } from "@create-figma-plugin/ui";
-import { Fragment, h } from "preact";
+import { h } from "preact";
+
+import { StatusBanner } from "@components/StatusBanner";
 
 import { useSettings } from "./useSettings";
 
@@ -125,17 +124,8 @@ export function SettingsTab() {
         </Button>
       </Columns>
 
-      {status && (
-        <Fragment>
-          <VerticalSpace space="small" />
-          <Banner
-            icon={status.success ? <IconCheck16 /> : <IconWarning16 />}
-            variant={status.success ? "success" : "warning"}
-          >
-            {status.text}
-          </Banner>
-        </Fragment>
-      )}
+      <VerticalSpace space="small" />
+      <StatusBanner status={status} />
 
       <VerticalSpace space="medium" />
     </Container>
