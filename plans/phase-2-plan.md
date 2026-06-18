@@ -72,7 +72,7 @@ A step-by-step checklist for testing the plugin:
 - [ ] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
 - [ ] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
 - [ ] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
-- [ ] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints)
+- [ ] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints; if a Pro plan were available, we would document Dark Mode too)
 
 ### Stage 2.3: End-to-end QA [IN PROGRESS]
 - [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
@@ -83,3 +83,13 @@ A step-by-step checklist for testing the plugin:
 - [ ] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
 - [x] Add setup instructions to the plugin [README.md](file:///Users/olly/dev/figma-variables-sync/README.md)
 - [ ] Tag a release in the repository
+
+---
+
+## 📌 Claude Handover Instructions & Guidelines
+
+When Claude picks up this work, please follow these guidelines:
+1. **Figma API Key**: Do **NOT** attempt to use or request a Figma REST API key/token. The variables sync and canvas updates should run via the local Figma Desktop App plugin context (or the Figma Developer MCP server), which does not require a REST API key to perform write operations.
+2. **Preview Documentation & Theme Mode**: Create the preview documentation on the canvas showing the button variant states (Normal, Hover, etc.) in **Light Mode only**. Because the target file is on a Free Figma plan, it is limited to a single mode. If we had a Pro plan, we would also render the preview documentation in Dark Mode, but under current constraints, only Light Mode should be generated.
+3. **Variables Input**: Import variables from the single-mode token set: `test-kit/tokens/design-tokens-single-mode.json`.
+
