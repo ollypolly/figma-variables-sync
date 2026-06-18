@@ -1,9 +1,12 @@
 {
+  "$modes": {
+    "Value": {}
+  },
   "Tokens": {
     "brand": {
       "primary": {
         "$type": "color",
-        "$value": "#0284c7"
+        "$value": "#b62919"
       },
       "secondary": {
         "$type": "color",
