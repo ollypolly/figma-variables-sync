@@ -66,6 +66,8 @@ Currently the plugin syncs a single `filePath` to one JSON file. In practice, DT
 ### 6. Token-to-Component Binding Awareness
 Currently the plugin syncs variable **values** but not variable **bindings** — which variable is applied to which property on which component. Capturing this mapping (e.g. "Button background uses `brand/primary`") would let designers see the downstream impact of a token change. Needs research into whether the Figma Plugin API exposes bound-variable-to-node relationships in a way we can export.
 
+**Key insight from QA**: With a semantic token layer, dev wires up component code once to semantic tokens (e.g. `background-color: var(--tokens-button-background-color)`), and semantic tokens alias to primitives (e.g. `button-background-color` → `brand/primary`). Designers then control two things without dev involvement: (1) the alias mapping — which primitive a semantic token points to, and (2) the primitive value itself — e.g. changing `brand/primary` from blue to red. This two-layer indirection is the core value proposition: **design autonomy through semantic tokens**. The plugin already syncs primitive values and alias references; extending it to track component-to-semantic-token bindings would close the loop entirely.
+
 ### 7. Stale Data After Merge
 The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging a proposal, the plugin may briefly show stale diffs. Consider adding a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay.
 
