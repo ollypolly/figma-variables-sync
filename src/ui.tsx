@@ -33,11 +33,13 @@ function Plugin() {
   ];
 
   return (
-    <Tabs
-      options={tabOptions}
-      value={tabValue}
-      onValueChange={setTabValue}
-    />
+    <div class="flex flex-col h-screen overflow-hidden">
+      <Tabs
+        options={tabOptions}
+        value={tabValue}
+        onValueChange={setTabValue}
+      />
+    </div>
   );
 }
 
