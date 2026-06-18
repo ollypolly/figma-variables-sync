@@ -53,6 +53,45 @@ See the [QA Checklist & Setup Guide](test-kit/QA.md) for details on how to confi
 
 ---
 
+## 🎨 Modes & DTCG Mapping Spec
+
+The plugin maps native Figma Variable Collections and Modes to W3C DTCG (Design Tokens Community Group) formatted JSON using the `$modes` property.
+
+Example mapping structure:
+
+```jsonc
+{
+  "$modes": {
+    "light": {},
+    "dark": { "$fallback": "light" }
+  },
+  "color": {
+    "surface": {
+      "$type": "color",
+      "$value": "#ffffff",
+      "$modes": {
+        "dark": "#0b0d10"
+      }
+    }
+  }
+}
+```
+
+- **File-level `$modes`** declares the available modes in the collection and their optional fallback hierarchies.
+- **Per-token `$modes`** overrides the default `$value` for a specific mode.
+
+---
+
+## 🚀 Future Roadmap (v2+)
+
+- **Staging UI** — Let designers select specific changes to include in a proposal.
+- **Drafts & Workstreams** — Support multiple concurrent named drafts (branches).
+- **Multi-File Token Support** — Organize tokens across directories and files instead of a single path.
+- **Token-to-Component Bindings** — Track component-to-semantic-token bindings to view downstream impacts.
+- **Bidirectional conflict resolution** — Ask designers which version wins directly inside Figma when merge conflicts happen.
+
+---
+
 ## 📜 License
 
 This project is open-source and licensed under the [MIT License](LICENSE).
