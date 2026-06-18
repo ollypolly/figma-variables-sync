@@ -1,16 +1,11 @@
-import {
-  Container,
-  render,
-  Tabs,
-  Text,
-  VerticalSpace,
-  useWindowResize,
-} from "@create-figma-plugin/ui";
+import { render, Tabs, useWindowResize } from "@create-figma-plugin/ui";
 import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 
+import { ProposalsTab } from "./tabs/ProposalsTab";
 import { SettingsTab } from "./tabs/SettingsTab";
+import { UpdatesTab } from "./tabs/UpdatesTab";
 import { ResizeWindowHandler } from "./types";
 import "!./output.css";
 
@@ -42,24 +37,6 @@ function Plugin() {
       value={tabValue}
       onValueChange={setTabValue}
     />
-  );
-}
-
-function UpdatesTab() {
-  return (
-    <Container space="medium">
-      <VerticalSpace space="medium" />
-      <Text>Updates tab — check for incoming changes from GitHub.</Text>
-    </Container>
-  );
-}
-
-function ProposalsTab() {
-  return (
-    <Container space="medium">
-      <VerticalSpace space="medium" />
-      <Text>Proposals tab — push Figma changes to GitHub as a PR.</Text>
-    </Container>
   );
 }
 
