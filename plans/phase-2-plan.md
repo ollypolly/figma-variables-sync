@@ -66,13 +66,13 @@ A step-by-step checklist for testing the plugin:
 - [x] Verify it round-trips through the DTCG parser (written [roundtrip.test.ts](file:///Users/olly/dev/figma-variables-sync/src/common/dtcg/roundtrip.test.ts) unit test)
 - [x] Build robust unit-dimension parsing (pixels, nested values) and Starter plan single-mode fallback in importer
 
-### Stage 2.2: Build the Figma test file [IN PROGRESS - CLAUDE HANDOVER]
+### Stage 2.2: Build the Figma test file [COMPLETE]
 - [x] Configure figma MCP server in user's dotfiles (`config/dot_claude/dot_mcp.json.tmpl` and `config/dot_gemini/`) and apply configuration
-- [ ] Connect to Figma file `FN7FDpzw6DpZJeibayDH2K` via the Figma plugin/MCP interface
-- [ ] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
-- [ ] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
-- [ ] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
-- [ ] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints; if a Pro plan were available, we would document Dark Mode too)
+- [x] Connect to Figma file `FN7FDpzw6DpZJeibayDH2K` via the Figma plugin/MCP interface
+- [x] Programmatically add variables to the Figma file from the single-mode token set ([design-tokens-single-mode.json](file:///Users/olly/dev/figma-variables-sync/test-kit/tokens/design-tokens-single-mode.json))
+- [x] Programmatically create the Button component on the canvas, ensuring it binds to variables (Background Fill -> `brand/primary`, Radius -> `radius/small`, Padding -> `spacing/medium`, Text Color -> `surface/foreground`)
+- [x] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
+- [x] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints; if a Pro plan were available, we would document Dark Mode too)
 
 ### Stage 2.3: End-to-end QA [IN PROGRESS]
 - [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
