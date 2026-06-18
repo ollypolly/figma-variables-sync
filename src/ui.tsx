@@ -10,6 +10,7 @@ import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 
+import { SettingsTab } from "./tabs/SettingsTab";
 import { ResizeWindowHandler } from "./types";
 import "!./output.css";
 
@@ -36,14 +37,11 @@ function Plugin() {
   ];
 
   return (
-    <Container space="medium">
-      <VerticalSpace space="small" />
-      <Tabs
-        options={tabOptions}
-        value={tabValue}
-        onValueChange={setTabValue}
-      />
-    </Container>
+    <Tabs
+      options={tabOptions}
+      value={tabValue}
+      onValueChange={setTabValue}
+    />
   );
 }
 
@@ -61,15 +59,6 @@ function ProposalsTab() {
     <Container space="medium">
       <VerticalSpace space="medium" />
       <Text>Proposals tab — push Figma changes to GitHub as a PR.</Text>
-    </Container>
-  );
-}
-
-function SettingsTab() {
-  return (
-    <Container space="medium">
-      <VerticalSpace space="medium" />
-      <Text>Settings tab — configure GitHub connection.</Text>
     </Container>
   );
 }
