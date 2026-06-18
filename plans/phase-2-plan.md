@@ -74,16 +74,17 @@ A step-by-step checklist for testing the plugin:
 - [x] Programmatically build variant states (e.g. Hover state using `brand/secondary` background fill)
 - [x] Create preview documentation on the canvas showing all button variant states in Light Mode (due to free plan constraints; if a Pro plan were available, we would document Dark Mode too)
 
-### Stage 2.3: End-to-end QA [IN PROGRESS]
+### Stage 2.3: End-to-end QA [COMPLETE]
 - [x] Load the plugin in Figma dev mode, verify build output compiles cleanly
 - [x] Write up the step-by-step QA checklist as [QA.md](file:///Users/olly/dev/figma-variables-sync/test-kit/QA.md)
 - [x] Add Style Dictionary token build + HTML preview page (`test-kit/build-tokens.js`, `test-kit/preview.html`)
 - [x] Fix Tailwind watcher picking up test-kit files (`@source not` directive)
 - [x] Fix exporter dimension/number round-trip: FLOAT variables with dimension scopes now export as `$type: "dimension"` with `px` suffix; importer sets `WIDTH_HEIGHT` scope on new dimension-type variables
-- [ ] **BLOCKED**: Updates tab still shows 11 updates when Figma vars and Git tokens should be in sync
-- [ ] Write a snapshot test that: (1) takes the actual Figma variable state (pulled via MCP — collection, name, type, scopes, values), (2) feeds it through `exportToDtcg`, (3) compares the exported DTCG against the Git token file (`design-tokens-single-mode.json`) to pinpoint every mismatch
-- [ ] Fix the remaining round-trip mismatches identified by the snapshot test
-- [ ] Run through the full QA script
+- [x] Fix Updates tab showing 11 false diffs: root cause was GitHub API returning 404 (token file not pushed to remote) silently falling through to `"{}"`. Added explicit error message for missing files
+- [x] Fix leading whitespace in settings fields causing silent 404s — extracted `trimSettings` helper applied on both save and load
+- [x] Add Figma variable snapshot fixture (`test-kit/figma/figma-variable-snapshot.json`) pulled via MCP, and export round-trip snapshot test (`src/common/dtcg/snapshot.test.ts`)
+- [x] Auto-refresh Updates and Proposals tabs on tab switch (no manual "Check" click needed)
+- [x] Full QA round-trip validated: change `brand/primary` to red in Figma → create proposal PR → merge → pull → rebuild tokens → confirm red value in CSS and preview.html
 
 ### Stage 2.4: Package and publish [IN PROGRESS]
 - [x] Save the local test file copy to `test-kit/figma/variables-sync-test-kit.fig`
