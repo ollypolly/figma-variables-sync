@@ -113,48 +113,42 @@ Moved from `src/ui/services/github.ts` → `src/services/github.ts`. No code cha
 
 All event types are defined in `src/types.ts` using `EventHandler` interface pattern.
 
-### Step 5: Rebuild the UI — TODO (next step)
+### Step 5: Rebuild the UI — DONE
 
-`src/ui.tsx` currently has placeholder tabs (Updates, Proposals, Settings) with stub text. Need to rebuild each tab using `@create-figma-plugin/ui` components + Tailwind, porting the business logic from the old hooks:
+Three tabs rebuilt with `@create-figma-plugin/ui` components + Preact hooks + Tailwind:
 
-**Settings tab** (start here — other tabs depend on having a config):
-- PAT, owner, repo, filePath, branch fields using `@create-figma-plugin/ui` Textbox components
-- Test Connection button
-- Save button
-- Uses `emit`/`on` to load/save settings via main thread's `figma.clientStorage`
-- Old logic reference: see git history for `src/ui/tabs/Settings/useSettingsForm.ts`
-- Key difference from old code: settings are no longer in React Context (`GitHubProvider`). The UI emits `LOAD_SETTINGS` on mount and stores the result in local Preact state. `GitHubService` is instantiated directly when needed.
+- **Settings tab** (`src/tabs/SettingsTab.tsx` + `useSettings.ts`): PAT, owner, repo, filePath, branch fields. Test Connection + Save buttons. Loads/saves via `emit`/`on` to main thread's `figma.clientStorage`.
+- **Updates tab** (`src/tabs/UpdatesTab.tsx` + `useUpdates.ts`): Fetches remote DTCG from GitHub, requests local export from main thread, runs `computeDiff()`, shows diff list. Accept button triggers `REQUEST_IMPORT`.
+- **Proposals tab** (`src/tabs/ProposalsTab.tsx` + `useProposals.ts`): Same fetch+diff in "proposals" mode. Description field + submit creates branch → commit → PR via `GitHubService`. Shows existing PRs.
+- **Shared** (`src/components/DiffList.tsx`): Renders diff items for both tabs.
 
-**Updates tab**:
-- Fetch remote DTCG from GitHub → diff against local (via `REQUEST_EXPORT`) → show changes → accept button
-- Old logic reference: see git history for `src/ui/tabs/Updates/useUpdates.ts`
-- Diff display: build a table/list showing added/modified/deleted tokens using `computeDiff()` from `src/common/diff.ts`
+### Step 6: Integration test — deferred to Phase 2
 
-**Proposals tab**:
-- Diff local against remote → show outgoing changes → description field → create PR button
-- Old logic reference: see git history for `src/ui/tabs/Proposals/useProposals.ts`
-- Creates branch, commits DTCG JSON, opens PR via `GitHubService`
-
-### Step 6: Integration test
-
-Load the plugin in Figma, connect to a test repo, verify the full loop:
-1. Create variables in Figma → export → PR opens correctly
-2. Merge a change in the repo → plugin detects diff → accept updates variables
+Manual Figma integration testing moved to Phase 2 alongside test infrastructure setup.
 
 ## Current file structure
 
 ```
 src/
   main.ts              — plugin main thread (Figma API + settings)
-  ui.tsx               — UI entry point (Preact, placeholder tabs)
+  ui.tsx               — UI entry point (Preact, tab routing)
   types.ts             — typed event definitions (EventHandler interfaces)
   css.d.ts             — declaration for !*.css imports
   input.css            — Tailwind entry point
+  tabs/
+    SettingsTab.tsx     — Settings tab component
+    useSettings.ts     — Settings form state + save/load/test connection
+    UpdatesTab.tsx     — Updates tab component
+    useUpdates.ts      — Fetch remote, diff, accept updates
+    ProposalsTab.tsx   — Proposals tab component
+    useProposals.ts    — Fetch remote, diff, create PR
+  components/
+    DiffList.tsx       — Shared diff item renderer
   common/
     diff.ts            — computeDiff() — framework-agnostic
-    dtcg/              — DTCG engine (exporter, importer, parser, color, utils) — untouched
+    dtcg/              — DTCG engine (exporter, importer, parser, color, utils)
   services/
-    github.ts          — GitHubService class (Octokit) — untouched
+    github.ts          — GitHubService class (Octokit)
 patches/
   @create-figma-plugin+build+4.0.3.patch — skips typed-css-modules on Node v26
 ```

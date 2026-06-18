@@ -1,5 +1,9 @@
 # Phase 2 Plan: Portable QA Test Kit
 
+## Prerequisites
+
+Phase 1.5 (replatform) is complete. The plugin is rebuilt on `create-figma-plugin` (Preact + esbuild + Tailwind) with all three UI tabs (Settings, Updates, Proposals) wired up. Integration testing in Figma was deferred from phase 1.5 step 6 to this phase (Stage 2.3).
+
 ## Goal
 
 Create a small, self-contained design system test that exercises the full plugin sync loop. Instead of dogfooding with the plugin's own UI (which is now built with `@create-figma-plugin/ui` rather than custom primitives), we provide a portable test fixture that anyone can use to QA the plugin end-to-end.
@@ -66,8 +70,9 @@ A step-by-step checklist for testing the plugin:
 - Build the button component consuming those variables
 - Set up Light/Dark mode variants on a test page
 
-### Stage 2.3: End-to-end QA
-- Run through the full QA script using the plugin in dev mode
+### Stage 2.3: End-to-end QA (includes deferred phase 1.5 integration test)
+- Load the plugin in Figma dev mode, verify build output works
+- Run through the full QA script
 - Document any issues found
 - Write up the QA checklist as `test-kit/QA.md`
 
