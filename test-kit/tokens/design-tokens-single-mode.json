@@ -40,7 +40,7 @@
     "radius": {
       "small": {
         "$type": "dimension",
-        "$value": "4px"
+        "$value": "20px"
       },
       "full": {
         "$type": "dimension",
