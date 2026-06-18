@@ -11,7 +11,7 @@ interface CheckResult {
   gitContent: string;
 }
 
-export function useUpdates() {
+export function useUpdates(active: boolean) {
   const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
   const github = useGitHub(settings);
 
@@ -47,10 +47,10 @@ export function useUpdates() {
   );
 
   useEffect(() => {
-    if (!settingsLoading && isConfigured) {
+    if (!settingsLoading && isConfigured && active) {
       check.execute();
     }
-  }, [settingsLoading]);
+  }, [settingsLoading, active]);
 
   const status = importAction.error
     ? { success: false, text: importAction.error }

@@ -63,6 +63,17 @@ Currently the plugin syncs a single `filePath` to one JSON file. In practice, DT
 *   How do popular tools (Style Dictionary, Tokens Studio) expect tokens to be organized?
 *   What changes are needed in the plugin to support syncing a directory of token files rather than a single file path?
 
+### 6. Token-to-Component Binding Awareness
+Currently the plugin syncs variable **values** but not variable **bindings** — which variable is applied to which property on which component. Capturing this mapping (e.g. "Button background uses `brand/primary`") would let designers see the downstream impact of a token change. Needs research into whether the Figma Plugin API exposes bound-variable-to-node relationships in a way we can export.
+
+### 7. Stale Data After Merge
+The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging a proposal, the plugin may briefly show stale diffs. Consider adding a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay.
+
+### 8. Intelligent Diff Filtering
+Two UX pain points around echo/duplicate diffs:
+*   **Suppress echo diffs on Updates tab**: After proposing a change, the Updates tab shows the Git version as an "incoming update" that would revert the local edit. Need to detect open proposals from the current file and filter or label these diffs so the designer isn't confused.
+*   **Suppress duplicate proposals**: If a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list.
+
 ---
 
 ## 📈 Implementation Order

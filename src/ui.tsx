@@ -27,8 +27,8 @@ function Plugin() {
   );
 
   const tabOptions = [
-    { value: "Updates", children: <UpdatesTab /> },
-    { value: "Proposals", children: <ProposalsTab /> },
+    { value: "Updates", children: <UpdatesTab active={tabValue === "Updates"} /> },
+    { value: "Proposals", children: <ProposalsTab active={tabValue === "Proposals"} /> },
     { value: "Settings", children: <SettingsTab /> },
   ];
 
