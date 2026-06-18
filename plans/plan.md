@@ -160,9 +160,6 @@ File-level `$modes` declares available modes + fallbacks. Per-token `$modes` ove
 - **Immediate personal use** — anyone with a design system can use it day one
 - **Approachable codebase** — Tokens Studio is open-source (MIT, 1,592 stars) but has 345 open issues and a massive surface area (custom UI, style management, multi-provider sync, theming engine). Contributing native variables + modes there means navigating years of architectural decisions. This plugin is small enough that a new contributor can read the whole thing in an afternoon, understand the full flow, and ship a meaningful PR on day one.
 
-## Goodlord Compatibility
-
-Design the Goodlord pipeline (Figma Enterprise REST API + GitHub Actions) with a standard interface: DTCG JSON in a known path, PRs as the change mechanism. If this plugin ships and proves stable, it can slot in as a direct replacement without changing the rest of the pipeline (SD config, CI, app consumption). The contract is the file format and the PR workflow, not the tool.
 
 ## Designer Workflow (MVP — git fully abstracted)
 
