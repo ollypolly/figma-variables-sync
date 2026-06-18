@@ -10,17 +10,18 @@ Before you begin, make sure you have:
 1. **Figma Desktop App** (local developer plugin loading is only supported in the desktop app, not the web).
 2. A **GitHub account** and a personal access token (PAT) with `repo` scope to allow the plugin to read/write to your test repository.
 3. A **GitHub Repository** with write access. You can use this very repository (`figma-variables-sync`) or any other repo.
-   - Ensure the token file `test-kit/tokens/design-tokens.json` exists on your remote target branch (so the plugin can read it).
-4. **Figma Test File**: Download the portable `.fig` template (or create a draft in Figma using the variables defined in `design-tokens.json`).
+   - Ensure the token file exists on your remote target branch:
+     - **Paid Figma Plans**: Use `test-kit/tokens/design-tokens.json` (includes Light & Dark modes).
+     - **Free Figma Plans**: Use `test-kit/tokens/design-tokens-single-mode.json` (single mode only).
+4. **Figma Test File**: Create a draft in Figma containing variables that match your chosen token JSON structure (with either 1 mode for free plans, or multiple modes for paid plans), and create a component (e.g. a Button) using these variables.
 
 ---
 
 ## 📋 Step-by-Step QA Checklist
 
-### 1. Import the Test Figma File
+### 1. Import or Create the Test Figma File
 1. Open the Figma Desktop App and navigate to your **Drafts**.
-2. Click **Import** and select the portable test kit `.fig` file.
-3. Open the imported file. You should see a page with a **Button** component placed inside a frame showcasing both a **Light Mode** and **Dark Mode** variant.
+2. Create or import your test draft file. If you are on a free plan, ensure your variables are set up with a single mode only.
 
 ### 2. Load the Plugin in Developer Mode
 1. Clone this repository locally.
@@ -34,9 +35,11 @@ Before you begin, make sure you have:
 2. Fill in the configuration fields:
    - **GitHub PAT**: Your personal access token.
    - **Repository Owner**: e.g., `yourusername`
-   - **Repository Name**: e.g., `figma-sync-test-tokens`
-   - **File Path**: The path to your JSON file, e.g. `tokens/design-tokens.json`
-   - **Branch**: e.g., `main`
+   - **Repository Name**: e.g., `figma-variables-sync`
+   - **File Path**: The path to your JSON file:
+     - Paid plans (multiple modes): `test-kit/tokens/design-tokens.json`
+     - Free plans (single mode): `test-kit/tokens/design-tokens-single-mode.json`
+   - **Branch**: e.g., `feature/phase-2-qa-test-kit` (or whichever branch contains your tokens file on GitHub)
 3. Click **Save Settings**.
 
 ### 4. Verify Initial Sync State
