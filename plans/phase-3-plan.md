@@ -1,10 +1,57 @@
-# Phase 3 Plan: UX Enhancements
+# Phase 3 Plan: Production-Ready MVP & UX Enhancements
 
-This document outlines the detailed plan, architecture, and task list for Phase 3 of the Figma Variables Sync plugin, focusing on designer workflow optimizations, sticky tab memory, and conflict prevention.
+This document outlines the plan for getting the Figma Variables Sync plugin to a shippable MVP, then layering on UX enhancements.
 
 ---
 
-## 🎯 Goal
+## 🚨 MVP Blockers (must fix before first real user)
+
+> **Note:** The diagnosis and fix approaches below are best guesses from a code audit — not verified against real behaviour. Validate each one against the actual Figma export fixture before implementing. Some may be wrong, some may not matter for the real-world token files we're targeting, and the right fix may look different once we see the data.
+
+### Bug: Metadata stripping on export (DATA LOSS)
+The exporter (`src/common/dtcg/exporter/exportToDtcg.ts`) builds tokens with only `$type`, `$value`, and `$modes`. Any other keys in the original token file — `$description`, `$extensions`, custom vendor properties — may be silently deleted when a proposal PR is created. The export also replaces the entire file rather than merging, so tokens in Git that don't exist as Figma variables may be wiped too.
+
+**Possible fix direction** (needs validation against real export data): Some kind of merge between the Figma export and existing Git JSON — preserving keys the exporter doesn't produce while updating `$value`/`$modes` for changed tokens. Exact approach TBD once we see the real fixture.
+
+- [ ] Get real Figma export fixture containing metadata (user providing)
+- [ ] Understand which keys actually get stripped in practice
+- [ ] Design and validate fix approach against real data
+- [ ] Test round-trip: import → change in Figma → export → verify no metadata loss
+
+### Feature: Update / delete existing proposal
+Currently every "Create Proposal" generates a new branch + PR. No way to amend or close from the plugin. For MVP, support one active proposal at a time.
+
+- [ ] Detect if an open `figma/proposal-*` PR already exists (already have `listPullRequests`)
+- [ ] If open proposal exists: show "Update" and "Delete" actions
+- [ ] If no open proposal: show "Create Proposal" as today
+- [ ] Implement update flow (push to existing branch) — exact API sequence TBD
+- [ ] Implement delete flow (close PR, clean up branch) — exact API sequence TBD
+- [ ] Decide behaviour when creating a new proposal while one is open
+
+### Hardening: Error handling & resilience
+Raw Octokit errors may surface to designers as meaningless strings. Promises may hang if the main thread doesn't respond. Needs investigation to confirm which of these actually bite in practice.
+
+- [ ] Audit which GitHub API errors actually reach the user and improve the worst ones
+- [ ] Investigate whether message-passing hangs are a real risk or theoretical — add timeouts if so
+- [ ] Add try/catch to main-thread handlers that could silently hang the UI
+- [ ] Guard against submitting a proposal with zero diffs
+- [ ] Prevent double-submission
+
+### Hardening: Settings validation
+- [ ] Extend `isConfigured` to check `filePath` and `branch` are non-empty
+- [ ] Improve "Test Connection" to catch more setup errors (branch missing, file path wrong, insufficient PAT scopes) — scope TBD based on what users actually hit
+
+### Edge case: Silent data corruption
+These were flagged by code audit — verify each is a real problem before fixing:
+
+- [ ] Color parsing: does it actually fall back to black for real-world inputs? Check against fixture
+- [ ] Unresolved aliases: does the raw reference string cause a runtime error or just a bad value?
+- [ ] Variables with undefined values: can this actually happen with real Figma data?
+- [ ] Single-mode Figma plan: warn before creating a proposal that would strip mode overrides from a multi-mode Git file
+
+---
+
+## 🎯 Goal (UX Enhancements — post-MVP)
 Improve the everyday usability of the plugin for designers by making the **Proposals** tab the default view, adding **Sticky Tab Memory** to persist state across sessions, and introducing **Background Sync Check Notifications** with warning alerts to proactively prevent Git merge conflicts.
 
 ---
