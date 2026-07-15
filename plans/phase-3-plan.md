@@ -8,15 +8,27 @@ This document outlines the plan for getting the Figma Variables Sync plugin to a
 
 > **Note:** The diagnosis and fix approaches below are best guesses from a code audit — not verified against real behaviour. Validate each one against the actual Figma export fixture before implementing. Some may be wrong, some may not matter for the real-world token files we're targeting, and the right fix may look different once we see the data.
 
-### Bug: Nested token-groups silently drop child tokens (DATA LOSS)
-`findTokens` in `src/common/dtcg/parser/findTokens.ts` returns immediately when a node has `$value`, never recursing into non-`$` children. In valid DTCG, a node can be both a token and a group — e.g. `Primary` has `$value` AND children `Hover`, `Disabled`. Tested against the Goodlord fixture (`example/goodlord-tokens.json`): **16 of 154 tokens are silently dropped**, all semantic variants (hover/disabled/subtle/strong states).
+### Bug: Figma variable naming collisions produce invalid DTCG (DATA LOSS — root cause corrected)
+> **Correction:** the original diagnosis below (in `findTokens`) was wrong. Verified against the [W3C DTCG spec](https://www.designtokens.org/TR/drafts/format/) §6.1: *"A group is identified as a JSON object that does NOT contain a `$value` property... If an object contains both `$value` and child tokens/groups, this creates an invalid structure... Tools MUST report this as an error."* A node cannot legally be both a token and a group. The Goodlord fixture's `Primary` (with `$value` AND children `Hover`/`Disabled`) is **invalid DTCG**, not a valid pattern `findTokens` fails to parse.
 
-Affected paths include `Semantic.Colours.Brand.Primary.Hover`, `Semantic.Colours.Status.Error.Subtle`, `Semantic.Colours.Border.Default.Focus`, etc.
+**Actual root cause**: `exportToDtcg.ts` (line 72) builds tree paths by splitting Figma variable *names* on `/`. When a Figma variable is literally named `Primary` and sibling variables are named `Primary/Hover`, `Primary/Disabled`, `setPath.ts` collides them — depending on processing order, it either nests the `Primary` token inside itself (silently swallowing it as `$value` on a group) or overwrites the whole `Hover`/`Disabled` group with just the `Primary` token. This confirms the "setPath collision" risk already flagged below. Tested against the Goodlord fixture: **16 of 154 tokens affected across 7 colliding paths** (`Semantic.Colours.Brand.Primary`, `Status.Error`, `Status.Info`, `Status.Success`, `Status.Warning`, `Status.Neutral`, `Border.Default`).
 
-- [ ] Fix `findTokens` to continue recursing into non-`$` children even when a node has `$value`
-- [ ] Verify the importer creates correct Figma variables for nested token-groups (is `Primary` a variable AND `Primary/Hover` a separate variable?)
-- [ ] Verify the exporter reproduces the nested structure (does `setPath` handle a path that's both a token and a parent?)
-- [ ] Add test cases using the Goodlord fixture
+The spec's sanctioned way to express "a token with variants" is the reserved `$root` key (§6.2) — e.g. `color/accent/$root` holds the base value, `color/accent/light`/`dark` are siblings, and `color/accent` itself stays a pure group. Adopting this would require the Figma variable to be *named* `Primary/Default` (or similar) rather than bare `Primary`, since Figma variable names — not the exporter — are the actual source of the ambiguous path.
+
+**Decision: fail both ways, but handle each differently**, because the two sides have different fix paths:
+
+- **Export-side (Figma → JSON)**: hard-fail, block the proposal. Self-serviceable — the designer sees exactly which Figma variables collide and can rename them right there, in the tool they're already using.
+- **Import-side (Git JSON → Figma)**: the designer can't self-serve this — they don't edit Git directly, and the bad shape could be hand-authored, left by another tool, or a leftover from before the export fix. Traced every call site: `findTokens` → `parseDtcg` → `importFromDtcg`/`diff.ts`, fed by (a) this session's own `exportToDtcg` output, and (b) whatever JSON currently sits at the user's configured `filePath`/`branch` on GitHub — **not provenance-checked**, so the invalid shape can reach `findTokens` even after the exporter is fixed. Rather than hard-failing the whole parse (blocks *all* updates over one bad subtree) or silently dropping data (today's bug), **quarantine just the offending paths**: import everything else, surface a visible warning naming the broken paths.
+
+**New shared component: "Contact an Engineer" notice.** Section 8 below already specs this concept for proposal conflicts (clear message, "Copy details" to clipboard, escape hatch) but it's never been built — confirmed nothing exists in `src/` today (`StatusBanner` is the only banner primitive, and it's just a pass/fail string, no structured detail payload or actions). Generalise it now into a reusable component rather than a proposal-specific one-off, since the principle is broader than proposals: **any situation too complex for a designer to self-serve shows this same message.** Two current consumers: this import-side quarantine warning, and the proposal-conflict flow in §8.
+
+- [ ] Build a generic `ContactEngineerNotice` component: message + structured details (e.g. affected token paths, file/branch, error text) + "Copy details" button (clipboard) + context-specific escape-hatch action (e.g. "Delete proposal" for §8, none needed for a quarantine warning)
+- [ ] In `exportToDtcg.ts`/`setPath.ts`, detect the collision while building the tree (a path that would need to be both a token and a parent of other tokens)
+- [ ] On export detection, abort and surface a clear error listing the colliding Figma variable names and a suggested fix (e.g. rename `Primary` → `Primary/Default`)
+- [ ] In `findTokens.ts`, detect (not silent-drop) when a node has both `$value` and non-`$` children; skip/quarantine that subtree rather than throwing for the whole parse
+- [ ] Surface quarantined paths via `ContactEngineerNotice` on the Updates tab, with the affected paths in the copyable details
+- [ ] Add test cases using the Goodlord fixture: export is rejected with a useful message (not silently corrupted); import succeeds for the 138 clean tokens and quarantines the 16 affected ones with a visible warning
+- [ ] Fix the real Goodlord Figma file: rename the 7 colliding variables so the plugin can export successfully
 
 ### Bug: Metadata not round-tripped (DATA LOSS — confirmed)
 Cross-referenced our export against three other exporters (Variables Pro, Export/Import Variables, and a Mylong export) in `example/goodlord-tokens-from-other-exporters/`. The Figma Plugin API exposes metadata that our plugin silently drops on both import and export:
@@ -171,11 +183,11 @@ Currently, each "Create Proposal" generates a new branch (`figma/proposal-<times
     *   **Auto-rebase**: On proposal select, detect if the branch is behind main and offer a one-click rebase (GitHub API: update branch). Simple for non-conflicting changes.
     *   **Manual prompt**: Show a warning banner ("This proposal is X commits behind main") and link to GitHub for manual resolution.
     *   **Re-export and force-push**: Since the plugin always holds the current Figma state, the simplest approach may be to re-export and overwrite the branch file — effectively a force-push of the designer's current intent. This sidesteps merge mechanics entirely but loses any manual edits made on the branch.
-*   **Conflict handling — "contact an engineer" philosophy**: Designers shouldn't need to understand git conflicts. When a conflict or unexpected error occurs on a proposal, the plugin should:
+*   **Conflict handling — "contact an engineer" philosophy**: Designers shouldn't need to understand git conflicts. When a conflict or unexpected error occurs on a proposal, use the shared `ContactEngineerNotice` component (spec'd under the naming-collision bug in MVP Blockers — same component, second consumer):
     *   Localise the error to that specific proposal (don't break the rest of the UI).
     *   Show a clear message: "This proposal has a conflict that needs an engineer to resolve."
-    *   Provide a **"Copy details"** button that copies a structured summary to the clipboard — affected token paths, branch name, PR URL, error details — so the designer can paste it to an engineer in Slack/Teams.
-    *   Offer a **"Delete proposal"** button as the self-service escape hatch (close the PR + delete the branch via GitHub API).
+    *   "Copy details" button copies a structured summary to the clipboard — affected token paths, branch name, PR URL, error details — so the designer can paste it to an engineer in Slack/Teams.
+    *   "Delete proposal" button as the self-service escape hatch (close the PR + delete the branch via GitHub API).
     *   The 90/10 principle: smooth sailing almost always, and a clear handoff when it isn't.
 *   **Closing/abandoning proposals**: Allow designers to close a PR from within the plugin (GitHub API: `PATCH /repos/{owner}/{repo}/pulls/{pull_number}` with `state: "closed"`), cleaning up stale branches. This doubles as the conflict escape hatch above.
 
