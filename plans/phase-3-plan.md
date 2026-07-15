@@ -8,15 +8,58 @@ This document outlines the plan for getting the Figma Variables Sync plugin to a
 
 > **Note:** The diagnosis and fix approaches below are best guesses from a code audit — not verified against real behaviour. Validate each one against the actual Figma export fixture before implementing. Some may be wrong, some may not matter for the real-world token files we're targeting, and the right fix may look different once we see the data.
 
-### Bug: Metadata stripping on export (DATA LOSS)
-The exporter (`src/common/dtcg/exporter/exportToDtcg.ts`) builds tokens with only `$type`, `$value`, and `$modes`. Any other keys in the original token file — `$description`, `$extensions`, custom vendor properties — may be silently deleted when a proposal PR is created. The export also replaces the entire file rather than merging, so tokens in Git that don't exist as Figma variables may be wiped too.
+### Bug: Nested token-groups silently drop child tokens (DATA LOSS)
+`findTokens` in `src/common/dtcg/parser/findTokens.ts` returns immediately when a node has `$value`, never recursing into non-`$` children. In valid DTCG, a node can be both a token and a group — e.g. `Primary` has `$value` AND children `Hover`, `Disabled`. Tested against the Goodlord fixture (`example/goodlord-tokens.json`): **16 of 154 tokens are silently dropped**, all semantic variants (hover/disabled/subtle/strong states).
 
-**Possible fix direction** (needs validation against real export data): Some kind of merge between the Figma export and existing Git JSON — preserving keys the exporter doesn't produce while updating `$value`/`$modes` for changed tokens. Exact approach TBD once we see the real fixture.
+Affected paths include `Semantic.Colours.Brand.Primary.Hover`, `Semantic.Colours.Status.Error.Subtle`, `Semantic.Colours.Border.Default.Focus`, etc.
 
-- [ ] Get real Figma export fixture containing metadata (user providing)
-- [ ] Understand which keys actually get stripped in practice
-- [ ] Design and validate fix approach against real data
-- [ ] Test round-trip: import → change in Figma → export → verify no metadata loss
+- [ ] Fix `findTokens` to continue recursing into non-`$` children even when a node has `$value`
+- [ ] Verify the importer creates correct Figma variables for nested token-groups (is `Primary` a variable AND `Primary/Hover` a separate variable?)
+- [ ] Verify the exporter reproduces the nested structure (does `setPath` handle a path that's both a token and a parent?)
+- [ ] Add test cases using the Goodlord fixture
+
+### Bug: Metadata not round-tripped (DATA LOSS — confirmed)
+Cross-referenced our export against three other exporters (Variables Pro, Export/Import Variables, and a Mylong export) in `example/goodlord-tokens-from-other-exporters/`. The Figma Plugin API exposes metadata that our plugin silently drops on both import and export:
+
+**Must fix (standard DTCG + high value):**
+- **`$description`** — Rich design guidance on tokens, e.g. *"The Goodlord teal. Use for primary button backgrounds, active tab indicators..."*. Standard DTCG field. Figma API: `variable.description`. Currently dropped by both the importer (never reads `$description` from JSON) and exporter (never reads `variable.description`). The Goodlord Semantic collection has detailed descriptions on nearly every token.
+
+**Should fix (Figma-specific but prevents data loss on round-trip):**
+- **`scopes`** — Which properties a variable can bind to (e.g. `["CORNER_RADIUS"]` for radius, `["GAP", "WIDTH_HEIGHT"]` for spacing, `["FRAME_FILL", "SHAPE_FILL", "STROKE_COLOR"]` for colours). Our importer hardcodes `WIDTH_HEIGHT` for all dimension types, losing the real scope. Figma API: `variable.scopes`. Would export as `$extensions.figma.scopes`.
+- **`codeSyntax`** — Developer code snippets (e.g. `{"WEB": "var(--radius-xs)"}`). Figma API: `variable.codeSyntax`. Would export as `$extensions.figma.codeSyntax`.
+- **`hiddenFromPublishing`** — Visibility flag. Figma API: `variable.hiddenFromPublishing`. Would export as `$extensions.figma.hiddenFromPublishing`.
+
+**Implementation:**
+- [ ] Add `$description` to `ParsedToken` type and `findTokens` parser
+- [ ] Import: set `variable.description` from `$description` when present
+- [ ] Export: read `variable.description` and emit `$description` when non-empty
+- [ ] Add `$extensions.figma.scopes` to export, read on import to set `variable.scopes` correctly (instead of hardcoding `WIDTH_HEIGHT`)
+- [ ] Add `$extensions.figma.codeSyntax` to export/import
+- [ ] Add `$extensions.figma.hiddenFromPublishing` to export/import
+- [ ] Preserve unknown `$`-prefixed keys and `$extensions` sub-keys during round-trip (don't strip what we don't recognise)
+
+### Bug: Importer doesn't delete variables removed from Git (DATA LOSS — orphaned variables)
+When the Updates flow imports tokens from Git, `importFromDtcg` creates/updates variables but never removes ones that no longer exist in the token file. If a designer adds a primitive in Figma, proposes it, and then the PR is reverted in Git, accepting updates will NOT delete the orphaned variable — it stays in Figma forever. The only `remove()` call in the importer (line 104) is for type-mismatch replacement, not for "this variable shouldn't exist anymore."
+
+This needs test-driven development against the real Goodlord fixture to verify the behaviour before fixing — assumptions from code reading alone have been wrong before.
+
+- [ ] Write a test: import a token file, then import a smaller file with a token removed → verify the variable is deleted
+- [ ] Write a test: import a token file, then import with an entire collection removed → verify the collection's variables are deleted
+- [ ] Decide UX: should deleted variables be removed silently, or should the Updates tab show "X variables will be removed" for confirmation?
+- [ ] Implement cleanup pass in `importFromDtcg`: after creating/updating, diff existing variables against imported tokens and remove orphans
+- [ ] Edge case: what if the removed variable is still bound to components on the canvas? Figma may error or leave broken bindings
+
+### Bug: Proposals replace entire Git file instead of merging (DATA LOSS)
+Git is the source of truth. The proposal flow (`useProposals.ts:67-72`) replaces the entire Git file with the Figma export. Anything the plugin didn't import into Figma — tokens dropped by the nested token-group bug, metadata (`$description`, `$extensions`), tokens from other tools/manual edits — gets silently deleted from the source of truth when a proposal PR is merged.
+
+This is the compound effect of the other bugs: import drops data → export doesn't include it → proposal PR deletes it from Git. Even with the other bugs fixed, a full replacement is risky if Git ever contains tokens the plugin doesn't manage.
+
+**Fix approach**: Proposals should merge changes into the existing Git file rather than replacing it. Read the current Git file, apply only the Figma-side changes (added/modified/deleted tokens from `computeDiff`), and preserve everything else. Needs test-driven validation.
+
+- [ ] Write a test: Git file has extra keys/tokens not in Figma → proposal preserves them
+- [ ] Write a test: Git file has `$description` on tokens → proposal preserves them
+- [ ] Write a test: designer deletes a variable in Figma → proposal removes only that token from Git file
+- [ ] Implement merge-based proposal: use `computeDiff` output to surgically update the Git JSON rather than wholesale replacing
 
 ### Feature: Update / delete existing proposal
 Currently every "Create Proposal" generates a new branch + PR. No way to amend or close from the plugin. For MVP, support one active proposal at a time.

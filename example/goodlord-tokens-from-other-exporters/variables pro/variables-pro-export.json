@@ -1,0 +1,1577 @@
+[
+  {
+    "Primitives": {
+      "modes": {
+        "Mode 1": {
+          "Black": {
+            "$hiddenFromPublishing": true,
+            "$type": "color",
+            "$value": "#000000"
+          },
+          "Purple": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#f0e4fb"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#9b51e0"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#4a157a"
+            }
+          },
+          "Accent": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#94aeb9"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#1c5d78"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#134053"
+            }
+          },
+          "Teal": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#d1dadd"
+            },
+            "200": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#aef0e7"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#34d9c3"
+            },
+            "600": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#24c1ac"
+            },
+            "700": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#1ea392"
+            },
+            "800": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#479885"
+            }
+          },
+          "Grey": {
+            "0": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#ffffff"
+            },
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#f4f7f8"
+            },
+            "200": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#f2f2f2"
+            },
+            "300": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#e9ecef"
+            },
+            "400": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#e0e0e0"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#bdbdbd"
+            },
+            "550": {
+              "$description": "#b3b3b3 — between Grey/500 and Grey/600. Backs Text/Inactive and Icon/Default (inactive nav icons + labels).",
+              "$type": "color",
+              "$value": "#b3b3b3"
+            },
+            "600": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#828282"
+            },
+            "700": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#4f4f4f"
+            },
+            "800": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#333333"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#1a1a1a"
+            }
+          },
+          "Red": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#fed1d0"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#e02020"
+            },
+            "600": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#c11b1b"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#79050b"
+            }
+          },
+          "Orange": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#feefde"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#fa8c16"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#743d03"
+            }
+          },
+          "Blue": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#ebf3fd"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#1366d6"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#0a3979"
+            }
+          },
+          "Green": {
+            "100": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#e0f2d7"
+            },
+            "500": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#6abd40"
+            },
+            "900": {
+              "$hiddenFromPublishing": true,
+              "$type": "color",
+              "$value": "#2a4b19"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Primitives — Radius": {
+      "modes": {
+        "Mode 1": {
+          "radius": {
+            "2": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-2)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Raw 2px radius. Prefer the semantic Radius/tight; use directly only for edge cases the intents don't cover.",
+              "$type": "float",
+              "$value": 2
+            },
+            "4": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-4)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Raw 4px radius. Prefer the semantic Radius/default.",
+              "$type": "float",
+              "$value": 4
+            },
+            "10": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-10)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Raw 10px radius. Prefer the semantic Radius/container.",
+              "$type": "float",
+              "$value": 10
+            },
+            "full": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-full)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Raw fully-rounded radius (9999px). Prefer the semantic Radius/full.",
+              "$type": "float",
+              "$value": 9999
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Primitives — Shadow": {
+      "modes": {
+        "Mode 1": {
+          "offset-x": {
+            "0": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-offset-x-0)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 0
+            }
+          },
+          "offset-y": {
+            "0": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-offset-y-0)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 0
+            },
+            "1": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-offset-y-1)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 1
+            },
+            "3": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-offset-y-3)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 3
+            },
+            "4": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-offset-y-4)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 4
+            }
+          },
+          "blur": {
+            "3": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-blur-3)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 3
+            },
+            "10": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-blur-10)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 10
+            },
+            "15": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-blur-15)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 15
+            }
+          },
+          "spread": {
+            "0": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-spread-0)"
+              },
+              "$scopes": [
+                "EFFECT_FLOAT"
+              ],
+              "$type": "float",
+              "$value": 0
+            }
+          },
+          "colour": {
+            "black-15": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-colour-black-15)"
+              },
+              "$scopes": [
+                "EFFECT_COLOR"
+              ],
+              "$type": "color",
+              "$value": "rgba(0, 0, 0, 0.15)"
+            },
+            "black-10": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-colour-black-10)"
+              },
+              "$scopes": [
+                "EFFECT_COLOR"
+              ],
+              "$type": "color",
+              "$value": "rgba(0, 0, 0, 0.1)"
+            },
+            "black-8": {
+              "$codeSyntax": {
+                "WEB": "var(--shadow-colour-black-8)"
+              },
+              "$scopes": [
+                "EFFECT_COLOR"
+              ],
+              "$type": "color",
+              "$value": "rgba(0, 0, 0, 0.08)"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Primitives — Spacing": {
+      "modes": {
+        "Mode 1": {
+          "spacing": {
+            "5": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 5
+            },
+            "10": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 10
+            },
+            "15": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 15
+            },
+            "20": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 20
+            },
+            "30": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 30
+            },
+            "40": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$type": "float",
+              "$value": 40
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Primitives — Typography": {
+      "modes": {
+        "Default": {
+          "Size": {
+            "12": {
+              "$scopes": [
+                "FONT_SIZE"
+              ],
+              "$type": "float",
+              "$value": 12
+            },
+            "14": {
+              "$scopes": [
+                "FONT_SIZE"
+              ],
+              "$type": "float",
+              "$value": 14
+            },
+            "16": {
+              "$scopes": [
+                "FONT_SIZE"
+              ],
+              "$type": "float",
+              "$value": 16
+            },
+            "21": {
+              "$scopes": [
+                "FONT_SIZE"
+              ],
+              "$type": "float",
+              "$value": 21
+            },
+            "24": {
+              "$scopes": [
+                "FONT_SIZE"
+              ],
+              "$type": "float",
+              "$value": 24
+            }
+          },
+          "Line Height": {
+            "20": {
+              "$scopes": [
+                "LINE_HEIGHT"
+              ],
+              "$type": "float",
+              "$value": 20
+            }
+          },
+          "Letter Spacing": {
+            "0": {
+              "$scopes": [
+                "LETTER_SPACING"
+              ],
+              "$type": "float",
+              "$value": 0
+            }
+          },
+          "Family": {
+            "Brandon Text": {
+              "$scopes": [
+                "FONT_FAMILY"
+              ],
+              "$type": "string",
+              "$value": "Brandon Text"
+            }
+          },
+          "Weight": {
+            "Regular": {
+              "$scopes": [
+                "FONT_STYLE"
+              ],
+              "$type": "string",
+              "$value": "Regular"
+            },
+            "Bold": {
+              "$scopes": [
+                "FONT_STYLE"
+              ],
+              "$type": "string",
+              "$value": "Bold"
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "Semantic": {
+      "modes": {
+        "Mode 1": {
+          "Colours": {
+            "Brand": {
+              "Primary": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "The Goodlord teal. Use for primary button backgrounds, active tab indicators, and brand accents like checkbox ticks and radio dots. Not for body text — for highest-emphasis text use Text/Primary (a separate hierarchy concept, not brand-related).",
+                "$type": "color",
+                "Hover": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Hover state of Brand/Primary — a slightly darker teal. Used as the background of primary buttons and active links on hover. Pair with Brand/Primary as the rest state.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Teal.600}"
+                },
+                "Disabled": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Disabled state of Brand/Primary — a near-white teal. Used as the BACKGROUND of disabled primary buttons. The contrast drop is intentional; pair with Text/Secondary for the disabled label colour.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Teal.200}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Teal.500}"
+              }
+            },
+            "Text": {
+              "Primary": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "Highest-emphasis text colour. Default for body copy, headings, and primary labels. Despite the shared word \"Primary\", this is unrelated to Brand/Primary — it describes visual hierarchy, not brand identity.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.800}"
+              },
+              "Secondary": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "Lower-emphasis text — supporting metadata, timestamps, captions, and input placeholders. Pair with Body/Supporting typography. Not for primary readable content. Resolves to the same hex as Status/Neutral, but the roles differ: this is for text hierarchy, that is for status surfaces.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.700}"
+              },
+              "Inverse": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "White text for dark surfaces — sidebar, dark banners, and filled (teal or charcoal) buttons. Ensures AAA contrast on deep fills. The inverse of Text/Primary.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.0}"
+              },
+              "Link": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "The action accent colour. Used for link text, tertiary button text, and interactive icons in their resting state. Despite living under Text/, this is a FUNCTIONAL token (it indicates clickability), not a hierarchy token. Pair with Interactive/Hover and Interactive/Disabled for state variants.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Accent.500}"
+              },
+              "Tertiary": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "Lower-emphasis text. Used for prefix/suffix in inputs, ghost/placeholder fallback, helper labels. Below Text/Secondary in the hierarchy.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.600}"
+              },
+              "Inactive": {
+                "$scopes": [
+                  "TEXT_FILL"
+                ],
+                "$description": "Inactive/disabled text — e.g. unselected nav item labels. Aliases Grey/550 (#b3b3b3).",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.550}"
+              }
+            },
+            "Border": {
+              "Default": {
+                "$scopes": [
+                  "STROKE_COLOR"
+                ],
+                "$description": "Lower-contrast border. Used for dividers, secondary button outlines, and card outlines. Note: form inputs do NOT use this as their resting border — they use Border/Strong. The Border/Default/Hover, /Focus, /Disabled state variants nest under this token.",
+                "$type": "color",
+                "Hover": {
+                  "$scopes": [
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Hover state of Border/Default. Applied when a bordered element (card, secondary button) is hovered, to reinforce interactivity. Pair with Border/Default as the rest state.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Grey.700}"
+                },
+                "Focus": {
+                  "$scopes": [
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Focus ring colour — adopts the brand's darker teal so focus state visibly inherits brand identity. Used on focused form inputs and other focusable surfaces.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Teal.800}"
+                },
+                "Disabled": {
+                  "$scopes": [
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Disabled state of Border/Default. Muted border for disabled containers and secondary buttons. Pair with Surface/Disabled and Text/Secondary for a complete disabled state.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Grey.400}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.400}"
+              },
+              "Strong": {
+                "$scopes": [
+                  "STROKE_COLOR"
+                ],
+                "$description": "Higher-contrast border — the resting border for form inputs (text fields, select fields, checkboxes, radios). \"Strong\" describes contrast/visibility, not state. Hover/focus/disabled states of these inputs bind to the Border/Default/Hover, /Focus, /Disabled ladder.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.500}"
+              }
+            },
+            "Surface": {
+              "Default": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL"
+                ],
+                "$description": "Page-level background. The lowest surface in the elevation stack — cards, modals, and content blocks sit above this on Surface/Raised. Despite \"Default\" in the name, white is NOT the default surface — Surface/Raised is the white card-level surface.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.300}"
+              },
+              "Raised": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL"
+                ],
+                "$description": "Card-level surface that sits above Surface/Default. Use for card backgrounds, modal surfaces, dropdown panels, and any container that should appear elevated above the page background.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.0}"
+              },
+              "Disabled": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL"
+                ],
+                "$description": "Background fill for disabled interactive surfaces — cancel buttons, disabled inputs, disabled checkbox/radio. Resolves to the same hex as Status/Neutral/Subtle but means something different: use Surface/Disabled when the meaning is \"unavailable\"; use Status/Neutral/Subtle when the meaning is \"neutral status\".",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.200}"
+              },
+              "Hover": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL"
+                ],
+                "$description": "Hover state for raised surfaces — e.g. Secondary button hover, hoverable cards. Pair with Surface/Raised as the rest state.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.100}"
+              }
+            },
+            "Status": {
+              "Error": {
+                "Strong": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "TEXT_FILL"
+                  ],
+                  "$description": "Highest-emphasis error colour — primarily for text or icons sitting on Error/Subtle backgrounds, where the brighter Error would lack contrast. Same pattern applies to the Strong variants of Info/Success/Warning/Neutral.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Red.900}"
+                },
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "Default error colour. Use for error icons, error message text, and error-state input borders. For text on Error/Subtle backgrounds use Error/Strong (higher contrast); for error background tints use Error/Subtle.",
+                "$type": "color",
+                "Subtle": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL"
+                  ],
+                  "$description": "Muted background tint for error banners, alert backgrounds, and error-state field fills. Pair with Error/Strong for any text or icons sitting on top.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Red.100}"
+                },
+                "Hover": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Hover state for error-coloured interactive elements — e.g. danger button hover. Pair with Status/Error as the rest state.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Red.600}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Red.500}"
+              },
+              "Info": {
+                "Strong": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "TEXT_FILL"
+                  ],
+                  "$description": "Highest-emphasis info colour — primarily for text or icons on Info/Subtle backgrounds, where the brighter Info would lack contrast.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Blue.900}"
+                },
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "Default info colour. Use for info icons, informational message text, and info-state borders. For text/icons on Info/Subtle backgrounds use Info/Strong; for background tints use Info/Subtle.",
+                "$type": "color",
+                "Subtle": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL"
+                  ],
+                  "$description": "Muted background tint for info banners and alert backgrounds. Pair with Info/Strong for any text or icons sitting on top.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Blue.100}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Blue.500}"
+              },
+              "Success": {
+                "Strong": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "TEXT_FILL"
+                  ],
+                  "$description": "Highest-emphasis success colour — primarily for text or icons on Success/Subtle backgrounds, where the brighter Success would lack contrast.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Green.900}"
+                },
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "Default success colour. Use for success icons, confirmation message text, and success-state borders. For text/icons on Success/Subtle backgrounds use Success/Strong; for background tints use Success/Subtle.",
+                "$type": "color",
+                "Subtle": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL"
+                  ],
+                  "$description": "Muted background tint for success banners and alert backgrounds. Pair with Success/Strong for any text or icons sitting on top.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Green.100}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Green.500}"
+              },
+              "Warning": {
+                "Strong": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "TEXT_FILL"
+                  ],
+                  "$description": "Highest-emphasis warning colour — primarily for text or icons on Warning/Subtle backgrounds, where the brighter Warning would lack contrast.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Orange.900}"
+                },
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "Default warning colour. Use for warning icons, warning message text, and warning-state borders. For text/icons on Warning/Subtle backgrounds use Warning/Strong; for background tints use Warning/Subtle.",
+                "$type": "color",
+                "Subtle": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL"
+                  ],
+                  "$description": "Muted background tint for warning banners and alert backgrounds. Pair with Warning/Strong for any text or icons sitting on top.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Orange.100}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Orange.500}"
+              },
+              "Neutral": {
+                "Subtle": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL"
+                  ],
+                  "$description": "Muted background tint for neutral status badges and pills. Resolves to the same hex as Surface/Disabled — use this when the meaning is \"neutral status\"; use Surface/Disabled when the meaning is \"unavailable\".",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Grey.200}"
+                },
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "STROKE_COLOR"
+                ],
+                "$description": "Neutral status indicator — for status badges, pills, or alerts that signal information without success/warning/error connotation. Resolves to the same hex as Text/Secondary but the roles are different: this is for status surfaces; Text/Secondary is for text hierarchy.",
+                "$type": "color",
+                "Strong": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "TEXT_FILL"
+                  ],
+                  "$description": "Highest-emphasis neutral colour — primarily for text or icons on Neutral/Subtle backgrounds, where Neutral would lack contrast.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Grey.900}"
+                },
+                "Hover": {
+                  "$scopes": [
+                    "FRAME_FILL",
+                    "SHAPE_FILL",
+                    "STROKE_COLOR"
+                  ],
+                  "$description": "Hover state for neutral status surfaces — e.g. neutral badge or chip hover. Pair with Status/Neutral as the rest state.",
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives",
+                  "$value": "{Grey.500}"
+                },
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.700}"
+              }
+            },
+            "Interactive": {
+              "Hover": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "TEXT_FILL"
+                ],
+                "$description": "Hover state of action-coloured text and icons (tertiary button hover, link hover, interactive icon hover). The resting state for these elements is Text/Link — there is intentionally no Interactive/Default.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Accent.900}"
+              },
+              "Disabled": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL",
+                  "TEXT_FILL"
+                ],
+                "$description": "Disabled state of action-coloured text and icons. Pair with Text/Link as the resting state.",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Accent.100}"
+              }
+            },
+            "Icon": {
+              "Default": {
+                "$scopes": [
+                  "FRAME_FILL",
+                  "SHAPE_FILL"
+                ],
+                "$description": "Default resting colour for standalone vector icons (e.g. inactive nav icons). Opens the Icon/* namespace. Aliases Grey/550 (#b3b3b3).",
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives",
+                "$value": "{Grey.550}"
+              }
+            }
+          },
+          "Typography": {
+            "Heading": {
+              "H1": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "Page-title size (24px). Goodlord uses three heading levels — H1 for page titles, H2 for parent-card and modal titles, H6 for paragraph leads. H3/H4/H5 are intentionally not defined.",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.24}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for H1 page titles. Pair with H1/Size (24px).",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Regular}"
+                }
+              },
+              "H2": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "Parent-card and modal title size (21px). The middle of Goodlord's three heading levels (H1 page title, H2 card/modal title, H6 paragraph lead).",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.21}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for H2 card and modal titles. Pair with H2/Size (21px).",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Bold}"
+                }
+              },
+              "H6": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "Paragraph-lead / sub-section heading size (16px). The smallest of Goodlord's three heading levels — introduces a block of body copy without the weight of H1 or H2.",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.16}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for H6 paragraph leads. Pair with H6/Size (16px).",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Bold}"
+                }
+              }
+            },
+            "Body": {
+              "Single-Line": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "16px body text without explicit line-height (defaults to 100% leading). Use for SINGLE-LINE UI text — labels, button text, single-line input values, table cells. Not suitable for multi-line copy that may wrap — use Body/Paragraph instead, which has a line-height token for readability.",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.16}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for single-line body text — labels, button text, table cells. Pair with Body/Single-Line/Size (16px).",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Regular}"
+                }
+              },
+              "Paragraph": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "16px body text for multi-line copy that may wrap. Use with Paragraph/Line-Height for readability. For single-line UI text use Body/Single-Line instead.",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.16}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for multi-line paragraph copy. Pair with Body/Paragraph/Size (16px) and Paragraph/Line-Height.",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Regular}"
+                },
+                "Line-Height": {
+                  "$scopes": [
+                    "LINE_HEIGHT"
+                  ],
+                  "$description": "Line-height (20px) for multi-line paragraph copy, giving readable leading when text wraps. Single-line body text does not use this — it defaults to 100% leading.",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Line Height.20}"
+                }
+              },
+              "Supporting": {
+                "Size": {
+                  "$scopes": [
+                    "FONT_SIZE"
+                  ],
+                  "$description": "Smaller, lower-emphasis body text (14px). Used for helper text below form inputs, supporting copy under primary content, secondary information. Pair with Text/Secondary for muted contexts; for error messages use this size + Status/Error colour (typography stays the same — only colour changes).",
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Size.14}"
+                },
+                "Weight": {
+                  "$scopes": [
+                    "FONT_STYLE"
+                  ],
+                  "$description": "Weight for supporting/helper text. Pair with Body/Supporting/Size (14px).",
+                  "$type": "string",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Typography",
+                  "$value": "{Weight.Regular}"
+                }
+              },
+              "Error": {
+                "Size [deprecated — use Body": {
+                  "Supporting]": {
+                    "$scopes": [
+                      "FONT_SIZE"
+                    ],
+                    "$description": "Deprecated 2026-06-09. Identical to Typography/Body/Supporting/Size (both alias the same primitive). Use Typography/Body/Supporting/Size instead. Error styling = Supporting typography + Status/Error colour.",
+                    "$type": "float",
+                    "$libraryName": "",
+                    "$collectionName": "Primitives — Typography",
+                    "$value": "{Size.14}"
+                  }
+                },
+                "Weight [deprecated — use Body": {
+                  "Supporting]": {
+                    "$scopes": [
+                      "FONT_STYLE"
+                    ],
+                    "$description": "Deprecated 2026-06-09. Identical to Typography/Body/Supporting/Weight (both alias the same primitive). Use Typography/Body/Supporting/Weight instead. Error styling = Supporting typography + Status/Error colour.",
+                    "$type": "string",
+                    "$libraryName": "",
+                    "$collectionName": "Primitives — Typography",
+                    "$value": "{Weight.Regular}"
+                  }
+                }
+              }
+            },
+            "Font": {
+              "Family": {
+                "$scopes": [
+                  "FONT_FAMILY"
+                ],
+                "$description": "The product typeface, Brandon Text. Applied across all heading and body type. The single source of truth for font family — components bind here rather than hard-coding the family name.",
+                "$type": "string",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Typography",
+                "$value": "{Family.Brandon Text}"
+              }
+            },
+            "Label": {
+              "Size": {
+                "$scopes": [
+                  "FONT_SIZE"
+                ],
+                "$description": "Small text (12px) for badges, pills, chips, and micro-copy. NOT the standard form-field label — form labels use Body/Single-Line/Size (16px). This is for compact UI elements that need smaller text.",
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Typography",
+                "$value": "{Size.12}"
+              },
+              "Weight": {
+                "$scopes": [
+                  "FONT_STYLE"
+                ],
+                "$description": "Weight for compact label text on badges, pills, and chips. Pair with Label/Size (12px).",
+                "$type": "string",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Typography",
+                "$value": "{Weight.Regular}"
+              }
+            }
+          },
+          "Radius": {
+            "xs": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-xs)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Extra-small radius (2px). Checkboxes, chips, and badges.",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Radius",
+              "$value": "{radius.2}"
+            },
+            "sm": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-sm)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Small radius (4px). The default for most UI — buttons, inputs, alerts, and cards nested inside a parent card.",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Radius",
+              "$value": "{radius.4}"
+            },
+            "md": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-md)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Medium radius (10px). Top-level containers — parent cards and modals.",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Radius",
+              "$value": "{radius.10}"
+            },
+            "full": {
+              "$codeSyntax": {
+                "WEB": "var(--radius-full)"
+              },
+              "$scopes": [
+                "CORNER_RADIUS"
+              ],
+              "$description": "Fully rounded (9999px). Pills, avatars, and circular elements.",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Radius",
+              "$value": "{radius.full}"
+            }
+          },
+          "Spacing": {
+            "xxs": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Tightest gap — label to input (5px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.5}"
+            },
+            "xs": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Small internal gaps, e.g. checkbox to label (10px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.10}"
+            },
+            "s": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Medium-small gaps, e.g. alert padding vertical (15px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.15}"
+            },
+            "m": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Default gap between elements inside a parent card (20px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.20}"
+            },
+            "l": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Section heading to fields within a form section (30px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.30}"
+            },
+            "xl": {
+              "$scopes": [
+                "WIDTH_HEIGHT",
+                "GAP"
+              ],
+              "$description": "Card padding; gap between form sections (40px)",
+              "$type": "float",
+              "$libraryName": "",
+              "$collectionName": "Primitives — Spacing",
+              "$value": "{spacing.40}"
+            }
+          },
+          "Elevation": {
+            "Card": {
+              "OffsetX": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-card-offset-x)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-x.0}"
+              },
+              "OffsetY": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-card-offset-y)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-y.1}"
+              },
+              "Blur": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-card-blur)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{blur.3}"
+              },
+              "Spread": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-card-spread)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{spread.0}"
+              },
+              "Colour": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-card-colour)"
+                },
+                "$scopes": [
+                  "EFFECT_COLOR"
+                ],
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{colour.black-15}"
+              }
+            },
+            "Button": {
+              "OffsetX": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-button-offset-x)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-x.0}"
+              },
+              "OffsetY": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-button-offset-y)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-y.4}"
+              },
+              "Blur": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-button-blur)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{blur.10}"
+              },
+              "Spread": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-button-spread)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{spread.0}"
+              },
+              "Colour": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-button-colour)"
+                },
+                "$scopes": [
+                  "EFFECT_COLOR"
+                ],
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{colour.black-10}"
+              },
+              "Inner": {
+                "OffsetX": {
+                  "$codeSyntax": {
+                    "WEB": "var(--elevation-button-inner-offset-x)"
+                  },
+                  "$scopes": [
+                    "EFFECT_FLOAT"
+                  ],
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Shadow",
+                  "$value": "{offset-x.0}"
+                },
+                "OffsetY": {
+                  "$codeSyntax": {
+                    "WEB": "var(--elevation-button-inner-offset-y)"
+                  },
+                  "$scopes": [
+                    "EFFECT_FLOAT"
+                  ],
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Shadow",
+                  "$value": "{offset-y.3}"
+                },
+                "Blur": {
+                  "$codeSyntax": {
+                    "WEB": "var(--elevation-button-inner-blur)"
+                  },
+                  "$scopes": [
+                    "EFFECT_FLOAT"
+                  ],
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Shadow",
+                  "$value": "{blur.3}"
+                },
+                "Spread": {
+                  "$codeSyntax": {
+                    "WEB": "var(--elevation-button-inner-spread)"
+                  },
+                  "$scopes": [
+                    "EFFECT_FLOAT"
+                  ],
+                  "$type": "float",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Shadow",
+                  "$value": "{spread.0}"
+                },
+                "Colour": {
+                  "$codeSyntax": {
+                    "WEB": "var(--elevation-button-inner-colour)"
+                  },
+                  "$scopes": [
+                    "EFFECT_COLOR"
+                  ],
+                  "$type": "color",
+                  "$libraryName": "",
+                  "$collectionName": "Primitives — Shadow",
+                  "$value": "{colour.black-8}"
+                }
+              }
+            },
+            "Overlay": {
+              "OffsetX": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-overlay-offset-x)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-x.0}"
+              },
+              "OffsetY": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-overlay-offset-y)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{offset-y.0}"
+              },
+              "Blur": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-overlay-blur)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{blur.15}"
+              },
+              "Spread": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-overlay-spread)"
+                },
+                "$scopes": [
+                  "EFFECT_FLOAT"
+                ],
+                "$type": "float",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{spread.0}"
+              },
+              "Colour": {
+                "$codeSyntax": {
+                  "WEB": "var(--elevation-overlay-colour)"
+                },
+                "$scopes": [
+                  "EFFECT_COLOR"
+                ],
+                "$type": "color",
+                "$libraryName": "",
+                "$collectionName": "Primitives — Shadow",
+                "$value": "{colour.black-15}"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+]

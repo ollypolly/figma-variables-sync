@@ -1,0 +1,62 @@
+{
+  "Size": {
+    "12": {
+      "value": 12,
+      "type": "number",
+      "prefix": "primitives_typography"
+    },
+    "14": {
+      "value": 14,
+      "type": "number",
+      "prefix": "primitives_typography"
+    },
+    "16": {
+      "value": 16,
+      "type": "number",
+      "prefix": "primitives_typography"
+    },
+    "21": {
+      "value": 21,
+      "type": "number",
+      "prefix": "primitives_typography"
+    },
+    "24": {
+      "value": 24,
+      "type": "number",
+      "prefix": "primitives_typography"
+    }
+  },
+  "Line Height": {
+    "20": {
+      "value": 20,
+      "type": "number",
+      "prefix": "primitives_typography"
+    }
+  },
+  "Letter Spacing": {
+    "0": {
+      "value": 0,
+      "type": "number",
+      "prefix": "primitives_typography"
+    }
+  },
+  "Family": {
+    "Brandon Text": {
+      "value": "Brandon Text",
+      "type": "fontFamily",
+      "prefix": "primitives_typography"
+    }
+  },
+  "Weight": {
+    "Regular": {
+      "value": "Regular",
+      "type": "fontFamily",
+      "prefix": "primitives_typography"
+    },
+    "Bold": {
+      "value": "Bold",
+      "type": "fontFamily",
+      "prefix": "primitives_typography"
+    }
+  }
+}

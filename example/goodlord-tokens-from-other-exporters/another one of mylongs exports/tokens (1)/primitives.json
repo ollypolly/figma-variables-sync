@@ -1,0 +1,198 @@
+{
+  "Black": {
+    "value": "#000000",
+    "type": "color",
+    "prefix": "primitives"
+  },
+  "Purple": {
+    "100": {
+      "value": "#f0e4fb",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#9b51e0",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#4a157a",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Accent": {
+    "100": {
+      "value": "#94aeb9",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#1c5d78",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#134053",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Teal": {
+    "100": {
+      "value": "#d1dadd",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "200": {
+      "value": "#aef0e7",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#34d9c3",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "600": {
+      "value": "#24c1ac",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "700": {
+      "value": "#1ea392",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "800": {
+      "value": "#479885",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Grey": {
+    "0": {
+      "value": "#ffffff",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "100": {
+      "value": "#f4f7f8",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "200": {
+      "value": "#f2f2f2",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "300": {
+      "value": "#e9ecef",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "400": {
+      "value": "#e0e0e0",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#bdbdbd",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "600": {
+      "value": "#828282",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "700": {
+      "value": "#4f4f4f",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "800": {
+      "value": "#333333",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#1a1a1a",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Red": {
+    "100": {
+      "value": "#fed1d0",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#e02020",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "600": {
+      "value": "#c11b1b",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#79050b",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Orange": {
+    "100": {
+      "value": "#feefde",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#fa8c16",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#743d03",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Blue": {
+    "100": {
+      "value": "#ebf3fd",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#1366d6",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#0a3979",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  },
+  "Green": {
+    "100": {
+      "value": "#e0f2d7",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "500": {
+      "value": "#6abd40",
+      "type": "color",
+      "prefix": "primitives"
+    },
+    "900": {
+      "value": "#2a4b19",
+      "type": "color",
+      "prefix": "primitives"
+    }
+  }
+}

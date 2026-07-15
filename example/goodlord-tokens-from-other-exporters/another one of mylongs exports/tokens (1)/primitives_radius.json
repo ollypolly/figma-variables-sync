@@ -1,0 +1,24 @@
+{
+  "radius": {
+    "2": {
+      "value": 2,
+      "type": "number",
+      "prefix": "primitives_radius"
+    },
+    "4": {
+      "value": 4,
+      "type": "number",
+      "prefix": "primitives_radius"
+    },
+    "10": {
+      "value": 10,
+      "type": "number",
+      "prefix": "primitives_radius"
+    },
+    "full": {
+      "value": 9999,
+      "type": "number",
+      "prefix": "primitives_radius"
+    }
+  }
+}

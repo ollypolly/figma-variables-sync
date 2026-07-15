@@ -1,0 +1,331 @@
+{
+  "Colours": {
+    "Brand": {
+      "Primary": {
+        "value": "{Teal.500}",
+        "type": "color",
+        "prefix": "semantic",
+        "Hover": {
+          "value": "{Teal.600}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "Disabled": {
+          "value": "{Teal.200}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      }
+    },
+    "Text": {
+      "Primary": {
+        "value": "{Grey.800}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Secondary": {
+        "value": "{Grey.700}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Inverse": {
+        "value": "{Grey.0}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Link": {
+        "value": "{Accent.500}",
+        "type": "color",
+        "prefix": "semantic"
+      }
+    },
+    "Border": {
+      "Default": {
+        "value": "{Grey.400}",
+        "type": "color",
+        "prefix": "semantic",
+        "Hover": {
+          "value": "{Grey.700}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "Focus": {
+          "value": "{Teal.800}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "Disabled": {
+          "value": "{Grey.400}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      },
+      "Strong": {
+        "value": "{Grey.500}",
+        "type": "color",
+        "prefix": "semantic"
+      }
+    },
+    "Surface": {
+      "Default": {
+        "value": "{Grey.300}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Raised": {
+        "value": "{Grey.0}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Disabled": {
+        "value": "{Grey.200}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Hover": {
+        "value": "{Grey.100}",
+        "type": "color",
+        "prefix": "semantic"
+      }
+    },
+    "Status": {
+      "Error": {
+        "Strong": {
+          "value": "{Red.900}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "value": "{Red.500}",
+        "type": "color",
+        "prefix": "semantic",
+        "Subtle": {
+          "value": "{Red.100}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "Hover": {
+          "value": "{Red.600}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      },
+      "Info": {
+        "Strong": {
+          "value": "{Blue.900}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "value": "{Blue.500}",
+        "type": "color",
+        "prefix": "semantic",
+        "Subtle": {
+          "value": "{Blue.100}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      },
+      "Success": {
+        "Strong": {
+          "value": "{Green.900}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "value": "{Green.500}",
+        "type": "color",
+        "prefix": "semantic",
+        "Subtle": {
+          "value": "{Green.100}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      },
+      "Warning": {
+        "Strong": {
+          "value": "{Orange.900}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "value": "{Orange.500}",
+        "type": "color",
+        "prefix": "semantic",
+        "Subtle": {
+          "value": "{Orange.100}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      },
+      "Neutral": {
+        "Subtle": {
+          "value": "{Grey.200}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "value": "{Grey.700}",
+        "type": "color",
+        "prefix": "semantic",
+        "Strong": {
+          "value": "{Grey.900}",
+          "type": "color",
+          "prefix": "semantic"
+        },
+        "Hover": {
+          "value": "{Grey.500}",
+          "type": "color",
+          "prefix": "semantic"
+        }
+      }
+    },
+    "Interactive": {
+      "Hover": {
+        "value": "{Accent.900}",
+        "type": "color",
+        "prefix": "semantic"
+      },
+      "Disabled": {
+        "value": "{Accent.100}",
+        "type": "color",
+        "prefix": "semantic"
+      }
+    }
+  },
+  "Typography": {
+    "Heading": {
+      "H1": {
+        "Size": {
+          "value": "{Size.24}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Regular}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        }
+      },
+      "H2": {
+        "Size": {
+          "value": "{Size.21}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Bold}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        }
+      },
+      "H6": {
+        "Size": {
+          "value": "{Size.16}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Bold}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        }
+      }
+    },
+    "Body": {
+      "Single-Line": {
+        "Size": {
+          "value": "{Size.16}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Regular}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        }
+      },
+      "Paragraph": {
+        "Size": {
+          "value": "{Size.16}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Regular}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        },
+        "Line-Height": {
+          "value": "{Line Height.20}",
+          "type": "number",
+          "prefix": "semantic"
+        }
+      },
+      "Supporting": {
+        "Size": {
+          "value": "{Size.14}",
+          "type": "number",
+          "prefix": "semantic"
+        },
+        "Weight": {
+          "value": "{Weight.Regular}",
+          "type": "fontFamily",
+          "prefix": "semantic"
+        }
+      },
+      "Error": {
+        "Size [deprecated — use Body": {
+          "Supporting]": {
+            "value": "{Size.14}",
+            "type": "number",
+            "prefix": "semantic"
+          }
+        },
+        "Weight [deprecated — use Body": {
+          "Supporting]": {
+            "value": "{Weight.Regular}",
+            "type": "fontFamily",
+            "prefix": "semantic"
+          }
+        }
+      }
+    },
+    "Font": {
+      "Family": {
+        "value": "{Family.Brandon Text}",
+        "type": "fontFamily",
+        "prefix": "semantic"
+      }
+    },
+    "Label": {
+      "Size": {
+        "value": "{Size.12}",
+        "type": "number",
+        "prefix": "semantic"
+      },
+      "Weight": {
+        "value": "{Weight.Regular}",
+        "type": "fontFamily",
+        "prefix": "semantic"
+      }
+    }
+  },
+  "Radius": {
+    "xs": {
+      "value": "{radius.2}",
+      "type": "number",
+      "prefix": "semantic"
+    },
+    "sm": {
+      "value": "{radius.4}",
+      "type": "number",
+      "prefix": "semantic"
+    },
+    "md": {
+      "value": "{radius.10}",
+      "type": "number",
+      "prefix": "semantic"
+    },
+    "full": {
+      "value": "{radius.full}",
+      "type": "number",
+      "prefix": "semantic"
+    }
+  }
+}
