@@ -83,9 +83,8 @@ export function useProposals(active: boolean) {
       );
 
       setDescription("");
-      await check.execute();
       return pr;
-    }, [check.data, description, settings, github, check.execute])
+    }, [check.data, description, settings, github])
   );
 
   useEffect(() => {

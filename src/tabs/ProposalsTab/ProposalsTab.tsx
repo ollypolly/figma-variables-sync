@@ -37,7 +37,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
       <Container space="medium">
         {/* Sticky: the CTA is the first thing designers should see and act on */}
         <div
-          class="sticky top-0 z-10 -mx-4 px-4 pb-3"
+          class="sticky top-0 z-10 -mx-4 px-4"
           style={{ backgroundColor: "var(--figma-color-bg)" }}
         >
           <VerticalSpace space="small" />
