@@ -2,12 +2,13 @@ import {
   Banner,
   IconCheck16,
   IconWarning16,
+  Link,
   VerticalSpace,
 } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
 interface StatusBannerProps {
-  status: { success: boolean; text: string } | null;
+  status: { success: boolean; text: string; link?: string } | null;
 }
 
 export function StatusBanner({ status }: StatusBannerProps) {
@@ -19,7 +20,13 @@ export function StatusBanner({ status }: StatusBannerProps) {
         icon={status.success ? <IconCheck16 /> : <IconWarning16 />}
         variant={status.success ? "success" : "warning"}
       >
-        {status.text}
+        {status.link ? (
+          <Link href={status.link} target="_blank">
+            {status.text}
+          </Link>
+        ) : (
+          status.text
+        )}
       </Banner>
       <VerticalSpace space="medium" />
     </Fragment>

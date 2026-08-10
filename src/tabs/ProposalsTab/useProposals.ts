@@ -49,7 +49,7 @@ export function useProposals(active: boolean) {
     }, [settings, github])
   );
 
-  const submit = useAsync<string>(
+  const submit = useAsync<{ number: number; html_url: string }>(
     useCallback(async () => {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
@@ -84,7 +84,7 @@ export function useProposals(active: boolean) {
 
       setDescription("");
       await check.execute();
-      return `PR #${pr.number} created.`;
+      return pr;
     }, [check.data, description, settings, github, check.execute])
   );
 
@@ -97,7 +97,11 @@ export function useProposals(active: boolean) {
   const status = submit.error
     ? { success: false, text: submit.error }
     : submit.data
-      ? { success: true, text: submit.data }
+      ? {
+          success: true,
+          text: `PR #${submit.data.number} created.`,
+          link: submit.data.html_url,
+        }
       : check.error
         ? { success: false, text: check.error }
         : null;

@@ -8,11 +8,8 @@ import {
 } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
-import { DiffList } from "@components/DiffList";
-import type { DiffItem } from "@common/diff";
-
 interface ProposalFormProps {
-  diffItems: DiffItem[];
+  changeCount: number;
   description: string;
   onDescriptionChange: (value: string) => void;
   onSubmit: () => void;
@@ -20,7 +17,7 @@ interface ProposalFormProps {
 }
 
 export function ProposalForm({
-  diffItems,
+  changeCount,
   description,
   onDescriptionChange,
   onSubmit,
@@ -30,16 +27,9 @@ export function ProposalForm({
     <Fragment>
       <Text>
         <Muted>
-          <Bold>{String(diffItems.length)}</Bold> change
-          {diffItems.length === 1 ? "" : "s"} to propose:
+          <Bold>{String(changeCount)}</Bold> change
+          {changeCount === 1 ? "" : "s"} to propose:
         </Muted>
-      </Text>
-      <VerticalSpace space="small" />
-      <DiffList items={diffItems} mode="proposals" />
-
-      <VerticalSpace space="medium" />
-      <Text>
-        <Muted>Description</Muted>
       </Text>
       <VerticalSpace space="extraSmall" />
       <TextboxMultiline
