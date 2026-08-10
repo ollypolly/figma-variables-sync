@@ -24,9 +24,9 @@ Terminology decision: use **"Pull Request" / "PR"** as the primary UI term, not 
 
 The mental model designers should have:
 
-> You're always either **on main** (browsing your current changes, free to start a new PR) or **working on a PR** (an open pull request you're actively adding to). While working on a PR, your changes are diffed against *that PR's branch*, not against `main` — so things you've already sent for review don't keep reappearing as "new."
+> You're always either **on main** (browsing your current changes, free to start a new PR) or **on a PR** (an open pull request you're actively adding to). While on a PR, your changes are diffed against *that PR's branch*, not against `main` — so things you've already sent for review don't keep reappearing as "new."
 
-This mirrors a working branch in git, described without git jargon: "Start a PR," "Add to this PR," "Stop working on this PR" (i.e. go back to browsing main — the PR itself stays open on GitHub regardless).
+UI shape: a single row at the top of the Changes tab — a **"Pull Request:"** dropdown (options: "Main" + each open PR) and a **"New Request"** button next to it. There's no separate "select" action, no "working on" banner, no explicit stop/start step — the dropdown's current value *is* the state. Selecting a PR from it re-diffs against that branch; "New Request" just resets the dropdown back to "Main" (going back to browsing, ready to start a fresh PR from whatever's diffed against main). This mirrors a working branch in git without any git jargon leaking through, and without a state model any more complex than "what does the dropdown say right now."
 
 ## Value slices
 
@@ -36,13 +36,13 @@ Ordered smallest-safe-shippable first. Each slice is independently useful; later
 
 A read-only "already proposed" indicator on its own isn't enough to be worth shipping alone — a designer would still see it, then hit "Create Pull Request" and get a duplicate anyway, since nothing about *submitting* changed. The smallest slice that's actually useful bundles the indicator with the ability to act on it: select the PR and diff against it directly.
 
-**Designer-facing:** A dropdown at the top of the Changes tab lists open PRs (never merged or closed/draft-excluded — draft PRs are still selectable, only closed/merged ones are excluded) with "Work on this PR" as an action. Once selected, the header shows "Working on: PR #4 — <PR title/description>" (linked to the PR), with a way to stop and go back to browsing main. While working on a PR, the diff is computed against *that PR's branch* instead of `main` — so only genuinely new changes (made since that branch was last pushed) show as pending, and nothing gets silently duplicated into a second PR.
+**Designer-facing:** A "Pull Request:" dropdown at the top of the Changes tab, with "Main" plus every open PR as options (never merged/closed — draft PRs are still selectable, only closed/merged ones are excluded), and a "New Request" button next to it. Selecting a PR from the dropdown re-diffs against that branch, with its title/link shown underneath — so only genuinely new changes (made since that branch was last pushed) show as pending, and nothing gets silently duplicated into a second PR. Hitting "New Request" resets the dropdown to "Main," going back to browsing whatever's currently different from main, ready to start a fresh PR.
 
 **How:**
-- New state: `activeProposal: { number, headRef, title, html_url } | null`. See "Persistence" below — this should survive closing/reopening the plugin, not reset every session.
+- New state: `activeProposal: { number, headRef, title, html_url } | null` — `null` means the dropdown is on "Main." See "Persistence" below — this should survive closing/reopening the plugin, not reset every session.
 - `check()`'s diff base becomes `activeProposal ? activeProposal.headRef : settings.branch`.
 - The dropdown is populated from the existing `listPullRequests` call, filtered to `state === "open"`.
-- "Create Pull Request" button relabels to "Update PR #4" when a PR is active, and calls `updateFile` against the existing branch (Slice 2) instead of `createBranch` + `createPullRequest`.
+- "Create Pull Request" button relabels to "Update PR #4" when a PR is active, and calls `updateFile` against the existing branch (Slice 2) instead of `createBranch` + `createPullRequest`. "New Request" just sets `activeProposal` back to `null` — it doesn't touch GitHub at all, the PR stays open regardless.
 
 **Risk:** Medium. Touches `useProposals`'s core diff/submit logic, and the smallest useful version is bigger than originally scoped — accept that up front rather than trying to ship an indicator-only version first.
 
@@ -58,7 +58,7 @@ A read-only "already proposed" indicator on its own isn't enough to be worth shi
 
 Two related problems, solved together:
 
-**3a. Is the PR the designer is "on" still valid?** If it's merged or closed on GitHub while they're working on it, the plugin shouldn't silently keep pushing to a dead branch. Needs a periodic/on-`check()` status check against that PR number — if it's no longer open, clear `activeProposal`, tell the designer ("PR #4 was merged — you're back on main"), and fall back to diffing against `main`.
+**3a. Is the selected PR still valid?** If it's merged or closed on GitHub while it's selected in the dropdown, the plugin shouldn't silently keep pushing to a dead branch. Needs a periodic/on-`check()` status check against that PR number — if it's no longer open, reset the dropdown to "Main," tell the designer ("PR #4 was merged — you're back on main"), and fall back to diffing against `main`.
 
 **3b. Is `main` ahead of the PR branch?** If `main` has commits the active PR branch doesn't (another proposal merged, or a dev pushed token changes directly), show a banner: "This PR is behind main — a teammate may have changed tokens you don't have. [View on GitHub]" No auto-resolution attempted (auto-rebase was considered and dropped — see below).
 
@@ -77,7 +77,7 @@ Two related problems, solved together:
 
 ### Slice 4 — Staging (VS Code-style +/− on the diff tree)
 
-**Designer-facing:** Within "Working on: PR #4" (or even before starting a PR, for the very first push), each row and group in the diff tree gets a hover-revealed `+` (stage) / `−` (unstage) rather than a checkbox, styled like VS Code's Source Control panel. There are two sections: unstaged (still just sitting in Figma) and staged (going into the next push). Submitting only pushes the staged set; the rest stay pending for later.
+**Designer-facing:** Whether the "Pull Request:" dropdown (Slice 1) is on a specific PR or on "Main," each row and group in the diff tree gets a hover-revealed `+` (stage) / `−` (unstage) rather than a checkbox, styled like VS Code's Source Control panel. There are two sections: unstaged (still just sitting in Figma) and staged (going into the next push). Submitting only pushes the staged set; the rest stay pending for later.
 
 **How — this is the part that changes the data flow, not just the UI:**
 - `DiffItem` currently only stores *display strings* (`figmaVal`/`gitVal`), not the raw DTCG token object. Staging requires reconstructing real `$value`/`$type`/`$modes` objects to build a "staged content" JSON — so a new function is needed, working off the already-parsed token trees (`parseDtcg` output), not off `DiffItem`:
@@ -106,4 +106,4 @@ Combined with Slice 3's PR-status check-in: on load, if a persisted `activePropo
 
 ## Terminology (resolved)
 
-"Working on: PR #4" — shown with the PR's title/description alongside it, and linked to the PR on GitHub wherever this state is surfaced (header, dropdown, banners).
+"Pull Request:" dropdown + "New Request" button — no separate "working on" label or banner needed; the dropdown's selected value is the state. The PR's title/link is shown underneath the dropdown when a PR is selected, wherever else this state needs surfacing (e.g. staleness banners in Slice 3).
