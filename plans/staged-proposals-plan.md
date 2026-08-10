@@ -2,6 +2,8 @@
 
 Supersedes and consolidates phase-3-plan.md §8 (Multi-Proposal Branch Management), the "Suppress duplicate proposals" note in §9, and §12 (Staged Proposals). Those sections remain in `phase-3-plan.md` as a historical record but should link here.
 
+⚠️ **Gated by [`pre-staging-data-integrity-plan.md`](./pre-staging-data-integrity-plan.md)** — that plan's Bug 4 (proposals replace the entire Git file instead of merging) shares its core mechanism with this plan's Slice 4 `applyStagedDiffs`. Fix the data-integrity bugs first; the "submit everything" path here is really just "stage everything" once that groundwork exists, so building it twice would be wasted effort.
+
 ## Why this is the priority
 
 Today, once a designer clicks "Create Pull Request," they're functionally locked out of the plugin until that PR merges:
