@@ -2,7 +2,6 @@ import {
   Bold,
   Button,
   Container,
-  Divider,
   LoadingIndicator,
   Muted,
   Text,
@@ -14,7 +13,6 @@ import { DiffList } from "@components/DiffList";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
-import { ProposalList } from "./ProposalList";
 import { useProposals } from "./useProposals";
 
 export function ProposalsTab({ active }: { active: boolean }) {
@@ -23,7 +21,6 @@ export function ProposalsTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
-    proposals,
     description,
     setDescription,
     submitting,
@@ -88,19 +85,6 @@ export function ProposalsTab({ active }: { active: boolean }) {
           <Fragment>
             <VerticalSpace space="medium" />
             <DiffList items={diffItems} mode="proposals" />
-          </Fragment>
-        )}
-
-        {proposals.length > 0 && (
-          <Fragment>
-            <VerticalSpace space="large" />
-            <Divider />
-            <VerticalSpace space="medium" />
-            <Text>
-              <Bold>Recent Proposals</Bold>
-            </Text>
-            <VerticalSpace space="small" />
-            <ProposalList proposals={proposals} />
           </Fragment>
         )}
 
