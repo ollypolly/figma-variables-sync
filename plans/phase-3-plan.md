@@ -7,7 +7,7 @@ This document outlines the detailed plan, architecture, and task list for Phase 
 ## 🎯 Goal
 Improve the everyday usability of the plugin for designers by adding **Sticky Tab Memory** to persist state across sessions, and introducing **Background Sync Check Notifications** with warning alerts to proactively prevent Git merge conflicts.
 
-> ✅ **Done:** Proposals is now the default landing tab and leads the tab order (see `designer-feedback-quick-wins` branch). Recent Proposals is also now scoped to PRs this plugin created (via a `figma-variables-sync` label) instead of every PR against the branch.
+> ✅ **Done:** Proposals is now the default landing tab and leads the tab order (see `designer-feedback-quick-wins` branch). Recent Proposals is also now scoped to PRs this plugin created (via the `figma/proposal-` branch prefix) instead of every PR against the branch. Labels are a separate, user-configurable setting purely for external tagging (e.g. `patch`), decoupled from filtering.
 
 ---
 
