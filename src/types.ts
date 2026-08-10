@@ -54,6 +54,7 @@ export interface PluginSettings {
   repo: string;
   filePath: string;
   branch: string;
+  prLabels: string; // comma-separated; see parsePrLabels()
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -62,10 +63,18 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   repo: "",
   filePath: "tokens/design-tokens.json",
   branch: "main",
+  prLabels: "",
 };
 
 export function trimSettings(settings: PluginSettings): PluginSettings {
   return Object.fromEntries(
     Object.entries(settings).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])
   ) as PluginSettings;
+}
+
+export function parsePrLabels(prLabels: string): string[] {
+  return prLabels
+    .split(",")
+    .map((label) => label.trim())
+    .filter(Boolean);
 }

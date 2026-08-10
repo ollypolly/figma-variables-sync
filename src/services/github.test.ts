@@ -180,26 +180,30 @@ describe("GitHubService", () => {
   });
 
   describe("createPullRequest", () => {
-    it("should create PR and return PR number and HTML URL", async () => {
-      mockRequest.mockResolvedValueOnce({
-        data: {
-          number: 42,
-          html_url: "https://github.com/pull/42",
-        },
-      });
+    it("should create PR, apply the given labels, and return PR number and HTML URL", async () => {
+      mockRequest
+        .mockResolvedValueOnce({
+          data: {
+            number: 42,
+            html_url: "https://github.com/pull/42",
+          },
+        })
+        .mockResolvedValueOnce({ data: [] });
 
       const result = await service.createPullRequest(
         config,
         "pr title",
         "pr body",
-        "feature/new-branch"
+        "feature/new-branch",
+        ["patch"]
       );
 
       expect(result).toEqual({
         number: 42,
         html_url: "https://github.com/pull/42",
       });
-      expect(mockRequest).toHaveBeenCalledWith(
+      expect(mockRequest).toHaveBeenNthCalledWith(
+        1,
         "POST /repos/{owner}/{repo}/pulls",
         {
           owner: "test-owner",
@@ -210,6 +214,35 @@ describe("GitHubService", () => {
           base: "main",
         }
       );
+      expect(mockRequest).toHaveBeenNthCalledWith(
+        2,
+        "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
+        {
+          owner: "test-owner",
+          repo: "test-repo",
+          issue_number: 42,
+          labels: ["patch"],
+        }
+      );
+    });
+
+    it("should skip the labels request when no labels are given", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: {
+          number: 42,
+          html_url: "https://github.com/pull/42",
+        },
+      });
+
+      await service.createPullRequest(
+        config,
+        "pr title",
+        "pr body",
+        "feature/new-branch",
+        []
+      );
+
+      expect(mockRequest).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -228,7 +261,7 @@ describe("GitHubService", () => {
   });
 
   describe("listPullRequests", () => {
-    it("should return formatted pull request list", async () => {
+    it("should return only PRs from figma/proposal- branches", async () => {
       mockRequest.mockResolvedValueOnce({
         data: [
           {
@@ -237,15 +270,15 @@ describe("GitHubService", () => {
             state: "open",
             merged_at: null,
             html_url: "url-5",
-            head: { ref: "ref-5" },
+            head: { ref: "figma/proposal-123" },
           },
           {
             number: 6,
-            title: "PR 6",
+            title: "Unrelated PR",
             state: "closed",
             merged_at: "2026-06-18T12:00:00Z",
             html_url: "url-6",
-            head: { ref: "ref-6" },
+            head: { ref: "some-other-branch" },
           },
         ],
       });
@@ -257,14 +290,7 @@ describe("GitHubService", () => {
           title: "PR 5",
           state: "open",
           html_url: "url-5",
-          head_ref: "ref-5",
-        },
-        {
-          number: 6,
-          title: "PR 6",
-          state: "merged",
-          html_url: "url-6",
-          head_ref: "ref-6",
+          head_ref: "figma/proposal-123",
         },
       ]);
       expect(mockRequest).toHaveBeenCalledWith(
