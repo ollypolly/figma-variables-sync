@@ -1,7 +1,9 @@
 import {
+  Bold,
   Button,
   Columns,
   Container,
+  Divider,
   Link,
   Muted,
   Text,
@@ -41,6 +43,11 @@ export function SettingsTab() {
     <Container space="medium">
       <VerticalSpace space="medium" />
 
+      <Text>
+        <Bold>Repository Setup</Bold>
+      </Text>
+
+      <VerticalSpace space="medium" />
       <Text>
         <Muted>
           Personal Access Token{" "}
@@ -109,20 +116,42 @@ export function SettingsTab() {
         placeholder="main"
       />
 
+      <VerticalSpace space="medium" />
+      <Button
+        onClick={handleTestConnection}
+        loading={testing}
+        secondary
+        fullWidth
+      >
+        Test Connection
+      </Button>
+
       <VerticalSpace space="large" />
-      <Columns space="small">
-        <Button onClick={handleSave} loading={saving} fullWidth>
-          Save
-        </Button>
-        <Button
-          onClick={handleTestConnection}
-          loading={testing}
-          secondary
-          fullWidth
-        >
-          Test Connection
-        </Button>
-      </Columns>
+      <Divider />
+      <VerticalSpace space="medium" />
+      <Text>
+        <Bold>Pull Request Setup</Bold>
+      </Text>
+
+      <VerticalSpace space="medium" />
+      <Text>
+        <Muted>Labels</Muted>
+      </Text>
+      <VerticalSpace space="extraSmall" />
+      <Text>
+        <Muted>Comma-separated. Applied to every PR this plugin creates.</Muted>
+      </Text>
+      <VerticalSpace space="extraSmall" />
+      <Textbox
+        value={settings.prLabels}
+        onValueInput={updateField("prLabels")}
+        placeholder="e.g. patch, figma-variables-sync"
+      />
+
+      <VerticalSpace space="large" />
+      <Button onClick={handleSave} loading={saving} fullWidth>
+        Save
+      </Button>
 
       <VerticalSpace space="small" />
       <StatusBanner status={status} />

@@ -5,6 +5,8 @@ import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
 import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport } from "@services/figmaMessages";
+import { PROPOSAL_BRANCH_PREFIX } from "@services/github";
+import { parsePrLabels } from "../../types";
 
 export interface Proposal {
   number: number;
@@ -12,7 +14,6 @@ export interface Proposal {
   state: string;
   html_url: string;
   head_ref: string;
-  labels: string[];
 }
 
 interface CheckResult {
@@ -61,7 +62,7 @@ export function useProposals(active: boolean) {
         branch: settings.branch,
       };
 
-      const branchName = `figma/proposal-${Date.now()}`;
+      const branchName = `${PROPOSAL_BRANCH_PREFIX}${Date.now()}`;
       await github.createBranch(config, branchName);
 
       const fileData = await github.getFile(config);
@@ -77,7 +78,8 @@ export function useProposals(active: boolean) {
         config,
         description,
         `Design variable changes exported from Figma.\n\n${description}`,
-        branchName
+        branchName,
+        parsePrLabels(settings.prLabels)
       );
 
       setDescription("");

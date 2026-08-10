@@ -239,7 +239,8 @@ describe("Plugin Flow Integration Tests", () => {
         config,
         "Update variables",
         "PR body description",
-        newBranchName
+        newBranchName,
+        []
       );
 
       // Verify PR creation output

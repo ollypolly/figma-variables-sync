@@ -21,7 +21,7 @@ export interface GitHubConfig {
   branch: string;
 }
 
-export const PROPOSAL_LABEL = "figma-variables-sync";
+export const PROPOSAL_BRANCH_PREFIX = "figma/proposal-";
 
 export class GitHubService {
   private octokit: Octokit;
@@ -111,7 +111,7 @@ export class GitHubService {
     prTitle: string,
     prBody: string,
     headBranch: string,
-    labels: string[] = [PROPOSAL_LABEL]
+    labels: string[]
   ): Promise<{ number: number; html_url: string }> {
     const response = await this.octokit.request("POST /repos/{owner}/{repo}/pulls", {
       owner: config.owner,
@@ -151,7 +151,7 @@ export class GitHubService {
     }
   }
 
-  // Fetch pull requests created by this plugin (filtered by PROPOSAL_LABEL)
+  // Fetch pull requests created by this plugin (branches prefixed with PROPOSAL_BRANCH_PREFIX)
   async listPullRequests(owner: string, repo: string, base: string) {
     const response = await this.octokit.request("GET /repos/{owner}/{repo}/pulls", {
       owner,
@@ -169,8 +169,7 @@ export class GitHubService {
         state: pr.merged_at ? "merged" : pr.state, // "open", "closed", "merged"
         html_url: pr.html_url,
         head_ref: pr.head.ref,
-        labels: pr.labels.map((label: any) => label.name),
       }))
-      .filter((pr) => pr.labels.includes(PROPOSAL_LABEL));
+      .filter((pr) => pr.head_ref.startsWith(PROPOSAL_BRANCH_PREFIX));
   }
 }

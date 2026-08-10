@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GitHubService, PROPOSAL_LABEL } from "./github";
+import { GitHubService } from "./github";
 
 const mockRequest = vi.fn();
 
@@ -180,7 +180,7 @@ describe("GitHubService", () => {
   });
 
   describe("createPullRequest", () => {
-    it("should create PR, apply the default label, and return PR number and HTML URL", async () => {
+    it("should create PR, apply the given labels, and return PR number and HTML URL", async () => {
       mockRequest
         .mockResolvedValueOnce({
           data: {
@@ -194,7 +194,8 @@ describe("GitHubService", () => {
         config,
         "pr title",
         "pr body",
-        "feature/new-branch"
+        "feature/new-branch",
+        ["patch"]
       );
 
       expect(result).toEqual({
@@ -220,12 +221,12 @@ describe("GitHubService", () => {
           owner: "test-owner",
           repo: "test-repo",
           issue_number: 42,
-          labels: [PROPOSAL_LABEL],
+          labels: ["patch"],
         }
       );
     });
 
-    it("should skip the labels request when labels is empty", async () => {
+    it("should skip the labels request when no labels are given", async () => {
       mockRequest.mockResolvedValueOnce({
         data: {
           number: 42,
@@ -260,7 +261,7 @@ describe("GitHubService", () => {
   });
 
   describe("listPullRequests", () => {
-    it("should return only PRs carrying the proposal label", async () => {
+    it("should return only PRs from figma/proposal- branches", async () => {
       mockRequest.mockResolvedValueOnce({
         data: [
           {
@@ -269,8 +270,7 @@ describe("GitHubService", () => {
             state: "open",
             merged_at: null,
             html_url: "url-5",
-            head: { ref: "ref-5" },
-            labels: [{ name: PROPOSAL_LABEL }],
+            head: { ref: "figma/proposal-123" },
           },
           {
             number: 6,
@@ -278,8 +278,7 @@ describe("GitHubService", () => {
             state: "closed",
             merged_at: "2026-06-18T12:00:00Z",
             html_url: "url-6",
-            head: { ref: "ref-6" },
-            labels: [],
+            head: { ref: "some-other-branch" },
           },
         ],
       });
@@ -291,8 +290,7 @@ describe("GitHubService", () => {
           title: "PR 5",
           state: "open",
           html_url: "url-5",
-          head_ref: "ref-5",
-          labels: [PROPOSAL_LABEL],
+          head_ref: "figma/proposal-123",
         },
       ]);
       expect(mockRequest).toHaveBeenCalledWith(
