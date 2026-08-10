@@ -1,15 +1,7 @@
-import {
-  Bold,
-  Button,
-  Muted,
-  Text,
-  TextboxMultiline,
-  VerticalSpace,
-} from "@create-figma-plugin/ui";
+import { Button, TextboxMultiline, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
 interface ProposalFormProps {
-  changeCount: number;
   description: string;
   onDescriptionChange: (value: string) => void;
   onSubmit: () => void;
@@ -17,7 +9,6 @@ interface ProposalFormProps {
 }
 
 export function ProposalForm({
-  changeCount,
   description,
   onDescriptionChange,
   onSubmit,
@@ -25,13 +16,6 @@ export function ProposalForm({
 }: ProposalFormProps) {
   return (
     <Fragment>
-      <Text>
-        <Muted>
-          <Bold>{String(changeCount)}</Bold> change
-          {changeCount === 1 ? "" : "s"} to propose:
-        </Muted>
-      </Text>
-      <VerticalSpace space="extraSmall" />
       <TextboxMultiline
         value={description}
         onValueInput={onDescriptionChange}
@@ -45,7 +29,7 @@ export function ProposalForm({
         disabled={!description.trim()}
         fullWidth
       >
-        Propose Changes
+        Create Pull Request
       </Button>
     </Fragment>
   );

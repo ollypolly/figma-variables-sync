@@ -44,10 +44,19 @@ export function ProposalsTab({ active }: { active: boolean }) {
 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Text>
-              <Bold>Outgoing Changes</Bold>
+              <Muted>
+                {checking ? (
+                  "Refreshing…"
+                ) : (
+                  <Fragment>
+                    <Bold>{String(diffItems.length)}</Bold> change
+                    {diffItems.length === 1 ? "" : "s"} to propose
+                  </Fragment>
+                )}
+              </Muted>
             </Text>
             <Button onClick={checkForChanges} disabled={checking || submitting} secondary>
-              {checking ? "Refreshing…" : "Refresh"}
+              Refresh
             </Button>
           </div>
 
@@ -56,20 +65,13 @@ export function ProposalsTab({ active }: { active: boolean }) {
           <StatusBanner status={status} />
 
           {checking ? (
-            <Fragment>
-              <LoadingIndicator />
-              <VerticalSpace space="small" />
-              <Text>
-                <Muted>Comparing local variables with repository…</Muted>
-              </Text>
-            </Fragment>
+            <LoadingIndicator />
           ) : diffItems.length === 0 ? (
             <Text>
               <Muted>No local changes to propose.</Muted>
             </Text>
           ) : (
             <ProposalForm
-              changeCount={diffItems.length}
               description={description}
               onDescriptionChange={setDescription}
               onSubmit={submitProposal}
@@ -86,10 +88,6 @@ export function ProposalsTab({ active }: { active: boolean }) {
         {!checking && diffItems.length > 0 && (
           <Fragment>
             <VerticalSpace space="medium" />
-            <Text>
-              <Bold>Changes</Bold>
-            </Text>
-            <VerticalSpace space="small" />
             <DiffList items={diffItems} mode="proposals" />
           </Fragment>
         )}
