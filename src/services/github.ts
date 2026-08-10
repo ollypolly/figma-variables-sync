@@ -21,6 +21,8 @@ export interface GitHubConfig {
   branch: string;
 }
 
+export const PROPOSAL_BRANCH_PREFIX = "figma/proposal-";
+
 export class GitHubService {
   private octokit: Octokit;
 
@@ -108,7 +110,8 @@ export class GitHubService {
     config: Omit<GitHubConfig, "pat">,
     prTitle: string,
     prBody: string,
-    headBranch: string
+    headBranch: string,
+    labels: string[]
   ): Promise<{ number: number; html_url: string }> {
     const response = await this.octokit.request("POST /repos/{owner}/{repo}/pulls", {
       owner: config.owner,
@@ -118,6 +121,16 @@ export class GitHubService {
       head: headBranch,
       base: config.branch,
     });
+
+    if (labels.length > 0) {
+      await this.octokit.request("POST /repos/{owner}/{repo}/issues/{issue_number}/labels", {
+        owner: config.owner,
+        repo: config.repo,
+        issue_number: response.data.number,
+        labels,
+      });
+    }
+
     return {
       number: response.data.number,
       html_url: response.data.html_url,
@@ -138,7 +151,7 @@ export class GitHubService {
     }
   }
 
-  // Fetch pull requests
+  // Fetch pull requests created by this plugin (branches prefixed with PROPOSAL_BRANCH_PREFIX)
   async listPullRequests(owner: string, repo: string, base: string) {
     const response = await this.octokit.request("GET /repos/{owner}/{repo}/pulls", {
       owner,
@@ -149,12 +162,14 @@ export class GitHubService {
       direction: "desc",
       per_page: 30,
     });
-    return response.data.map((pr: any) => ({
-      number: pr.number,
-      title: pr.title,
-      state: pr.merged_at ? "merged" : pr.state, // "open", "closed", "merged"
-      html_url: pr.html_url,
-      head_ref: pr.head.ref,
-    }));
+    return response.data
+      .map((pr: any) => ({
+        number: pr.number,
+        title: pr.title,
+        state: pr.merged_at ? "merged" : pr.state, // "open", "closed", "merged"
+        html_url: pr.html_url,
+        head_ref: pr.head.ref,
+      }))
+      .filter((pr) => pr.head_ref.startsWith(PROPOSAL_BRANCH_PREFIX));
   }
 }

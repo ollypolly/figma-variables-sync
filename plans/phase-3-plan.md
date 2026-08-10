@@ -5,7 +5,9 @@ This document outlines the detailed plan, architecture, and task list for Phase 
 ---
 
 ## 🎯 Goal
-Improve the everyday usability of the plugin for designers by making the **Proposals** tab the default view, adding **Sticky Tab Memory** to persist state across sessions, and introducing **Background Sync Check Notifications** with warning alerts to proactively prevent Git merge conflicts.
+Improve the everyday usability of the plugin for designers by adding **Sticky Tab Memory** to persist state across sessions, and introducing **Background Sync Check Notifications** with warning alerts to proactively prevent Git merge conflicts.
+
+> ✅ **Done:** Proposals is now the default landing tab and leads the tab order (see `designer-feedback-quick-wins` branch). Recent Proposals is also now scoped to PRs this plugin created (via a `figma-variables-sync` label) instead of every PR against the branch.
 
 ---
 
@@ -26,7 +28,7 @@ Phase 3 introduces shared sync state and persistent storage access:
 └────────────────────────────────────────────────────────┘
 ```
 
-1.  **Context-Aware Defaults**: Default the landing page to the **Proposals** view.
+1.  ~~**Context-Aware Defaults**: Default the landing page to the **Proposals** view.~~ ✅ Done.
 2.  **State Persistence**: Store the last active tab in `figma.clientStorage` via message handlers on `UI_CHANNEL` / `PLUGIN_CHANNEL`.
 3.  **Proactive Sync Check & Auto-Apply**: On plugin load, execute a silent background fetch-and-diff. If incoming updates are found on Git that are missing locally in Figma:
     *   If there are **no unproposed local changes**, automatically apply the updates to Figma variables immediately.
@@ -47,8 +49,8 @@ Abstract diff logic out of page/tab views into a central provider to prevent dup
 *   **Trigger**: Fetches and performs diff comparison immediately when credentials are loaded.
 
 ### 3. Notifications & Banner UI (`src/ui/components/primitives/`)
-*   **Tabs Header Badge**: Add CSS styles to render a small red notification indicator on the **Updates** tab trigger if `incomingDiff.length > 0`.
 *   **Proposals Page Alert Banner**: If remote updates exist, display a warning banner in `Proposals.tsx` advising the designer to pull incoming updates first before making a proposal, preventing merge conflicts.
+*   ⚠️ Superseded by §9 below: whether Updates keeps a dedicated tab badge, or whether "updates available" surfaces only as this banner, is now an open question pending that redesign.
 
 ### 4. Integration Testing Strategy (`src/ui/integration-tests/`)
 Before building the visual layers, we will establish integration tests for the core Phase 3 mechanisms:
@@ -89,10 +91,18 @@ Currently, each "Create Proposal" generates a new branch (`figma/proposal-<times
     *   The 90/10 principle: smooth sailing almost always, and a clear handoff when it isn't.
 *   **Closing/abandoning proposals**: Allow designers to close a PR from within the plugin (GitHub API: `PATCH /repos/{owner}/{repo}/pulls/{pull_number}` with `state: "closed"`), cleaning up stale branches. This doubles as the conflict escape hatch above.
 
-### 9. Intelligent Diff Filtering
-Two UX pain points around echo/duplicate diffs:
-*   **Suppress echo diffs on Updates tab**: After proposing a change, the Updates tab shows the Git version as an "incoming update" that would revert the local edit. Need to detect open proposals from the current file and filter or label these diffs so the designer isn't confused.
+### 9. Rethink "Updates" as a State, Not a Tab
+Designer feedback (Aug 2026): a single designer rarely has main move ahead of their local Figma state, so "Updates" as a permanent third of the tab bar is often just confusing — worse, it can actively contradict reality. If the designer has unproposed local edits, Updates can show the Git version as an "incoming update" that would *revert* their newer local work, when in fact Figma is ahead, not behind. This absorbs and reframes what was previously a separate "Intelligent Diff Filtering" section (echo diffs from your own open proposal): the fix isn't just filtering the diff list, it's questioning whether "remote is ahead" deserves a whole tab versus a contextual banner/notification that only appears when genuinely true.
+*   **Detect true staleness**: Only surface "updates available" when Git actually has changes the designer doesn't have locally — cross-reference open proposals (via the `figma-variables-sync`-labelled PRs from §2/§3 quick wins) so a designer's own pending proposal is never mistaken for an incoming update.
+*   **Surface as state, not a tab**: Candidate directions — a banner/badge on the Proposals tab (where designers actually spend their time, since it's now the default landing tab) rather than a standalone Updates tab; or keep Updates but only render/enable it when `incomingDiff.length > 0`.
 *   **Suppress duplicate proposals**: If a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list. Closely related to the proposal picker in §8 — if the designer can select an existing proposal, the diff should reflect what's changed since that branch, not since main.
+*   This needs its own design pass before implementation — not a quick fix.
+
+### 10. Diff List Visual Redesign (match Figma's Variables panel)
+Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` reads as confusing diff-tool notation rather than a design tool. Direction: model the list after Figma's own Variables panel (left-hand indented group tree, collapsible by collection/group) instead of a flat dot-path list, and replace the +/−/~ prefixes with colour-coded highlights (e.g. green/yellow/red for added/changed/removed) on each row. Doesn't need to be a full two-pane tree/value split like Figma's — a simplified single-column version with indentation and colour is enough. Needs its own mockup/PR; not a quick win.
+
+### 11. Link to Actual Variable
+Designer feedback: from a diff or proposal entry, it'd be valuable to jump straight to the corresponding variable in Figma. Needs a spike first — the Plugin API doesn't have an obvious equivalent of `scrollAndZoomIntoView` (used for nodes) for variables, so it's unclear whether opening/focusing a specific variable in the Variables panel is possible at all via the API. Blocked on that research.
 
 ---
 
@@ -101,7 +111,7 @@ Two UX pain points around echo/duplicate diffs:
 1.  **Test Infrastructure & Mocks**: Set up the initial UI integration testing harness, mocking `figma.clientStorage` and background network fetch-and-diff cycles.
 2.  **Storage Handlers**: Implement and test the message-passing storage logic via `figma.clientStorage` for `active_tab` values.
 3.  **Shared State Refactoring**: Wrap the app in the global sync status context and write integration tests verifying diff calculation and single-fetch guarantees.
-4.  **Default Landing & Sticky Tab**: Wire up and test tab restoration logic on initialization.
+4.  **Sticky Tab**: ~~Default Landing &~~ Wire up and test tab restoration logic on initialization (default landing is done — see Goal note above).
 5.  **Badging, Warning Banners & Auto-Apply**: Build the visual notifications for the tabs header and Proposals tab, implement the auto-apply logic on open (silently applying if there are no unproposed local changes, otherwise asking first), backed by integration tests verifying warning visibility and auto-apply conditions.
 6.  **Release**: Version bump, GitHub tag/release, and Figma Community publish (see release process below).
 

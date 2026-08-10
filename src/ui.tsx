@@ -11,7 +11,7 @@ import { ResizeWindowHandler } from "./types";
 import "!./output.css";
 
 function Plugin() {
-  const [tabValue, setTabValue] = useState<string>("Updates");
+  const [tabValue, setTabValue] = useState<string>("Changes");
 
   useWindowResize(
     function (windowSize) {
@@ -27,8 +27,8 @@ function Plugin() {
   );
 
   const tabOptions = [
+    { value: "Changes", children: <ProposalsTab active={tabValue === "Changes"} /> },
     { value: "Updates", children: <UpdatesTab active={tabValue === "Updates"} /> },
-    { value: "Proposals", children: <ProposalsTab active={tabValue === "Proposals"} /> },
     { value: "Settings", children: <SettingsTab /> },
   ];
 

@@ -9,6 +9,7 @@ describe("trimSettings", () => {
       repo: " my-repo ",
       filePath: "  tokens/design-tokens.json",
       branch: "main  ",
+      prLabels: " patch ",
     };
 
     const trimmed = trimSettings(dirtySettings);
@@ -19,6 +20,7 @@ describe("trimSettings", () => {
       repo: "my-repo",
       filePath: "tokens/design-tokens.json",
       branch: "main",
+      prLabels: "patch",
     });
   });
 
@@ -29,6 +31,7 @@ describe("trimSettings", () => {
       repo: "repo",
       filePath: "tokens.json",
       branch: "main",
+      prLabels: "patch",
     };
 
     const trimmed = trimSettings(cleanSettings);

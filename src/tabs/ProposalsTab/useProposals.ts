@@ -5,6 +5,8 @@ import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
 import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport } from "@services/figmaMessages";
+import { PROPOSAL_BRANCH_PREFIX } from "@services/github";
+import { parsePrLabels } from "../../types";
 
 export interface Proposal {
   number: number;
@@ -47,7 +49,7 @@ export function useProposals(active: boolean) {
     }, [settings, github])
   );
 
-  const submit = useAsync<string>(
+  const submit = useAsync<{ number: number; html_url: string }>(
     useCallback(async () => {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
@@ -60,7 +62,7 @@ export function useProposals(active: boolean) {
         branch: settings.branch,
       };
 
-      const branchName = `figma/proposal-${Date.now()}`;
+      const branchName = `${PROPOSAL_BRANCH_PREFIX}${Date.now()}`;
       await github.createBranch(config, branchName);
 
       const fileData = await github.getFile(config);
@@ -76,13 +78,13 @@ export function useProposals(active: boolean) {
         config,
         description,
         `Design variable changes exported from Figma.\n\n${description}`,
-        branchName
+        branchName,
+        parsePrLabels(settings.prLabels)
       );
 
       setDescription("");
-      await check.execute();
-      return `PR #${pr.number} created.`;
-    }, [check.data, description, settings, github, check.execute])
+      return pr;
+    }, [check.data, description, settings, github])
   );
 
   useEffect(() => {
@@ -94,7 +96,11 @@ export function useProposals(active: boolean) {
   const status = submit.error
     ? { success: false, text: submit.error }
     : submit.data
-      ? { success: true, text: submit.data }
+      ? {
+          success: true,
+          text: `PR #${submit.data.number} created.`,
+          link: submit.data.html_url,
+        }
       : check.error
         ? { success: false, text: check.error }
         : null;
