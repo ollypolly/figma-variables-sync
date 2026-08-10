@@ -1,4 +1,9 @@
-import { IconChevronDown16, IconChevronRight16, Text } from "@create-figma-plugin/ui";
+import {
+  IconChevronDown16,
+  IconChevronRight16,
+  Text,
+  VerticalSpace,
+} from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 import { useState } from "preact/hooks";
 
@@ -115,24 +120,23 @@ function DiffTreeRow({
 
   return (
     <div style={{ padding: `6px 8px 6px ${indent}px` }}>
-      <Text>
-        <span style={{ color: TYPE_COLOR[item.type] }}>{node.name}</span>
-      </Text>
+      <Text>{node.name}</Text>
+      <VerticalSpace space="extraSmall" />
       {item.type === "modified" && (
         <Text>
-          <span style={{ color: "var(--figma-color-text-secondary)" }}>
+          <span style={{ color: TYPE_COLOR[item.type] }}>
             {oldVal} → {newVal}
           </span>
         </Text>
       )}
       {item.type === "added" && (
         <Text>
-          <span style={{ color: "var(--figma-color-text-secondary)" }}>{newVal}</span>
+          <span style={{ color: TYPE_COLOR[item.type] }}>{newVal}</span>
         </Text>
       )}
       {item.type === "deleted" && (
         <Text>
-          <span style={{ color: "var(--figma-color-text-secondary)" }}>{oldVal}</span>
+          <span style={{ color: TYPE_COLOR[item.type] }}>{oldVal}</span>
         </Text>
       )}
     </div>
