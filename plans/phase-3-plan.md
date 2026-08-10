@@ -76,6 +76,11 @@ Currently the plugin syncs variable **values** but not variable **bindings** —
 The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging a proposal, the plugin may briefly show stale diffs. Consider adding a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay.
 
 ### 8. Multi-Proposal Branch Management
+⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md)** — identified as the actual usability blocker (a designer is effectively locked out of the plugin once they've created a PR, since every diff always bundles into a new proposal against `main`, causing duplication). That doc consolidates this section, the "Suppress duplicate proposals" note in §9, and §12 into a single value-sliced plan. Original content kept below for history.
+
+<details>
+<summary>Original content</summary>
+
 Currently, each "Create Proposal" generates a new branch (`figma/proposal-<timestamp>`) and PR, but there's no way to revisit, update, or coordinate between outstanding proposals. Several open questions:
 
 *   **Proposal picker**: Should the Proposals tab list open PRs with a way to switch between them? A designer might want to amend an existing proposal rather than create a duplicate. The plugin already calls `listPullRequests` — this data could populate a dropdown/list that, when selected, shows the diff for that branch vs main and allows pushing additional changes onto it (via `updateFile` to the existing branch).
@@ -91,11 +96,13 @@ Currently, each "Create Proposal" generates a new branch (`figma/proposal-<times
     *   The 90/10 principle: smooth sailing almost always, and a clear handoff when it isn't.
 *   **Closing/abandoning proposals**: Allow designers to close a PR from within the plugin (GitHub API: `PATCH /repos/{owner}/{repo}/pulls/{pull_number}` with `state: "closed"`), cleaning up stale branches. This doubles as the conflict escape hatch above.
 
+</details>
+
 ### 9. Rethink "Updates" as a State, Not a Tab
 Designer feedback (Aug 2026): a single designer rarely has main move ahead of their local Figma state, so "Updates" as a permanent third of the tab bar is often just confusing — worse, it can actively contradict reality. If the designer has unproposed local edits, Updates can show the Git version as an "incoming update" that would *revert* their newer local work, when in fact Figma is ahead, not behind. This absorbs and reframes what was previously a separate "Intelligent Diff Filtering" section (echo diffs from your own open proposal): the fix isn't just filtering the diff list, it's questioning whether "remote is ahead" deserves a whole tab versus a contextual banner/notification that only appears when genuinely true.
 *   **Detect true staleness**: Only surface "updates available" when Git actually has changes the designer doesn't have locally — cross-reference open proposals (via the `figma-variables-sync`-labelled PRs from §2/§3 quick wins) so a designer's own pending proposal is never mistaken for an incoming update.
 *   **Surface as state, not a tab**: Candidate directions — a banner/badge on the Proposals tab (where designers actually spend their time, since it's now the default landing tab) rather than a standalone Updates tab; or keep Updates but only render/enable it when `incomingDiff.length > 0`.
-*   **Suppress duplicate proposals**: If a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list. Closely related to the proposal picker in §8 — if the designer can select an existing proposal, the diff should reflect what's changed since that branch, not since main.
+*   **Suppress duplicate proposals**: ⚠️ Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slices 1–2) — if a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list. Closely related to the proposal picker in §8 — if the designer can select an existing proposal, the diff should reflect what's changed since that branch, not since main.
 *   This needs its own design pass before implementation — not a quick fix.
 
 ### 10. Diff List Visual Redesign (match Figma's Variables panel)
@@ -105,6 +112,11 @@ Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` rea
 Designer feedback: from a diff or proposal entry, it'd be valuable to jump straight to the corresponding variable in Figma. Needs a spike first — the Plugin API doesn't have an obvious equivalent of `scrollAndZoomIntoView` (used for nodes) for variables, so it's unclear whether opening/focusing a specific variable in the Variables panel is possible at all via the API. Blocked on that research.
 
 ### 12. Staged Proposals (VS Code-style Stage/Unstage)
+⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slice 5)** — folded into the full working-on-a-proposal plan alongside §8 and the duplicate-suppression note in §9.
+
+<details>
+<summary>Original content</summary>
+
 Designer feedback: "stage changes / checkbox to selections" — the ability to choose which of the current local changes go into a given proposal, rather than every diff always being bundled into one PR. Direction: mimic VS Code's Source Control panel — hover-revealed `+`/`−` icons per row (and per group, to stage/unstage everything under that group at once) that move an item between an unstaged "Changes" section and a "Staged Changes" section, rather than checkboxes.
 
 *   **Two-section tree**: Reuse the tree/grouping work from §10 (now shipped), split into two regions: unstaged diffs and staged diffs. Likely two DiffList-style trees (or one tree with a staged flag per node), with `+` to stage a row/group and `−` to unstage.
@@ -113,6 +125,8 @@ Designer feedback: "stage changes / checkbox to selections" — the ability to c
 *   **Group-level actions**: Staging a group should stage all descendant leaves; a group's icon likely needs a "mixed" state (some staged, some not), similar to VS Code's partial-stage indicators.
 *   **Interaction with §8 (proposal picker)**: once a designer can select an *existing* open proposal to add to, staging becomes more relevant — they'd stage only the changes relevant to that proposal's scope, holding the rest back for a later PR.
 *   This changes the diff/export data flow, not just the UI — needs its own design pass before implementation.
+
+</details>
 
 ### 13. Design Token Consistency Pass on Plugin UI
 While building the diff tree (§10), spacing/colours/radii ended up as sporadic inline `style` px values (`GROUP_ROW_HEIGHT`, `INDENT_STEP`, `BASE_INDENT`, `ROW_GAP`, ad-hoc `padding`/`gap` strings) rather than reusing `@create-figma-plugin/ui`'s own space/border-radius tokens (`--space-*`, `--border-radius-*` in `base.css`) or its existing components (`Button`, `Container`, `VerticalSpace`) wherever one already exists. A bit ironic for a design-token-sync plugin's own UI. Worth a dedicated pass: audit `DiffList.tsx` and other components for inline `style` usage, replace with design tokens/CSS variables and existing UI primitives where they fit, and decide whether custom values (e.g. tree indentation, sticky row height) need their own local CSS custom properties for consistency.
