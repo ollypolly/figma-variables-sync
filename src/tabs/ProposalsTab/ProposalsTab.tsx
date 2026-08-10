@@ -1,12 +1,4 @@
-import {
-  Bold,
-  Button,
-  Container,
-  LoadingIndicator,
-  Muted,
-  Text,
-  VerticalSpace,
-} from "@create-figma-plugin/ui";
+import { Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
 import { DiffList } from "@components/DiffList";
@@ -31,42 +23,13 @@ export function ProposalsTab({ active }: { active: boolean }) {
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
-      <Container space="medium">
-        <div
-          class="sticky top-0 z-10 -mx-4 px-4"
-          style={{ backgroundColor: "var(--figma-color-bg)" }}
-        >
-          <VerticalSpace space="small" />
-
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <Text>
-              <Muted>
-                {checking ? (
-                  "Refreshing…"
-                ) : (
-                  <Fragment>
-                    <Bold>{String(diffItems.length)}</Bold> change
-                    {diffItems.length === 1 ? "" : "s"} to propose
-                  </Fragment>
-                )}
-              </Muted>
-            </Text>
-            <Button onClick={checkForChanges} disabled={checking || submitting} secondary>
-              Refresh
-            </Button>
-          </div>
-
+      <div class="flex flex-col h-full">
+        <Container space="medium">
           <VerticalSpace space="small" />
 
           <StatusBanner status={status} />
 
-          {checking ? (
-            <LoadingIndicator />
-          ) : diffItems.length === 0 ? (
-            <Text>
-              <Muted>No local changes to propose.</Muted>
-            </Text>
-          ) : (
+          {!checking && diffItems.length > 0 && (
             <ProposalForm
               description={description}
               onDescriptionChange={setDescription}
@@ -75,21 +38,29 @@ export function ProposalsTab({ active }: { active: boolean }) {
             />
           )}
 
-          <div
-            class="-mx-4 mt-3"
-            style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }}
-          />
+          <VerticalSpace space="small" />
+        </Container>
+
+        <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+
+        <div class="flex-1 min-h-0 overflow-y-auto">
+          <Container space="extraSmall">
+            <DiffList
+              items={diffItems}
+              mode="proposals"
+              checking={checking}
+              onRefresh={checkForChanges}
+              refreshDisabled={submitting}
+              emptyMessage="No local changes to propose."
+              countLabel={(count) => (
+                <Fragment>
+                  <strong>{String(count)}</strong> change{count === 1 ? "" : "s"} to propose
+                </Fragment>
+              )}
+            />
+          </Container>
         </div>
-
-        {!checking && diffItems.length > 0 && (
-          <Fragment>
-            <VerticalSpace space="medium" />
-            <DiffList items={diffItems} mode="proposals" />
-          </Fragment>
-        )}
-
-        <VerticalSpace space="medium" />
-      </Container>
+      </div>
     </TabGuard>
   );
 }

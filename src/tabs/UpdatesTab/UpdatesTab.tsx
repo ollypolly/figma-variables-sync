@@ -1,12 +1,4 @@
-import {
-  Bold,
-  Button,
-  Container,
-  LoadingIndicator,
-  Muted,
-  Text,
-  VerticalSpace,
-} from "@create-figma-plugin/ui";
+import { Button, Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
 import { DiffList } from "@components/DiffList";
@@ -31,42 +23,24 @@ export function UpdatesTab({ active }: { active: boolean }) {
       <Container space="medium">
         <VerticalSpace space="medium" />
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <Text>
-            <Bold>Incoming Updates</Bold>
-          </Text>
-          <Button onClick={checkForUpdates} disabled={checking || importing} secondary>
-            {checking ? "Refreshing…" : "Refresh"}
-          </Button>
-        </div>
-
-        <VerticalSpace space="medium" />
-
         <StatusBanner status={status} />
 
-        {checking ? (
+        <DiffList
+          items={diffItems}
+          mode="updates"
+          checking={checking}
+          onRefresh={checkForUpdates}
+          refreshDisabled={importing}
+          emptyMessage="All variables are up to date."
+          countLabel={(count) => (
+            <Fragment>
+              <strong>{String(count)}</strong> update{count === 1 ? "" : "s"} available
+            </Fragment>
+          )}
+        />
+
+        {!checking && diffItems.length > 0 && (
           <Fragment>
-            <VerticalSpace space="small" />
-            <LoadingIndicator />
-            <VerticalSpace space="small" />
-            <Text>
-              <Muted>Comparing local variables with repository…</Muted>
-            </Text>
-          </Fragment>
-        ) : diffItems.length === 0 ? (
-          <Text>
-            <Muted>All variables are up to date.</Muted>
-          </Text>
-        ) : (
-          <Fragment>
-            <Text>
-              <Muted>
-                <Bold>{String(diffItems.length)}</Bold> update
-                {diffItems.length === 1 ? "" : "s"} available:
-              </Muted>
-            </Text>
-            <VerticalSpace space="small" />
-            <DiffList items={diffItems} mode="updates" />
             <VerticalSpace space="medium" />
             <Button onClick={acceptUpdates} loading={importing} fullWidth>
               Accept Updates
