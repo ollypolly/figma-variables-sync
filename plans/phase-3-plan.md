@@ -104,7 +104,17 @@ Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` rea
 ### 11. Link to Actual Variable
 Designer feedback: from a diff or proposal entry, it'd be valuable to jump straight to the corresponding variable in Figma. Needs a spike first — the Plugin API doesn't have an obvious equivalent of `scrollAndZoomIntoView` (used for nodes) for variables, so it's unclear whether opening/focusing a specific variable in the Variables panel is possible at all via the API. Blocked on that research.
 
-### 12. Design Token Consistency Pass on Plugin UI
+### 12. Staged Proposals (VS Code-style Stage/Unstage)
+Designer feedback: "stage changes / checkbox to selections" — the ability to choose which of the current local changes go into a given proposal, rather than every diff always being bundled into one PR. Direction: mimic VS Code's Source Control panel — hover-revealed `+`/`−` icons per row (and per group, to stage/unstage everything under that group at once) that move an item between an unstaged "Changes" section and a "Staged Changes" section, rather than checkboxes.
+
+*   **Two-section tree**: Reuse the tree/grouping work from §10 (now shipped), split into two regions: unstaged diffs and staged diffs. Likely two DiffList-style trees (or one tree with a staged flag per node), with `+` to stage a row/group and `−` to unstage.
+*   **Partial export problem**: `submitProposal` currently commits the plugin's full current Figma-exported JSON (`check.data.figmaContent`) as the new file content on every PR. Staging only some changes means we need a step that computes "staged content" — take the git (base) JSON and apply only the staged `DiffItem`s on top of it, leaving the rest of Figma's local drift untouched for a later proposal. Needs a new function, e.g. `applyStagedDiffs(gitJson, diffs, stagedDotPaths)`.
+*   **Where does stage state live?**: Probably local component state (a `Set<string>` of staged dot-paths, similar to `openGroups`), not persisted — session-scoped, reset whenever the diff is recomputed since Figma's actual variable state can change between checks.
+*   **Group-level actions**: Staging a group should stage all descendant leaves; a group's icon likely needs a "mixed" state (some staged, some not), similar to VS Code's partial-stage indicators.
+*   **Interaction with §8 (proposal picker)**: once a designer can select an *existing* open proposal to add to, staging becomes more relevant — they'd stage only the changes relevant to that proposal's scope, holding the rest back for a later PR.
+*   This changes the diff/export data flow, not just the UI — needs its own design pass before implementation.
+
+### 13. Design Token Consistency Pass on Plugin UI
 While building the diff tree (§10), spacing/colours/radii ended up as sporadic inline `style` px values (`GROUP_ROW_HEIGHT`, `INDENT_STEP`, `BASE_INDENT`, `ROW_GAP`, ad-hoc `padding`/`gap` strings) rather than reusing `@create-figma-plugin/ui`'s own space/border-radius tokens (`--space-*`, `--border-radius-*` in `base.css`) or its existing components (`Button`, `Container`, `VerticalSpace`) wherever one already exists. A bit ironic for a design-token-sync plugin's own UI. Worth a dedicated pass: audit `DiffList.tsx` and other components for inline `style` usage, replace with design tokens/CSS variables and existing UI primitives where they fit, and decide whether custom values (e.g. tree indentation, sticky row height) need their own local CSS custom properties for consistency.
 
 ---
