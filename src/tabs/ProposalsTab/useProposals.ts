@@ -12,6 +12,7 @@ export interface Proposal {
   state: string;
   html_url: string;
   head_ref: string;
+  labels: string[];
 }
 
 interface CheckResult {

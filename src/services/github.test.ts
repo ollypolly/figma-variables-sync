@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GitHubService } from "./github";
+import { GitHubService, PROPOSAL_LABEL } from "./github";
 
 const mockRequest = vi.fn();
 
@@ -180,13 +180,15 @@ describe("GitHubService", () => {
   });
 
   describe("createPullRequest", () => {
-    it("should create PR and return PR number and HTML URL", async () => {
-      mockRequest.mockResolvedValueOnce({
-        data: {
-          number: 42,
-          html_url: "https://github.com/pull/42",
-        },
-      });
+    it("should create PR, apply the default label, and return PR number and HTML URL", async () => {
+      mockRequest
+        .mockResolvedValueOnce({
+          data: {
+            number: 42,
+            html_url: "https://github.com/pull/42",
+          },
+        })
+        .mockResolvedValueOnce({ data: [] });
 
       const result = await service.createPullRequest(
         config,
@@ -199,7 +201,8 @@ describe("GitHubService", () => {
         number: 42,
         html_url: "https://github.com/pull/42",
       });
-      expect(mockRequest).toHaveBeenCalledWith(
+      expect(mockRequest).toHaveBeenNthCalledWith(
+        1,
         "POST /repos/{owner}/{repo}/pulls",
         {
           owner: "test-owner",
@@ -210,6 +213,35 @@ describe("GitHubService", () => {
           base: "main",
         }
       );
+      expect(mockRequest).toHaveBeenNthCalledWith(
+        2,
+        "POST /repos/{owner}/{repo}/issues/{issue_number}/labels",
+        {
+          owner: "test-owner",
+          repo: "test-repo",
+          issue_number: 42,
+          labels: [PROPOSAL_LABEL],
+        }
+      );
+    });
+
+    it("should skip the labels request when labels is empty", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: {
+          number: 42,
+          html_url: "https://github.com/pull/42",
+        },
+      });
+
+      await service.createPullRequest(
+        config,
+        "pr title",
+        "pr body",
+        "feature/new-branch",
+        []
+      );
+
+      expect(mockRequest).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -228,7 +260,7 @@ describe("GitHubService", () => {
   });
 
   describe("listPullRequests", () => {
-    it("should return formatted pull request list", async () => {
+    it("should return only PRs carrying the proposal label", async () => {
       mockRequest.mockResolvedValueOnce({
         data: [
           {
@@ -238,14 +270,16 @@ describe("GitHubService", () => {
             merged_at: null,
             html_url: "url-5",
             head: { ref: "ref-5" },
+            labels: [{ name: PROPOSAL_LABEL }],
           },
           {
             number: 6,
-            title: "PR 6",
+            title: "Unrelated PR",
             state: "closed",
             merged_at: "2026-06-18T12:00:00Z",
             html_url: "url-6",
             head: { ref: "ref-6" },
+            labels: [],
           },
         ],
       });
@@ -258,13 +292,7 @@ describe("GitHubService", () => {
           state: "open",
           html_url: "url-5",
           head_ref: "ref-5",
-        },
-        {
-          number: 6,
-          title: "PR 6",
-          state: "merged",
-          html_url: "url-6",
-          head_ref: "ref-6",
+          labels: [PROPOSAL_LABEL],
         },
       ]);
       expect(mockRequest).toHaveBeenCalledWith(
