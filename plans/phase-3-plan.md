@@ -76,7 +76,7 @@ Currently the plugin syncs variable **values** but not variable **bindings** —
 The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging a proposal, the plugin may briefly show stale diffs. Consider adding a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay.
 
 ### 8. Multi-Proposal Branch Management
-⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md)** — identified as the actual usability blocker (a designer is effectively locked out of the plugin once they've created a PR, since every diff always bundles into a new proposal against `main`, causing duplication). That doc consolidates this section, the "Suppress duplicate proposals" note in §9, and §12 into a single value-sliced plan. Original content kept below for history.
+⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md)** (Slices 1–3) — identified as the actual usability blocker (a designer is effectively locked out of the plugin once they've created a PR, since every diff always bundles into a new proposal against `main`, causing duplication). That doc consolidates this section, the "Suppress duplicate proposals" note in §9, and §12 into a single value-sliced plan. Original content kept below for history.
 
 <details>
 <summary>Original content</summary>
@@ -99,11 +99,18 @@ Currently, each "Create Proposal" generates a new branch (`figma/proposal-<times
 </details>
 
 ### 9. Rethink "Updates" as a State, Not a Tab
+⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slice 3)** — resolved by removing the Updates tab entirely rather than redesigning it. Under the "working on a PR" model, a designer is always either on main (in sync, nothing pending) or on a PR (kept in sync via a staleness check against main), so there's no remaining case where a standalone "incoming updates" surface is needed. Original content kept below for history.
+
+<details>
+<summary>Original content</summary>
+
 Designer feedback (Aug 2026): a single designer rarely has main move ahead of their local Figma state, so "Updates" as a permanent third of the tab bar is often just confusing — worse, it can actively contradict reality. If the designer has unproposed local edits, Updates can show the Git version as an "incoming update" that would *revert* their newer local work, when in fact Figma is ahead, not behind. This absorbs and reframes what was previously a separate "Intelligent Diff Filtering" section (echo diffs from your own open proposal): the fix isn't just filtering the diff list, it's questioning whether "remote is ahead" deserves a whole tab versus a contextual banner/notification that only appears when genuinely true.
 *   **Detect true staleness**: Only surface "updates available" when Git actually has changes the designer doesn't have locally — cross-reference open proposals (via the `figma-variables-sync`-labelled PRs from §2/§3 quick wins) so a designer's own pending proposal is never mistaken for an incoming update.
 *   **Surface as state, not a tab**: Candidate directions — a banner/badge on the Proposals tab (where designers actually spend their time, since it's now the default landing tab) rather than a standalone Updates tab; or keep Updates but only render/enable it when `incomingDiff.length > 0`.
-*   **Suppress duplicate proposals**: ⚠️ Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slices 1–2) — if a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list. Closely related to the proposal picker in §8 — if the designer can select an existing proposal, the diff should reflect what's changed since that branch, not since main.
+*   **Suppress duplicate proposals**: if a change has already been proposed (open PR exists for that token path), the Proposals tab shouldn't show it as a new outgoing change. Could cross-reference open PR branch contents against the current diff list. Closely related to the proposal picker in §8 — if the designer can select an existing proposal, the diff should reflect what's changed since that branch, not since main.
 *   This needs its own design pass before implementation — not a quick fix.
+
+</details>
 
 ### 10. Diff List Visual Redesign (match Figma's Variables panel)
 Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` reads as confusing diff-tool notation rather than a design tool. Direction: model the list after Figma's own Variables panel (left-hand indented group tree, collapsible by collection/group) instead of a flat dot-path list, and replace the +/−/~ prefixes with colour-coded highlights (e.g. green/yellow/red for added/changed/removed) on each row. Doesn't need to be a full two-pane tree/value split like Figma's — a simplified single-column version with indentation and colour is enough. Needs its own mockup/PR; not a quick win.
@@ -112,7 +119,7 @@ Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` rea
 Designer feedback: from a diff or proposal entry, it'd be valuable to jump straight to the corresponding variable in Figma. Needs a spike first — the Plugin API doesn't have an obvious equivalent of `scrollAndZoomIntoView` (used for nodes) for variables, so it's unclear whether opening/focusing a specific variable in the Variables panel is possible at all via the API. Blocked on that research.
 
 ### 12. Staged Proposals (VS Code-style Stage/Unstage)
-⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slice 5)** — folded into the full working-on-a-proposal plan alongside §8 and the duplicate-suppression note in §9.
+⚠️ **Superseded by [`staged-proposals-plan.md`](./staged-proposals-plan.md) (Slice 4)** — folded into the full working-on-a-PR plan alongside §8 and the duplicate-suppression note in §9.
 
 <details>
 <summary>Original content</summary>
