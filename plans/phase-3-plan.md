@@ -104,6 +104,9 @@ Designer feedback: the current `+`/`−`/`~` prefix convention in `DiffList` rea
 ### 11. Link to Actual Variable
 Designer feedback: from a diff or proposal entry, it'd be valuable to jump straight to the corresponding variable in Figma. Needs a spike first — the Plugin API doesn't have an obvious equivalent of `scrollAndZoomIntoView` (used for nodes) for variables, so it's unclear whether opening/focusing a specific variable in the Variables panel is possible at all via the API. Blocked on that research.
 
+### 12. Design Token Consistency Pass on Plugin UI
+While building the diff tree (§10), spacing/colours/radii ended up as sporadic inline `style` px values (`GROUP_ROW_HEIGHT`, `INDENT_STEP`, `BASE_INDENT`, `ROW_GAP`, ad-hoc `padding`/`gap` strings) rather than reusing `@create-figma-plugin/ui`'s own space/border-radius tokens (`--space-*`, `--border-radius-*` in `base.css`) or its existing components (`Button`, `Container`, `VerticalSpace`) wherever one already exists. A bit ironic for a design-token-sync plugin's own UI. Worth a dedicated pass: audit `DiffList.tsx` and other components for inline `style` usage, replace with design tokens/CSS variables and existing UI primitives where they fit, and decide whether custom values (e.g. tree indentation, sticky row height) need their own local CSS custom properties for consistency.
+
 ---
 
 ## 📈 Implementation Order
