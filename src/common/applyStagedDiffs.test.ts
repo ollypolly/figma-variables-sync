@@ -1,14 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { applyStagedDiffs } from "./applyStagedDiffs";
 import { computeDiff } from "./diff";
-
-function color(value: string, extra: Record<string, any> = {}) {
-  return { $type: "color", $value: value, ...extra };
-}
-
-function dimension(value: string, extra: Record<string, any> = {}) {
-  return { $type: "dimension", $value: value, ...extra };
-}
+import { color, dimension } from "@common/testUtils/tokens";
 
 describe("applyStagedDiffs", () => {
   it("writes a staged path's raw Figma subtree onto the base tree, leaving the rest unchanged", () => {

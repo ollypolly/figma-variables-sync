@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { importFromDtcg } from "./importFromDtcg";
 import { createMockFigma } from "@common/testUtils/mockFigma";
+import { color, dimension } from "@common/testUtils/tokens";
 
 describe("importFromDtcg", () => {
   it("should parse DTCG JSON format and build native Figma collections, modes, variables, and links", async () => {
@@ -13,20 +14,10 @@ describe("importFromDtcg", () => {
       },
       "Tokens": {
         "colors": {
-          "primary": {
-            "$type": "color",
-            "$value": "#ffffff",
-            "$modes": {
-              "Dark": "#000000"
-            }
-          },
-          "surface": {
-            "$type": "color",
-            "$value": "{Tokens.colors.primary}",
-            "$modes": {
-              "Dark": "{Tokens.colors.primary}"
-            }
-          }
+          "primary": color("#ffffff", { "$modes": { "Dark": "#000000" } }),
+          "surface": color("{Tokens.colors.primary}", {
+            "$modes": { "Dark": "{Tokens.colors.primary}" },
+          }),
         },
         "sizes": {
           "width": {
@@ -103,15 +94,9 @@ describe("importFromDtcg", () => {
       },
       "Tokens": {
         "colors": {
-          "primary": {
-            "$type": "color",
-            "$value": "#ffffff",
-            "$modes": {
-              "Dark": "#000000"
-            }
-          }
-        }
-      }
+          "primary": color("#ffffff", { "$modes": { "Dark": "#000000" } }),
+        },
+      },
     };
 
     await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
@@ -138,18 +123,8 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          Primary: {
-            $type: "color",
-            $value: "#ffffff",
-            Hover: {
-              $type: "color",
-              $value: "#eeeeee",
-            },
-          },
-          secondary: {
-            $type: "color",
-            $value: "#000000",
-          },
+          Primary: { ...color("#ffffff"), Hover: color("#eeeeee") },
+          secondary: color("#000000"),
         },
       },
     };
@@ -169,11 +144,9 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          primary: {
-            $type: "color",
-            $value: "#ffffff",
+          primary: color("#ffffff", {
             $description: "The Goodlord teal. Use for primary button backgrounds.",
-          },
+          }),
         },
       },
     };
@@ -192,11 +165,9 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          primary: {
-            $type: "color",
-            $value: "#ffffff",
+          primary: color("#ffffff", {
             $extensions: { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
-          },
+          }),
         },
       },
     };
@@ -213,7 +184,7 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         sizes: {
-          width: { $type: "dimension", $value: "16px" },
+          width: dimension("16px"),
         },
       },
     };
@@ -230,13 +201,11 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          primary: {
-            $type: "color",
-            $value: "#ffffff",
+          primary: color("#ffffff", {
             $extensions: {
               figma: { codeSyntax: { WEB: "var(--colors-primary)", ANDROID: "colorsPrimary" } },
             },
-          },
+          }),
         },
       },
     };
@@ -256,11 +225,9 @@ describe("importFromDtcg", () => {
     const withCodeSyntax = {
       Tokens: {
         colors: {
-          primary: {
-            $type: "color",
-            $value: "#ffffff",
+          primary: color("#ffffff", {
             $extensions: { figma: { codeSyntax: { WEB: "var(--colors-primary)" } } },
-          },
+          }),
         },
       },
     };
@@ -269,7 +236,7 @@ describe("importFromDtcg", () => {
     const withoutCodeSyntax = {
       Tokens: {
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
+          primary: color("#ffffff"),
         },
       },
     };
@@ -285,11 +252,9 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          primary: {
-            $type: "color",
-            $value: "#ffffff",
+          primary: color("#ffffff", {
             $extensions: { figma: { hiddenFromPublishing: true } },
-          },
+          }),
         },
       },
     };
@@ -306,8 +271,8 @@ describe("importFromDtcg", () => {
     const withBothTokens = {
       Tokens: {
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
-          secondary: { $type: "color", $value: "#000000" },
+          primary: color("#ffffff"),
+          secondary: color("#000000"),
         },
       },
     };
@@ -316,7 +281,7 @@ describe("importFromDtcg", () => {
     const withPrimaryOnly = {
       Tokens: {
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
+          primary: color("#ffffff"),
         },
       },
     };
@@ -333,17 +298,17 @@ describe("importFromDtcg", () => {
 
     const withBothCollections = {
       Tokens: {
-        colors: { primary: { $type: "color", $value: "#ffffff" } },
+        colors: { primary: color("#ffffff") },
       },
       Spacing: {
-        sizes: { sm: { $type: "dimension", $value: "4px" } },
+        sizes: { sm: dimension("4px") },
       },
     };
     await importFromDtcg(JSON.stringify(withBothCollections), figmaMock);
 
     const withoutSpacing = {
       Tokens: {
-        colors: { primary: { $type: "color", $value: "#ffffff" } },
+        colors: { primary: color("#ffffff") },
       },
     };
     await importFromDtcg(JSON.stringify(withoutSpacing), figmaMock);
@@ -362,8 +327,8 @@ describe("importFromDtcg", () => {
     const dtcgJson = {
       Tokens: {
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
-          secondary: { $type: "color", $value: "#000000" },
+          primary: color("#ffffff"),
+          secondary: color("#000000"),
         },
       },
     };
@@ -378,13 +343,13 @@ describe("importFromDtcg", () => {
     const { figmaMock } = createMockFigma();
 
     const asColor = {
-      Tokens: { primary: { $type: "color", $value: "#ffffff" } },
+      Tokens: { primary: color("#ffffff") },
     };
     await importFromDtcg(JSON.stringify(asColor), figmaMock);
     const originalId = figmaMock.variables.getLocalVariables()[0].id;
 
     const asDimension = {
-      Tokens: { primary: { $type: "dimension", $value: "16px" } },
+      Tokens: { primary: dimension("16px") },
     };
     await importFromDtcg(JSON.stringify(asDimension), figmaMock);
 
@@ -400,8 +365,8 @@ describe("importFromDtcg", () => {
     const clean = {
       Tokens: {
         colors: {
-          Primary: { $type: "color", $value: "#ffffff" },
-          secondary: { $type: "color", $value: "#000000" },
+          Primary: color("#ffffff"),
+          secondary: color("#000000"),
         },
       },
     };
@@ -414,12 +379,8 @@ describe("importFromDtcg", () => {
     const nowQuarantined = {
       Tokens: {
         colors: {
-          Primary: {
-            $type: "color",
-            $value: "#ffffff",
-            Hover: { $type: "color", $value: "#eeeeee" },
-          },
-          secondary: { $type: "color", $value: "#000000" },
+          Primary: { ...color("#ffffff"), Hover: color("#eeeeee") },
+          secondary: color("#000000"),
         },
       },
     };
@@ -434,7 +395,7 @@ describe("importFromDtcg", () => {
     const { figmaMock } = createMockFigma();
 
     const withTokens = {
-      Tokens: { primary: { $type: "color", $value: "#ffffff" } },
+      Tokens: { primary: color("#ffffff") },
     };
     await importFromDtcg(JSON.stringify(withTokens), figmaMock);
     expect(figmaMock.variables.getLocalVariables().length).toBe(1);
@@ -443,11 +404,7 @@ describe("importFromDtcg", () => {
     // intentional wipe, so this must be a no-op rather than deleting everything.
     const whollyQuarantined = {
       Tokens: {
-        primary: {
-          $type: "color",
-          $value: "#ffffff",
-          weird: {},
-        },
+        primary: { ...color("#ffffff"), weird: {} },
       },
     };
     await importFromDtcg(JSON.stringify(whollyQuarantined), figmaMock);
@@ -462,8 +419,8 @@ describe("importFromDtcg", () => {
     const withBoth = {
       Tokens: {
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
-          link: { $type: "color", $value: "{Tokens.colors.primary}" },
+          primary: color("#ffffff"),
+          link: color("{Tokens.colors.primary}"),
         },
       },
     };
@@ -475,7 +432,7 @@ describe("importFromDtcg", () => {
     const primaryRemoved = {
       Tokens: {
         colors: {
-          link: { $type: "color", $value: "{Tokens.colors.primary}" },
+          link: color("{Tokens.colors.primary}"),
         },
       },
     };
@@ -501,7 +458,7 @@ describe("importFromDtcg", () => {
       Tokens: {
         $extensions: { figma: { hiddenFromPublishing: true } },
         colors: {
-          primary: { $type: "color", $value: "#ffffff" },
+          primary: color("#ffffff"),
         },
       },
     };

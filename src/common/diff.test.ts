@@ -1,53 +1,32 @@
 import { describe, it, expect } from "vitest";
 import { computeDiff } from "./diff";
+import { color, dimension } from "@common/testUtils/tokens";
 
 describe("computeDiff", () => {
   const tokenA = JSON.stringify({
-    Tokens: {
-      brand: {
-        primary: {
-          "$type": "color",
-          "$value": "#ffffff"
-        }
-      }
-    }
+    Tokens: { brand: { primary: color("#ffffff") } },
   });
 
   const tokenB = JSON.stringify({
-    Tokens: {
-      brand: {
-        primary: {
-          "$type": "color",
-          "$value": "#000000"
-        }
-      }
-    }
+    Tokens: { brand: { primary: color("#000000") } },
   });
 
   const tokenMultiA = JSON.stringify({
     "$modes": { "Light": {}, "Dark": {} },
     Tokens: {
       brand: {
-        primary: {
-          "$type": "color",
-          "$value": "#ffffff",
-          "$modes": { "Dark": "#000000" }
-        }
-      }
-    }
+        primary: color("#ffffff", { "$modes": { "Dark": "#000000" } }),
+      },
+    },
   });
 
   const tokenMultiB = JSON.stringify({
     "$modes": { "Light": {}, "Dark": {} },
     Tokens: {
       brand: {
-        primary: {
-          "$type": "color",
-          "$value": "#ffffff",
-          "$modes": { "Dark": "#111111" }
-        }
-      }
-    }
+        primary: color("#ffffff", { "$modes": { "Dark": "#111111" } }),
+      },
+    },
   });
 
   describe("Matching Tokens", () => {
@@ -92,10 +71,10 @@ describe("computeDiff", () => {
     const tokenWithTwo = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { "$type": "color", "$value": "#ffffff" },
-          secondary: { "$type": "color", "$value": "#ff0000" }
-        }
-      }
+          primary: color("#ffffff"),
+          secondary: color("#ff0000"),
+        },
+      },
     });
 
     it("should detect additions in proposals mode", () => {
@@ -195,7 +174,7 @@ describe("computeDiff", () => {
     const withDescriptionA = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { "$type": "color", "$value": "#ffffff", "$description": "Old guidance" },
+          primary: color("#ffffff", { "$description": "Old guidance" }),
         },
       },
     });
@@ -203,7 +182,7 @@ describe("computeDiff", () => {
     const withDescriptionB = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { "$type": "color", "$value": "#ffffff", "$description": "New guidance" },
+          primary: color("#ffffff", { "$description": "New guidance" }),
         },
       },
     });
@@ -226,20 +205,16 @@ describe("computeDiff", () => {
       const withScopesA = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
-              "$extensions": { figma: { scopes: ["FRAME_FILL"] } },
-            },
+            primary: color("#ffffff", { "$extensions": { figma: { scopes: ["FRAME_FILL"] } } }),
           },
         },
       });
       const withScopesB = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
-            },
+            }),
           },
         },
       });
@@ -255,20 +230,18 @@ describe("computeDiff", () => {
       const scopesOrderA = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
-            },
+            }),
           },
         },
       });
       const scopesOrderB = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { scopes: ["SHAPE_FILL", "FRAME_FILL"] } },
-            },
+            }),
           },
         },
       });
@@ -281,20 +254,18 @@ describe("computeDiff", () => {
       const withCodeSyntaxA = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { codeSyntax: { WEB: "var(--old)" } } },
-            },
+            }),
           },
         },
       });
       const withCodeSyntaxB = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { codeSyntax: { WEB: "var(--new)" } } },
-            },
+            }),
           },
         },
       });
@@ -310,20 +281,18 @@ describe("computeDiff", () => {
       const codeSyntaxOrderA = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { codeSyntax: { WEB: "var(--x)", ANDROID: "x" } } },
-            },
+            }),
           },
         },
       });
       const codeSyntaxOrderB = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { codeSyntax: { ANDROID: "x", WEB: "var(--x)" } } },
-            },
+            }),
           },
         },
       });
@@ -336,20 +305,18 @@ describe("computeDiff", () => {
       const withHiddenA = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { hiddenFromPublishing: false } },
-            },
+            }),
           },
         },
       });
       const withHiddenB = JSON.stringify({
         Tokens: {
           brand: {
-            primary: {
-              "$type": "color", "$value": "#ffffff",
+            primary: color("#ffffff", {
               "$extensions": { figma: { hiddenFromPublishing: true } },
-            },
+            }),
           },
         },
       });
@@ -363,10 +330,10 @@ describe("computeDiff", () => {
 
     it("should flag a type-only change distinctly via changedFields", () => {
       const asColor = JSON.stringify({
-        Tokens: { sizes: { width: { "$type": "color", "$value": "#ffffff" } } },
+        Tokens: { sizes: { width: color("#ffffff") } },
       });
       const asDimension = JSON.stringify({
-        Tokens: { sizes: { width: { "$type": "dimension", "$value": "#ffffff" } } },
+        Tokens: { sizes: { width: dimension("#ffffff") } },
       });
 
       const { diffs } = computeDiff(asDimension, asColor, "proposals");
@@ -380,14 +347,14 @@ describe("computeDiff", () => {
       const before = JSON.stringify({
         Tokens: {
           brand: {
-            primary: { "$type": "color", "$value": "#ffffff", "$description": "Old guidance" },
+            primary: color("#ffffff", { "$description": "Old guidance" }),
           },
         },
       });
       const after = JSON.stringify({
         Tokens: {
           brand: {
-            primary: { "$type": "color", "$value": "#000000", "$description": "New guidance" },
+            primary: color("#000000", { "$description": "New guidance" }),
           },
         },
       });
@@ -409,10 +376,10 @@ describe("computeDiff", () => {
     const figmaWithTwo = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { "$type": "color", "$value": "#ffffff" },
-          secondary: { "$type": "color", "$value": "#ff0000" }
-        }
-      }
+          primary: color("#ffffff"),
+          secondary: color("#ff0000"),
+        },
+      },
     });
 
     // "secondary" is quarantined on the git side: it's both a token ($value)
@@ -420,14 +387,10 @@ describe("computeDiff", () => {
     const gitWithCollision = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { "$type": "color", "$value": "#ffffff" },
-          secondary: {
-            "$type": "color",
-            "$value": "#ff0000",
-            Hover: { "$type": "color", "$value": "#cc0000" }
-          }
-        }
-      }
+          primary: color("#ffffff"),
+          secondary: { ...color("#ff0000"), Hover: color("#cc0000") },
+        },
+      },
     });
 
     it("should exclude a git-side collision from the diff instead of showing it as added/deleted, and report it separately", () => {
