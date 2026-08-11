@@ -5,9 +5,7 @@ import { setPath } from "../utils/setPath";
 import { getVariableDotPath } from "./getVariableDotPath";
 import { getVariablePath } from "../utils/getVariablePath";
 
-// Thrown when a Figma variable's path collides with a sibling's path (see step 3 below).
-// Carries the colliding paths separately from the message so the UI can render them
-// as a structured list instead of a comma-joined sentence fragment.
+// Carries colliding paths separately from the message so the UI can render a structured list.
 export class NamingCollisionError extends Error {
   constructor(message: string, public readonly collidingPaths: string[]) {
     super(message);
@@ -26,13 +24,11 @@ function comparePathSegments(a: string[], b: string[]): number {
   return a.length - b.length;
 }
 
-// Export Figma local variables to DTCG JSON format.
 export function exportToDtcg(
   collections: VariableCollection[],
   variables: Variable[],
   figmaInstance?: typeof figma
 ): string {
-  // 1. Build a map of all variable IDs to their dot-notation paths.
   const variableMap = new Map<string, string>();
   const collectionMap = new Map<string, VariableCollection>();
 
@@ -47,10 +43,8 @@ export function exportToDtcg(
     variableMap.set(variable.id, dotPath);
   }
 
-  // 2. Build DTCG structure
   const root: any = {};
 
-  // Construct file-level modes declaring all modes + fallback mappings.
   const rootModes: Record<string, any> = {};
   for (const col of collections) {
     const colModes = col.modes;
@@ -68,7 +62,6 @@ export function exportToDtcg(
     root.$modes = rootModes;
   }
 
-  // Helper to convert variable value to DTCG representation.
   const valToDtcg = (val: VariableValue, type: VariableResolvedDataType, isDimension: boolean): any => {
     if (val && typeof val === "object" && "type" in val && val.type === "VARIABLE_ALIAS") {
       const refPath = getVariableDotPath(val.id, variableMap, figmaInstance);
@@ -83,9 +76,7 @@ export function exportToDtcg(
     return val;
   };
 
-  // 3. Detect naming collisions before writing anything: a variable's path can't
-  // be a prefix of another variable's path (e.g. "Primary" and "Primary/Hover"),
-  // since a DTCG node can't legally be both a token and a group.
+  // A path can't be both a token and a group per DTCG — detect collisions before writing anything.
   const allPaths: string[][] = [];
   for (const variable of variables) {
     const col = collectionMap.get(variable.variableCollectionId);
@@ -115,7 +106,6 @@ export function exportToDtcg(
     );
   }
 
-  // 4. Populate each token in the tree.
   for (const variable of variables) {
     const col = collectionMap.get(variable.variableCollectionId);
     if (!col) continue;
@@ -156,7 +146,7 @@ export function exportToDtcg(
       tokenObject.$extensions = { figma: figmaExtensions };
     }
 
-    // If there are other modes, add them to $modes object only if they differ from the default
+    // Only record a mode override when it actually differs from the default value.
     if (colModes.length > 1) {
       const modesOverrides: Record<string, any> = {};
       let hasOverride = false;
@@ -177,7 +167,6 @@ export function exportToDtcg(
     setPath(root, fullPath, tokenObject);
   }
 
-  // 5. Attach collection-level metadata onto each collection's own root node.
   for (const col of collections) {
     if (!col.hiddenFromPublishing) continue;
     const colName = sanitizeName(col.name);
