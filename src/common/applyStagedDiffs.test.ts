@@ -2,14 +2,22 @@ import { describe, it, expect } from "vitest";
 import { applyStagedDiffs } from "./applyStagedDiffs";
 import { computeDiff } from "./diff";
 
+function color(value: string, extra: Record<string, any> = {}) {
+  return { $type: "color", $value: value, ...extra };
+}
+
+function dimension(value: string, extra: Record<string, any> = {}) {
+  return { $type: "dimension", $value: value, ...extra };
+}
+
 describe("applyStagedDiffs", () => {
   it("writes a staged path's raw Figma subtree onto the base tree, leaving the rest unchanged", () => {
-    const baseJson = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+    const baseJson = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const figmaJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#fff"),
+          secondary: color("#f00"),
         },
       },
     });
@@ -19,8 +27,8 @@ describe("applyStagedDiffs", () => {
     expect(JSON.parse(result)).toEqual({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#fff"),
+          secondary: color("#f00"),
         },
       },
     });
@@ -30,16 +38,16 @@ describe("applyStagedDiffs", () => {
     const baseJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#fff"),
+          secondary: color("#f00"),
         },
       },
     });
     const figmaJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#000" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#000"),
+          secondary: color("#f00"),
         },
       },
     });
@@ -49,8 +57,8 @@ describe("applyStagedDiffs", () => {
     expect(JSON.parse(result)).toEqual({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#000" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#000"),
+          secondary: color("#f00"),
         },
       },
     });
@@ -60,35 +68,35 @@ describe("applyStagedDiffs", () => {
     const baseJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff" },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#fff"),
+          secondary: color("#f00"),
         },
       },
     });
     const figmaJson = JSON.stringify({
-      Tokens: { brand: { secondary: { $type: "color", $value: "#f00" } } },
+      Tokens: { brand: { secondary: color("#f00") } },
     });
 
     const result = applyStagedDiffs(baseJson, figmaJson, new Set(["Tokens.brand.primary"]));
 
     expect(JSON.parse(result)).toEqual({
-      Tokens: { brand: { secondary: { $type: "color", $value: "#f00" } } },
+      Tokens: { brand: { secondary: color("#f00") } },
     });
   });
 
   it("prunes a group left empty by deleting its last token, leaving a sibling collection untouched", () => {
     const baseJson = JSON.stringify({
-      Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } },
-      Other: { spacing: { sm: { $type: "dimension", $value: "4px" } } },
+      Tokens: { brand: { primary: color("#fff") } },
+      Other: { spacing: { sm: dimension("4px") } },
     });
     const figmaJson = JSON.stringify({
-      Other: { spacing: { sm: { $type: "dimension", $value: "4px" } } },
+      Other: { spacing: { sm: dimension("4px") } },
     });
 
     const result = applyStagedDiffs(baseJson, figmaJson, new Set(["Tokens.brand.primary"]));
 
     expect(JSON.parse(result)).toEqual({
-      Other: { spacing: { sm: { $type: "dimension", $value: "4px" } } },
+      Other: { spacing: { sm: dimension("4px") } },
     });
   });
 
@@ -96,27 +104,25 @@ describe("applyStagedDiffs", () => {
     const baseJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff", $description: "The brand primary color." },
-          secondary: { $type: "color", $value: "#f00" },
+          primary: color("#fff", { $description: "The brand primary color." }),
+          secondary: color("#f00"),
         },
       },
     });
     const figmaJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff", $description: "The brand primary color." },
-          secondary: { $type: "color", $value: "#0f0" },
+          primary: color("#fff", { $description: "The brand primary color." }),
+          secondary: color("#0f0"),
         },
       },
     });
 
     const result = applyStagedDiffs(baseJson, figmaJson, new Set(["Tokens.brand.secondary"]));
 
-    expect(JSON.parse(result).Tokens.brand.primary).toEqual({
-      $type: "color",
-      $value: "#fff",
-      $description: "The brand primary color.",
-    });
+    expect(JSON.parse(result).Tokens.brand.primary).toEqual(
+      color("#fff", { $description: "The brand primary color." })
+    );
   });
 
   it("mirrors Figma's current root $modes even when no token paths are staged", () => {
@@ -130,12 +136,12 @@ describe("applyStagedDiffs", () => {
 
   it("mirrors a collection's $extensions (e.g. hiddenFromPublishing) independent of staged token paths", () => {
     const baseJson = JSON.stringify({
-      Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } },
+      Tokens: { brand: { primary: color("#fff") } },
     });
     const figmaJson = JSON.stringify({
       Tokens: {
         $extensions: { figma: { hiddenFromPublishing: true } },
-        brand: { primary: { $type: "color", $value: "#fff" } },
+        brand: { primary: color("#fff") },
       },
     });
 
@@ -149,7 +155,7 @@ describe("applyStagedDiffs", () => {
       $modes: { Light: {}, Dark: { $fallback: "Light" } },
       Tokens: {
         $extensions: { figma: { hiddenFromPublishing: true } },
-        brand: { primary: { $type: "color", $value: "#fff" } },
+        brand: { primary: color("#fff") },
       },
     };
     const figmaJson = JSON.stringify(figmaTree);
@@ -163,9 +169,9 @@ describe("applyStagedDiffs", () => {
     const gitJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#fff" },
-          secondary: { $type: "color", $value: "#f00" },
-          tertiary: { $type: "color", $value: "#00f" },
+          primary: color("#fff"),
+          secondary: color("#f00"),
+          tertiary: color("#00f"),
         },
       },
       // An invalid/quarantined subtree (both $value and a non-"$" child) — excluded from
@@ -175,9 +181,9 @@ describe("applyStagedDiffs", () => {
     const figmaJson = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#000" }, // modified
-          secondary: { $type: "color", $value: "#f00" }, // unchanged
-          quaternary: { $type: "color", $value: "#ff0" }, // added
+          primary: color("#000"), // modified
+          secondary: color("#f00"), // unchanged
+          quaternary: color("#ff0"), // added
           // tertiary removed
         },
       },
@@ -191,9 +197,9 @@ describe("applyStagedDiffs", () => {
     expect(JSON.parse(result)).toEqual({
       Tokens: {
         brand: {
-          primary: { $type: "color", $value: "#000" },
-          secondary: { $type: "color", $value: "#f00" },
-          quaternary: { $type: "color", $value: "#ff0" },
+          primary: color("#000"),
+          secondary: color("#f00"),
+          quaternary: color("#ff0"),
         },
       },
       Notes: { readme: { $value: "hand-authored, not from Figma", weird: {} } },
