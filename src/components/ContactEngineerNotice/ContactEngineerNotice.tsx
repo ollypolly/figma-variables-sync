@@ -33,18 +33,43 @@ function formatDetailsForClipboard(message: string, details?: NoticeDetails): st
   return lines.join("\n");
 }
 
+// Figma's plugin UI iframe doesn't reliably grant the Clipboard API's write permission,
+// so navigator.clipboard.writeText() can silently reject. Fall back to the older
+// execCommand('copy') route, which works via a hidden textarea + user gesture instead.
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // fall through to the legacy approach below
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const success = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return success;
+}
+
 export function ContactEngineerNotice({
   message,
   details,
   action,
   onDismiss,
 }: ContactEngineerNoticeProps) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(formatDetailsForClipboard(message, details));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    const success = await copyToClipboard(formatDetailsForClipboard(message, details));
+    setCopyState(success ? "copied" : "failed");
+    setTimeout(() => setCopyState("idle"), 2000);
   };
 
   return (
@@ -62,7 +87,11 @@ export function ContactEngineerNotice({
         )}
         <div class="flex gap-2">
           <Button secondary onClick={handleCopy}>
-            {copied ? "Copied!" : "Copy details"}
+            {copyState === "copied"
+              ? "Copied!"
+              : copyState === "failed"
+                ? "Copy failed"
+                : "Copy details"}
           </Button>
           {action && <Button secondary onClick={action.onClick}>{action.label}</Button>}
           {onDismiss && <Button secondary onClick={onDismiss}>Dismiss</Button>}
