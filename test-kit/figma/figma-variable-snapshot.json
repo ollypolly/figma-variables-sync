@@ -15,6 +15,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "COLOR",
       "scopes": ["FRAME_FILL", "SHAPE_FILL"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": {
         "8:0": { "r": 0.7137254901960784, "g": 0.1607843137254902, "b": 0.09803921568627451, "a": 1 }
       }
@@ -25,6 +28,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "COLOR",
       "scopes": ["FRAME_FILL", "SHAPE_FILL"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": {
         "8:0": { "r": 0.30980393290519714, "g": 0.27450981736183167, "b": 0.8980392217636108, "a": 1 }
       }
@@ -35,6 +41,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "COLOR",
       "scopes": ["FRAME_FILL", "SHAPE_FILL"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": {
         "8:0": { "r": 1, "g": 1, "b": 1, "a": 1 }
       }
@@ -45,6 +54,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "COLOR",
       "scopes": ["TEXT_FILL"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": {
         "8:0": { "r": 0.05882352963089943, "g": 0.09019608050584793, "b": 0.16470588743686676, "a": 1 }
       }
@@ -55,6 +67,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["GAP"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 8 }
     },
     {
@@ -63,6 +78,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["GAP"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 16 }
     },
     {
@@ -71,6 +89,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["GAP"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 24 }
     },
     {
@@ -79,6 +100,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["CORNER_RADIUS"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 20 }
     },
     {
@@ -87,6 +111,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["CORNER_RADIUS"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 9999 }
     },
     {
@@ -95,6 +122,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "FLOAT",
       "scopes": ["FONT_SIZE"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": 16 }
     },
     {
@@ -103,6 +133,9 @@
       "variableCollectionId": "VariableCollectionId:8:2",
       "resolvedType": "STRING",
       "scopes": ["ALL_SCOPES"],
+      "description": "",
+      "hiddenFromPublishing": false,
+      "codeSyntax": {},
       "valuesByMode": { "8:0": "bold" }
     }
   ]

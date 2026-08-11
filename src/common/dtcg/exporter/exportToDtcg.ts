@@ -124,6 +124,24 @@ export function exportToDtcg(
       $value: valToDtcg(defaultValue, variable.resolvedType, isDim),
     };
 
+    if (variable.description) {
+      tokenObject.$description = variable.description;
+    }
+
+    const figmaExtensions: any = {};
+    if (variable.scopes.length > 0) {
+      figmaExtensions.scopes = variable.scopes;
+    }
+    if (Object.keys(variable.codeSyntax).length > 0) {
+      figmaExtensions.codeSyntax = variable.codeSyntax;
+    }
+    if (variable.hiddenFromPublishing) {
+      figmaExtensions.hiddenFromPublishing = true;
+    }
+    if (Object.keys(figmaExtensions).length > 0) {
+      tokenObject.$extensions = { figma: figmaExtensions };
+    }
+
     // If there are other modes, add them to $modes object only if they differ from the default
     if (colModes.length > 1) {
       const modesOverrides: Record<string, any> = {};
@@ -143,6 +161,14 @@ export function exportToDtcg(
     }
 
     setPath(root, fullPath, tokenObject);
+  }
+
+  // 5. Attach collection-level metadata onto each collection's own root node.
+  for (const col of collections) {
+    if (!col.hiddenFromPublishing) continue;
+    const colName = sanitizeName(col.name);
+    root[colName] = root[colName] || {};
+    root[colName].$extensions = { figma: { hiddenFromPublishing: true } };
   }
 
   return JSON.stringify(root, null, 2);

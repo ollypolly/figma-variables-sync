@@ -7,12 +7,14 @@ import { getVariablePath } from "../utils/getVariablePath";
 
 export type ImportFromDtcgResult = Pick<TokenParseResult, "quarantined">;
 
+const CODE_SYNTAX_PLATFORMS: CodeSyntaxPlatform[] = ["WEB", "ANDROID", "iOS"];
+
 // Import W3C DTCG JSON back into native Figma variables.
 export async function importFromDtcg(
   jsonStr: string,
   figmaInstance: typeof figma
 ): Promise<ImportFromDtcgResult> {
-  const { modes: rootModes, tokens, quarantined } = parseDtcg(jsonStr);
+  const { modes: rootModes, tokens, quarantined, collectionMetadata } = parseDtcg(jsonStr);
   if (tokens.length === 0) return { quarantined };
 
   // Group tokens by collection (first segment of token path)
@@ -47,6 +49,7 @@ export async function importFromDtcg(
     if (!collection) {
       collection = figmaInstance.variables.createVariableCollection(colName);
     }
+    collection.hiddenFromPublishing = collectionMetadata[colName]?.hiddenFromPublishing ?? false;
 
     // 2. Identify and setup modes for this collection
     const neededModes = new Set<string>();
@@ -108,8 +111,23 @@ export async function importFromDtcg(
 
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
-        if (targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
+        if (!t.figmaScopes && targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
           variable.scopes = ["WIDTH_HEIGHT"];
+        }
+      }
+
+      variable.description = t.description ?? "";
+      variable.hiddenFromPublishing = t.figmaHiddenFromPublishing ?? false;
+      if (t.figmaScopes) {
+        variable.scopes = t.figmaScopes as VariableScope[];
+      }
+
+      for (const platform of CODE_SYNTAX_PLATFORMS) {
+        const value = t.figmaCodeSyntax?.[platform];
+        if (value !== undefined) {
+          variable.setVariableCodeSyntax(platform, value);
+        } else if (variable.codeSyntax[platform] !== undefined) {
+          variable.removeVariableCodeSyntax(platform);
         }
       }
 

@@ -24,6 +24,7 @@ function createMockFigma() {
         const newCol = {
           id,
           name,
+          hiddenFromPublishing: false,
           modes: [{ modeId: `${id}-mode-1`, name: "Mode 1" }],
           renameMode(modeId: string, name: string) {
             const m = this.modes.find((mode: any) => mode.modeId === modeId);
@@ -46,8 +47,15 @@ function createMockFigma() {
           variableCollectionId: collectionId,
           resolvedType,
           valuesByMode: {} as Record<string, any>,
+          description: "",
+          hiddenFromPublishing: false,
+          scopes: [] as string[],
+          codeSyntax: {} as Record<string, string>,
           setValueForMode(modeId: string, value: any) {
             this.valuesByMode[modeId] = value;
+          },
+          setVariableCodeSyntax(platform: string, value: string) {
+            this.codeSyntax[platform] = value;
           },
           remove() {
             const idx = variables.indexOf(this);
@@ -138,5 +146,192 @@ describe("exportToDtcg", () => {
 
     expect(error).toBeInstanceOf(NamingCollisionError);
     expect((error as NamingCollisionError).collidingPaths).toEqual(["Tokens.colors.Primary"]);
+  });
+
+  it("exports a variable's description as $description", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.description = "The Goodlord teal. Use for primary button backgrounds.";
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$description).toBe(
+      "The Goodlord teal. Use for primary button backgrounds."
+    );
+  });
+
+  it("omits $description when a variable has no description", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$description).toBeUndefined();
+  });
+
+  it("exports a variable's scopes under $extensions.figma.scopes", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.scopes = ["FRAME_FILL", "SHAPE_FILL"];
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$extensions.figma.scopes).toEqual([
+      "FRAME_FILL",
+      "SHAPE_FILL",
+    ]);
+  });
+
+  it("exports a variable's codeSyntax under $extensions.figma.codeSyntax", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setVariableCodeSyntax("WEB", "var(--colors-primary)");
+    primary.setVariableCodeSyntax("ANDROID", "colorsPrimary");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$extensions.figma.codeSyntax).toEqual({
+      WEB: "var(--colors-primary)",
+      ANDROID: "colorsPrimary",
+    });
+  });
+
+  it("omits $extensions.figma.codeSyntax when a variable has no code syntax defined", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$extensions).toBeUndefined();
+  });
+
+  it("exports hiddenFromPublishing under $extensions.figma when true", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.hiddenFromPublishing = true;
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$extensions.figma.hiddenFromPublishing).toBe(true);
+  });
+
+  it("omits hiddenFromPublishing when false", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.primary.$extensions).toBeUndefined();
+  });
+
+  it("exports a hidden collection's hiddenFromPublishing under the collection's own $extensions.figma", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    col.hiddenFromPublishing = true;
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.$extensions.figma.hiddenFromPublishing).toBe(true);
+    // The collection-level flag must not leak onto the token nested inside it.
+    expect(result.Tokens.colors.primary.$extensions).toBeUndefined();
+  });
+
+  it("omits collection $extensions when the collection is not hidden", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.$extensions).toBeUndefined();
   });
 });

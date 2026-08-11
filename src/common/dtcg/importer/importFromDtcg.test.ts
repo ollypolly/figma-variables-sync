@@ -25,6 +25,7 @@ function createMockFigma() {
           id,
           name,
           modes: [{ modeId: `${id}-mode-1`, name: "Mode 1" }],
+          hiddenFromPublishing: false,
           renameMode(modeId: string, name: string) {
             const m = this.modes.find((mode: any) => mode.modeId === modeId);
             if (m) m.name = name;
@@ -46,8 +47,18 @@ function createMockFigma() {
           variableCollectionId: collectionId,
           resolvedType,
           valuesByMode: {} as Record<string, any>,
+          description: "",
+          scopes: [] as string[],
+          codeSyntax: {} as Record<string, string>,
+          hiddenFromPublishing: false,
           setValueForMode(modeId: string, value: any) {
              this.valuesByMode[modeId] = value;
+          },
+          setVariableCodeSyntax(platform: string, value: string) {
+            this.codeSyntax[platform] = value;
+          },
+          removeVariableCodeSyntax(platform: string) {
+            delete this.codeSyntax[platform];
           },
           remove() {
             const idx = variables.indexOf(this);
@@ -222,5 +233,160 @@ describe("importFromDtcg", () => {
     const variables = figmaMock.variables.getLocalVariables();
     expect(variables.length).toBe(1);
     expect(variables[0].name).toBe("colors/secondary");
+  });
+
+  it("sets a variable's description from $description", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: {
+            $type: "color",
+            $value: "#ffffff",
+            $description: "The Goodlord teal. Use for primary button backgrounds.",
+          },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const primaryVar = figmaMock.variables.getLocalVariables()[0];
+    expect(primaryVar.description).toBe(
+      "The Goodlord teal. Use for primary button backgrounds."
+    );
+  });
+
+  it("sets a variable's scopes from $extensions.figma.scopes", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: {
+            $type: "color",
+            $value: "#ffffff",
+            $extensions: { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
+          },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const primaryVar = figmaMock.variables.getLocalVariables()[0];
+    expect(primaryVar.scopes).toEqual(["FRAME_FILL", "SHAPE_FILL"]);
+  });
+
+  it("falls back to the WIDTH_HEIGHT scope for a new dimension variable with no $extensions.figma.scopes", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        sizes: {
+          width: { $type: "dimension", $value: "16px" },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const widthVar = figmaMock.variables.getLocalVariables()[0];
+    expect(widthVar.scopes).toEqual(["WIDTH_HEIGHT"]);
+  });
+
+  it("sets a variable's codeSyntax from $extensions.figma.codeSyntax", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: {
+            $type: "color",
+            $value: "#ffffff",
+            $extensions: {
+              figma: { codeSyntax: { WEB: "var(--colors-primary)", ANDROID: "colorsPrimary" } },
+            },
+          },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const primaryVar = figmaMock.variables.getLocalVariables()[0];
+    expect(primaryVar.codeSyntax).toEqual({
+      WEB: "var(--colors-primary)",
+      ANDROID: "colorsPrimary",
+    });
+  });
+
+  it("removes a previously-set codeSyntax platform that's no longer present in the DTCG", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const withCodeSyntax = {
+      Tokens: {
+        colors: {
+          primary: {
+            $type: "color",
+            $value: "#ffffff",
+            $extensions: { figma: { codeSyntax: { WEB: "var(--colors-primary)" } } },
+          },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withCodeSyntax), figmaMock);
+
+    const withoutCodeSyntax = {
+      Tokens: {
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withoutCodeSyntax), figmaMock);
+
+    const primaryVar = figmaMock.variables.getLocalVariables()[0];
+    expect(primaryVar.codeSyntax).toEqual({});
+  });
+
+  it("sets hiddenFromPublishing from $extensions.figma.hiddenFromPublishing", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: {
+            $type: "color",
+            $value: "#ffffff",
+            $extensions: { figma: { hiddenFromPublishing: true } },
+          },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const primaryVar = figmaMock.variables.getLocalVariables()[0];
+    expect(primaryVar.hiddenFromPublishing).toBe(true);
+  });
+
+  it("sets a collection's hiddenFromPublishing from the collection's own $extensions.figma", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        $extensions: { figma: { hiddenFromPublishing: true } },
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    const collection = figmaMock.variables.getLocalVariableCollections()[0];
+    expect(collection.hiddenFromPublishing).toBe(true);
   });
 });
