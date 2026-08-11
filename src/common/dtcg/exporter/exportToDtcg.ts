@@ -15,6 +15,17 @@ export class NamingCollisionError extends Error {
   }
 }
 
+// Lexicographic order over path segments, shorter-first when one is a prefix of the
+// other — matches how a group's own path sorts immediately before its children's.
+function comparePathSegments(a: string[], b: string[]): number {
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    if (a[i] < b[i]) return -1;
+    if (a[i] > b[i]) return 1;
+  }
+  return a.length - b.length;
+}
+
 // Export Figma local variables to DTCG JSON format.
 export function exportToDtcg(
   collections: VariableCollection[],
@@ -84,13 +95,16 @@ export function exportToDtcg(
     allPaths.push([colName, ...varNameSegments]);
   }
 
+  // Sorting groups every path together with its extensions (a shorter path always
+  // sorts immediately before anything it's a prefix of), so a single adjacent-pair
+  // scan over the sorted list finds every collision — no need to compare all pairs.
+  const sortedPaths = [...allPaths].sort(comparePathSegments);
   const collisions = new Set<string>();
-  for (const a of allPaths) {
-    for (const b of allPaths) {
-      if (a === b || a.length >= b.length) continue;
-      if (a.every((segment, i) => segment === b[i])) {
-        collisions.add(a.join("."));
-      }
+  for (let i = 0; i < sortedPaths.length - 1; i++) {
+    const a = sortedPaths[i];
+    const b = sortedPaths[i + 1];
+    if (a.length < b.length && a.every((segment, idx) => segment === b[idx])) {
+      collisions.add(a.join("."));
     }
   }
 
