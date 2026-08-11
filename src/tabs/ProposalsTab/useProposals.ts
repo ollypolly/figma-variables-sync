@@ -44,7 +44,6 @@ export function useProposals(active: boolean) {
       let figmaContent: string;
       try {
         figmaContent = await requestExport();
-        setCollisionNotice(null);
       } catch (e) {
         if (e instanceof NamingCollisionError) {
           setCollisionNotice({ message: e.message, paths: e.collidingPaths });
@@ -53,7 +52,16 @@ export function useProposals(active: boolean) {
         throw e;
       }
 
-      const diffs = computeDiff(figmaContent, gitContent, "proposals");
+      const { diffs, quarantined } = computeDiff(figmaContent, gitContent, "proposals");
+      setCollisionNotice(
+        quarantined.length > 0
+          ? {
+              message: `${quarantined.length} token group(s) in the repository couldn't be compared because a name collides with a sibling's path.`,
+              paths: quarantined,
+            }
+          : null
+      );
+
       const proposals = await github.listPullRequests(
         settings.owner,
         settings.repo,

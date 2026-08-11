@@ -55,15 +55,15 @@ describe("computeDiff", () => {
       const diffProposals = computeDiff(tokenA, tokenA, "proposals");
       const diffUpdates = computeDiff(tokenA, tokenA, "updates");
 
-      expect(diffProposals).toEqual([]);
-      expect(diffUpdates).toEqual([]);
+      expect(diffProposals.diffs).toEqual([]);
+      expect(diffUpdates.diffs).toEqual([]);
     });
   });
 
   describe("Modified Tokens", () => {
     it("should detect modified values in proposals mode", () => {
       // Figma has B (new value #000000), Git has A (old value #ffffff)
-      const diffs = computeDiff(tokenB, tokenA, "proposals");
+      const { diffs } = computeDiff(tokenB, tokenA, "proposals");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "primary"],
@@ -76,7 +76,7 @@ describe("computeDiff", () => {
 
     it("should detect modified values in updates mode", () => {
       // Figma has A (old value #ffffff), Git has B (new value #000000)
-      const diffs = computeDiff(tokenA, tokenB, "updates");
+      const { diffs } = computeDiff(tokenA, tokenB, "updates");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "primary"],
@@ -100,7 +100,7 @@ describe("computeDiff", () => {
 
     it("should detect additions in proposals mode", () => {
       // Figma has two tokens, Git has only one. secondary is added.
-      const diffs = computeDiff(tokenWithTwo, tokenA, "proposals");
+      const { diffs } = computeDiff(tokenWithTwo, tokenA, "proposals");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "secondary"],
@@ -113,7 +113,7 @@ describe("computeDiff", () => {
 
     it("should detect deletions in proposals mode", () => {
       // Figma has only primary, Git has both. secondary is deleted in Figma.
-      const diffs = computeDiff(tokenA, tokenWithTwo, "proposals");
+      const { diffs } = computeDiff(tokenA, tokenWithTwo, "proposals");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "secondary"],
@@ -126,7 +126,7 @@ describe("computeDiff", () => {
 
     it("should detect additions in updates mode", () => {
       // Figma has one token, Git has both. secondary is added in Git.
-      const diffs = computeDiff(tokenA, tokenWithTwo, "updates");
+      const { diffs } = computeDiff(tokenA, tokenWithTwo, "updates");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "secondary"],
@@ -139,7 +139,7 @@ describe("computeDiff", () => {
 
     it("should detect deletions in updates mode", () => {
       // Figma has both, Git has only one. secondary is deleted in Git.
-      const diffs = computeDiff(tokenWithTwo, tokenA, "updates");
+      const { diffs } = computeDiff(tokenWithTwo, tokenA, "updates");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "secondary"],
@@ -153,7 +153,7 @@ describe("computeDiff", () => {
 
   describe("Multi-mode Tokens", () => {
     it("should detect mode value differences", () => {
-      const diffs = computeDiff(tokenMultiB, tokenMultiA, "proposals");
+      const { diffs } = computeDiff(tokenMultiB, tokenMultiA, "proposals");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "primary"],
@@ -167,7 +167,7 @@ describe("computeDiff", () => {
 
   describe("Empty/404 Git JSON Scenario", () => {
     it("should mark everything as deleted in updates mode if git is empty", () => {
-      const diffs = computeDiff(tokenA, "{}", "updates");
+      const { diffs } = computeDiff(tokenA, "{}", "updates");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "primary"],
@@ -179,7 +179,7 @@ describe("computeDiff", () => {
     });
 
     it("should mark everything as added in proposals mode if git is empty", () => {
-      const diffs = computeDiff(tokenA, "{}", "proposals");
+      const { diffs } = computeDiff(tokenA, "{}", "proposals");
       expect(diffs).toHaveLength(1);
       expect(diffs[0]).toEqual({
         path: ["Tokens", "brand", "primary"],
@@ -188,6 +188,45 @@ describe("computeDiff", () => {
         figmaVal: "#ffffff",
         gitVal: "",
       });
+    });
+  });
+
+  describe("Quarantined collisions", () => {
+    const figmaWithTwo = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { "$type": "color", "$value": "#ffffff" },
+          secondary: { "$type": "color", "$value": "#ff0000" }
+        }
+      }
+    });
+
+    // "secondary" is quarantined on the git side: it's both a token ($value)
+    // and a group (has a "Hover" child) — invalid DTCG, per findTokens.ts.
+    const gitWithCollision = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { "$type": "color", "$value": "#ffffff" },
+          secondary: {
+            "$type": "color",
+            "$value": "#ff0000",
+            Hover: { "$type": "color", "$value": "#cc0000" }
+          }
+        }
+      }
+    });
+
+    it("should exclude a git-side collision from the diff instead of showing it as added/deleted, and report it separately", () => {
+      // Figma has a clean "secondary" token; Git's "secondary" is quarantined.
+      // Without quarantine-awareness this would misleadingly show as "added" (proposals)
+      // or "deleted" (updates), since it's simply absent from Git's parsed token map.
+      const proposalsResult = computeDiff(figmaWithTwo, gitWithCollision, "proposals");
+      const updatesResult = computeDiff(figmaWithTwo, gitWithCollision, "updates");
+
+      expect(proposalsResult.diffs).toEqual([]);
+      expect(updatesResult.diffs).toEqual([]);
+      expect(proposalsResult.quarantined).toEqual(["Tokens.brand.secondary"]);
+      expect(updatesResult.quarantined).toEqual(["Tokens.brand.secondary"]);
     });
   });
 });

@@ -26,7 +26,9 @@ export function useUpdates(active: boolean) {
       }
       const gitContent = fileData.content;
       const figmaContent = await requestExport();
-      const diffs = computeDiff(figmaContent, gitContent, "updates");
+      // Quarantined paths (git-side naming collisions) are intentionally not surfaced
+      // here — this tab is being retired, not worth building notice UI for.
+      const { diffs } = computeDiff(figmaContent, gitContent, "updates");
       return { diffs, gitContent };
     }, [settings, github])
   );

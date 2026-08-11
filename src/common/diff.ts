@@ -1,4 +1,4 @@
-import { parseDtcg, ParsedToken } from "./dtcg";
+import { parseDtcg, ParsedToken, TokenParseResult } from "./dtcg";
 
 export interface DiffItem {
   path: string[];
@@ -6,6 +6,10 @@ export interface DiffItem {
   type: "added" | "modified" | "deleted";
   figmaVal: string; // The Figma local value (new state when proposing, old state when updating)
   gitVal: string;   // The Git repository value (old state when proposing, new state when updating)
+}
+
+export interface ComputeDiffResult extends Pick<TokenParseResult, "quarantined"> {
+  diffs: DiffItem[];
 }
 
 function formatTokenVal(t: ParsedToken): string {
@@ -36,9 +40,14 @@ function formatTokenVal(t: ParsedToken): string {
  *   - "modified": values differ.
  *   - "deleted": variable exists in Figma but not Git.
  */
-export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals" | "updates"): DiffItem[] {
+export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals" | "updates"): ComputeDiffResult {
   const figmaData = parseDtcg(figmaJson);
   const gitData = parseDtcg(gitJson);
+  // A path quarantined on either side can't be meaningfully diffed — it's simply
+  // absent from that side's token map, which would otherwise look like a genuine
+  // add/delete instead of an unparseable collision.
+  const quarantined = [...new Set([...figmaData.quarantined, ...gitData.quarantined])];
+  const quarantinedSet = new Set(quarantined);
 
   const figmaMap = new Map<string, ParsedToken>();
   for (const t of figmaData.tokens) {
@@ -57,6 +66,7 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
 
   // Added and modified in target (new)
   for (const [key, targetToken] of targetMap.entries()) {
+    if (quarantinedSet.has(key)) continue;
     const sourceToken = sourceMap.get(key);
     if (!sourceToken) {
       diffs.push({
@@ -83,6 +93,7 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
 
   // Deleted in target (new)
   for (const [key, sourceToken] of sourceMap.entries()) {
+    if (quarantinedSet.has(key)) continue;
     if (!targetMap.has(key)) {
       diffs.push({
         path: sourceToken.path,
@@ -94,5 +105,5 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
     }
   }
 
-  return diffs;
+  return { diffs, quarantined };
 }

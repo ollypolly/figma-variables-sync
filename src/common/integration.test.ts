@@ -129,7 +129,7 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "updates");
+      const { diffs } = computeDiff(figmaJson, gitJson, "updates");
 
       // Verify diff calculation: #ff0000 (figma) vs #00ff00 (git)
       expect(diffs).toHaveLength(1);
@@ -189,7 +189,7 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "proposals");
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
 
       // Verify diff detection
       expect(diffs).toHaveLength(2);
@@ -308,8 +308,8 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "proposals");
-      
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
+
       // All variables in Figma are detected as "added"
       expect(diffs).toHaveLength(1);
       expect(diffs[0].type).toBe("added");
