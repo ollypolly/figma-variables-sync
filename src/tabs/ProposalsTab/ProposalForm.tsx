@@ -19,7 +19,7 @@ export function ProposalForm({
       <TextboxMultiline
         value={description}
         onValueInput={onDescriptionChange}
-        placeholder="What changed in this proposal?"
+        placeholder="What's changed?"
         rows={3}
       />
       <Button
