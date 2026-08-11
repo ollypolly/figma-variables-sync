@@ -1,5 +1,5 @@
 import { emit, on } from "@create-figma-plugin/utilities";
-import { exportToDtcg } from "@common/dtcg";
+import { exportToDtcg, NamingCollisionError } from "@common/dtcg";
 
 import {
   DEFAULT_SETTINGS,
@@ -22,7 +22,8 @@ export function registerFromFigmaHandlers() {
       emit<ExportResultHandler>("EXPORT_RESULT", true, dtcgJson);
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Export failed.";
-      emit<ExportResultHandler>("EXPORT_RESULT", false, "", message);
+      const collidingPaths = e instanceof NamingCollisionError ? e.collidingPaths : undefined;
+      emit<ExportResultHandler>("EXPORT_RESULT", false, "", message, collidingPaths);
     }
   });
 

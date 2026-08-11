@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { exportToDtcg } from "./exportToDtcg";
+import { exportToDtcg, NamingCollisionError } from "./exportToDtcg";
 
 function createMockFigma() {
   const collections: any[] = [];
@@ -125,12 +125,18 @@ describe("exportToDtcg", () => {
     const primaryHover = figmaMock.variables.createVariable("colors/Primary/Hover", col.id, "COLOR");
     primaryHover.setValueForMode(mode, { r: 0.9, g: 0.9, b: 0.9 });
 
-    expect(() =>
+    let error: unknown;
+    try {
       exportToDtcg(
         figmaMock.variables.getLocalVariableCollections(),
         figmaMock.variables.getLocalVariables(),
         figmaMock
-      )
-    ).toThrow(/Tokens\.colors\.Primary/);
+      );
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(NamingCollisionError);
+    expect((error as NamingCollisionError).collidingPaths).toEqual(["Tokens.colors.Primary"]);
   });
 });

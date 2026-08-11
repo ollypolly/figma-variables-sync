@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
+import { NamingCollisionError } from "@common/dtcg";
 import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
@@ -23,7 +24,7 @@ interface CheckResult {
 }
 
 export function useProposals(active: boolean) {
-  const { settings, settingsLoading, isConfigured } = useAppContext();
+  const { settings, settingsLoading, isConfigured, addNotice } = useAppContext();
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");
@@ -33,7 +34,18 @@ export function useProposals(active: boolean) {
       if (!github) throw new Error("Not configured.");
       const fileData = await github.getFile(settings);
       const gitContent = fileData?.content ?? "{}";
-      const figmaContent = await requestExport();
+
+      let figmaContent: string;
+      try {
+        figmaContent = await requestExport();
+      } catch (e) {
+        if (e instanceof NamingCollisionError) {
+          addNotice(e.message, { paths: e.collidingPaths });
+          return { diffs: [], figmaContent: "", proposals: [] };
+        }
+        throw e;
+      }
+
       const diffs = computeDiff(figmaContent, gitContent, "proposals");
       const proposals = await github.listPullRequests(
         settings.owner,
@@ -41,7 +53,7 @@ export function useProposals(active: boolean) {
         settings.branch
       );
       return { diffs, figmaContent, proposals };
-    }, [settings, github])
+    }, [settings, github, addNotice])
   );
 
   const submit = useAsync<{ number: number; html_url: string }>(

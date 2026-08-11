@@ -5,6 +5,15 @@ import { setPath } from "../utils/setPath";
 import { getVariableDotPath } from "./getVariableDotPath";
 import { getVariablePath } from "../utils/getVariablePath";
 
+// Thrown when a Figma variable's path collides with a sibling's path (see step 3 below).
+// Carries the colliding paths separately from the message so the UI can render them
+// as a structured list instead of a comma-joined sentence fragment.
+export class NamingCollisionError extends Error {
+  constructor(message: string, public readonly collidingPaths: string[]) {
+    super(message);
+    this.name = "NamingCollisionError";
+  }
+}
 
 // Export Figma local variables to DTCG JSON format.
 export function exportToDtcg(
@@ -86,8 +95,9 @@ export function exportToDtcg(
   }
 
   if (collisions.size > 0) {
-    throw new Error(
-      `Cannot export: the following Figma variable names collide with a sibling's path and would produce invalid DTCG (a token can't also be a group) — rename them, e.g. "Primary" → "Primary/Default": ${Array.from(collisions).join(", ")}`
+    throw new NamingCollisionError(
+      `Cannot export: the following Figma variable names collide with a sibling's path and would produce invalid DTCG (a token can't also be a group) — rename them, e.g. "Primary" → "Primary/Default".`,
+      Array.from(collisions)
     );
   }
 

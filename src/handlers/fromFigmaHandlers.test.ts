@@ -50,6 +50,12 @@ describe("REQUEST_EXPORT handler", () => {
     registerFromFigmaHandlers();
     (globalThis as any).figma.ui.onmessage(["REQUEST_EXPORT"]);
 
-    expect(postMessage).toHaveBeenCalledWith(["EXPORT_RESULT", false, "", expect.stringMatching(/Tokens\.colors\.Primary/)]);
+    expect(postMessage).toHaveBeenCalledWith([
+      "EXPORT_RESULT",
+      false,
+      "",
+      expect.any(String),
+      ["Tokens.colors.Primary"],
+    ]);
   });
 });

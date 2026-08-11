@@ -51,6 +51,15 @@ export function ContactEngineerNotice({
     <Banner icon={<IconWarning16 />} variant="warning">
       <div class="flex flex-col gap-2 py-1">
         <span>{message}</span>
+        {details?.paths && details.paths.length > 0 && (
+          <div class="flex flex-col">
+            {details.paths.map((path) => (
+              <span key={path}>
+                <strong>{path}</strong>
+              </span>
+            ))}
+          </div>
+        )}
         <div class="flex gap-2">
           <Button secondary onClick={handleCopy}>
             {copied ? "Copied!" : "Copy details"}
