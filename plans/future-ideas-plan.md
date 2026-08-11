@@ -30,6 +30,14 @@ Currently the plugin syncs variable **values** but not variable **bindings** —
 
 The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging, the plugin may briefly show stale diffs. Consider a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay. Distinct from the actual data-loss bugs in `pre-staging-data-integrity-plan.md` — this is read-after-write API lag, not a correctness bug.
 
+## Self-Service Fix for Git-Side Naming Collisions
+
+When `computeDiff` finds a path that's quarantined on the git side but clean on Figma's side (invalid DTCG already committed to the repo — a token name doubling as a group name), today's `ContactEngineerNotice` says an engineer has to edit the file directly. But Figma is the real source of truth here, and export already guarantees Figma's current state can't have this collision — so the "correct" content for that path is knowable: whatever Figma currently has for it.
+
+The blocker isn't knowledge, it's mechanism: today submitting a proposal replaces the *entire* git file with a full Figma export, which would fix the collision as a side effect but also clobber anything else in git that Figma doesn't have yet (another designer's pending change, dev-added metadata) — the exact data-loss risk `pre-staging-data-integrity-plan.md`'s Bug 4 already exists to fix.
+
+Once Bug 4's merge-based proposals land (patching only the paths that actually changed, rather than replacing the whole file), revisit this: detect "quarantined on git, clean on Figma" paths specifically and surface them as a normal, safe, proposable diff item (e.g. "Fix invalid token structure") instead of a dead-end engineer notice. Not pressing — Bug 4 needs to exist first regardless of this use case.
+
 ## Superseded (see linked plans)
 
 The following used to live here as open sections but have moved to dedicated, actively-developed plans:
