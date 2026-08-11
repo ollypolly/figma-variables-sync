@@ -38,7 +38,10 @@ export function ProposalsTab({ active }: { active: boolean }) {
                 <ContactEngineerNotice
                   message={collisionNotice.message}
                   resolution={collisionNotice.resolution}
-                  details={{ paths: collisionNotice.paths }}
+                  details={{
+                    paths: collisionNotice.paths,
+                    fixInstructions: collisionNotice.fixInstructions,
+                  }}
                 />
               )}
 

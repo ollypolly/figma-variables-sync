@@ -9,6 +9,11 @@ export interface NoticeDetails {
   file?: string;
   branch?: string;
   error?: string;
+  // Concrete steps for whoever has to actually resolve this (typically an
+  // engineer) — kept out of the visible banner so it doesn't clutter the
+  // on-screen message for readers who don't need it, but included in the
+  // copyable text so it travels with the report into Slack/Teams/etc.
+  fixInstructions?: string;
 }
 
 interface ContactEngineerNoticeProps {
@@ -73,6 +78,10 @@ function formatDetailsForClipboard(message: string, details?: NoticeDetails): st
 
   if (details?.error) {
     lines.push("", `Error: ${details.error}`);
+  }
+
+  if (details?.fixInstructions) {
+    lines.push("", "How to fix:", details.fixInstructions);
   }
 
   return lines.join("\n");

@@ -32,7 +32,12 @@ export function useProposals(active: boolean) {
   // from a previous check must not linger once the collision is resolved,
   // and re-checking repeatedly must not stack duplicate notices.
   const [collisionNotice, setCollisionNotice] = useState<
-    { message: string; paths: string[]; resolution: "designer" | "engineer" } | null
+    {
+      message: string;
+      paths: string[];
+      resolution: "designer" | "engineer";
+      fixInstructions?: string;
+    } | null
   >(null);
 
   const check = useAsync<CheckResult>(
@@ -63,6 +68,10 @@ export function useProposals(active: boolean) {
               message: `The repository's token file has ${quarantined.length} token group(s) that are invalid — a token name is also used as a group name (e.g. "Primary" and "Primary/Hover"), which isn't allowed. This isn't fixable from Figma; an engineer needs to edit the token file directly to remove the conflict.`,
               paths: quarantined,
               resolution: "engineer",
+              fixInstructions:
+                `Each path below has both a "$value" and at least one non-"$"-prefixed child key at the same level in ${settings.filePath} (branch: ${settings.branch}) — invalid per the W3C DTCG spec, since a token can't also be a group.\n` +
+                `To fix: either (a) move the child key(s) out to be a sibling of the token instead of nested under it, or (b) nest the token's own value under a new child key (e.g. rename the "$value" holder from "Primary" to "Primary/Default") so the parent becomes a pure group.\n` +
+                `After editing, re-import the file in the plugin to confirm it parses cleanly with no quarantined paths.`,
             }
           : null
       );
