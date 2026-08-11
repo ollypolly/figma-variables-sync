@@ -1,14 +1,50 @@
-import { Banner, Button, IconWarning16 } from "@create-figma-plugin/ui";
+import { Banner, IconWarning16 } from "@create-figma-plugin/ui";
 import { h } from "preact";
+import type { ComponentChildren } from "preact";
 import { useState } from "preact/hooks";
 
-import type { NoticeDetails } from "@hooks/useAppContext";
+// Structured detail payload for the "Copy details" button.
+export interface NoticeDetails {
+  paths?: string[];
+  file?: string;
+  branch?: string;
+  error?: string;
+}
 
 interface ContactEngineerNoticeProps {
   message: string;
   details?: NoticeDetails;
   action?: { label: string; onClick: () => void };
   onDismiss?: () => void;
+}
+
+// Button/Link from @create-figma-plugin/ui hardcode colors meant for the default
+// app background, not a colored Banner — nesting them here would be unreadable
+// (e.g. white button text on this yellow warning). Use the banner's own
+// "onwarning" text token directly instead.
+function NoticeButton({
+  onClick,
+  children,
+}: {
+  onClick: () => void;
+  children: ComponentChildren;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        height: "24px",
+        padding: "0 8px",
+        borderRadius: "6px",
+        border: "1px solid var(--figma-color-text-onwarning)",
+        background: "transparent",
+        color: "var(--figma-color-text-onwarning)",
+        cursor: "pointer",
+      }}
+    >
+      {children}
+    </button>
+  );
 }
 
 // Formats a notice's message + structured details into plain text for pasting into Slack/Teams.
@@ -74,7 +110,7 @@ export function ContactEngineerNotice({
 
   return (
     <Banner icon={<IconWarning16 />} variant="warning">
-      <div class="flex flex-col gap-2 py-1">
+      <div class="flex flex-col gap-2">
         <span>{message}</span>
         {details?.paths && details.paths.length > 0 && (
           <div class="flex flex-col">
@@ -86,15 +122,15 @@ export function ContactEngineerNotice({
           </div>
         )}
         <div class="flex gap-2">
-          <Button secondary onClick={handleCopy}>
+          <NoticeButton onClick={handleCopy}>
             {copyState === "copied"
               ? "Copied!"
               : copyState === "failed"
                 ? "Copy failed"
                 : "Copy details"}
-          </Button>
-          {action && <Button secondary onClick={action.onClick}>{action.label}</Button>}
-          {onDismiss && <Button secondary onClick={onDismiss}>Dismiss</Button>}
+          </NoticeButton>
+          {action && <NoticeButton onClick={action.onClick}>{action.label}</NoticeButton>}
+          {onDismiss && <NoticeButton onClick={onDismiss}>Dismiss</NoticeButton>}
         </div>
       </div>
     </Banner>
