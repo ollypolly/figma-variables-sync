@@ -80,7 +80,13 @@ Four related problems, solved together — this also absorbs the old "background
 
 **Updates tab: retired as part of this slice.** With this model, a designer is always in one of two states — "on main" (kept in sync via 3c/3d, auto-applying safe git-side changes) or "on a PR" (kept in sync via 3a/3b). There's no longer a scenario where a standalone "incoming updates" tab is the right surface — removing the tab entirely rather than reshaping it, and folding the old background-sync-check idea into 3c/3d instead of a dedicated notification system.
 
-**Risk:** Medium — needs the new compare-API call and the PR-status check-in wired into `check()`, careful copy so staleness reads as informative not alarming, deciding 3c/3d's auto-apply-vs-surface-as-change behavior, and removing the Updates tab touches `ui.tsx`'s tab list and whatever of `useUpdates`/`UpdatesTab` isn't reused elsewhere.
+**3c/3d auto-apply mechanics — not as free as it sounds:** the safety check itself is close to free (a path counts as "no local drift" exactly when it's absent from the current `diffs` array — `computeDiff` already gives us that), but the write-back isn't built yet. Specifically:
+- No blocking/hard-stop is needed on branch switch — unlike git, nothing here is ever silently lost. A local experiment (a value that already differs from whatever's checked out) simply never qualifies as "no drift," so it keeps showing as a pending change against whatever's newly selected instead of being blocked or overwritten. Confirmed this holds even for a path that doesn't exist on the destination branch at all — `computeDiff` already surfaces that as an ordinary "added" item, no special case needed.
+- Needs a git→Figma write-back scoped to only the safe (non-drifting) paths — the mirror of `applyStagedDiffs` (which only exists for the Figma→git direction today). Check whether `importFromDtcg` (currently used by the Updates tab) already handles a partial tree cleanly, or assumes it's given the whole file, before assuming it's reusable as-is.
+- Deletions need more caution than updates: if a token was removed on the branch and Figma still has it with no drift, "auto-apply" means deleting a Figma variable — which can break bindings elsewhere in the file. Worth a deliberate decision rather than treating identically to an add/modify.
+- Whether the write-back is fully silent or lightly surfaced ("Updated 3 variables from main") is a real UX call, not a given — a designer could otherwise be confused by a value changing with no visible cause.
+
+**Risk:** Medium — needs the new compare-API call and the PR-status check-in wired into `check()`, careful copy so staleness reads as informative not alarming, the new git→Figma partial write-back above, and removing the Updates tab touches `ui.tsx`'s tab list and whatever of `useUpdates`/`UpdatesTab` isn't reused elsewhere.
 
 ### Slice 4 — Staging (VS Code-style +/− on the diff tree)
 
