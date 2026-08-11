@@ -63,7 +63,35 @@ export function exportToDtcg(
     return val;
   };
 
-  // 3. Populate each token in the tree.
+  // 3. Detect naming collisions before writing anything: a variable's path can't
+  // be a prefix of another variable's path (e.g. "Primary" and "Primary/Hover"),
+  // since a DTCG node can't legally be both a token and a group.
+  const allPaths: string[][] = [];
+  for (const variable of variables) {
+    const col = collectionMap.get(variable.variableCollectionId);
+    if (!col) continue;
+    const colName = sanitizeName(col.name);
+    const varNameSegments = variable.name.split("/").map(sanitizeName);
+    allPaths.push([colName, ...varNameSegments]);
+  }
+
+  const collisions = new Set<string>();
+  for (const a of allPaths) {
+    for (const b of allPaths) {
+      if (a === b || a.length >= b.length) continue;
+      if (a.every((segment, i) => segment === b[i])) {
+        collisions.add(a.join("."));
+      }
+    }
+  }
+
+  if (collisions.size > 0) {
+    throw new Error(
+      `Cannot export: the following Figma variable names collide with a sibling's path and would produce invalid DTCG (a token can't also be a group) — rename them, e.g. "Primary" → "Primary/Default": ${Array.from(collisions).join(", ")}`
+    );
+  }
+
+  // 4. Populate each token in the tree.
   for (const variable of variables) {
     const col = collectionMap.get(variable.variableCollectionId);
     if (!col) continue;

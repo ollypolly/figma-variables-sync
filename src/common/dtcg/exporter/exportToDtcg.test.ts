@@ -112,4 +112,25 @@ describe("exportToDtcg", () => {
     expect(result.Tokens.sizes.width.$value).toBe(16);
     expect(result.Tokens.sizes.width.$modes.Dark).toBe(24);
   });
+
+  it("should throw a clear error when a variable name collides with a sibling's path (e.g. Primary and Primary/Hover)", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const primary = figmaMock.variables.createVariable("colors/Primary", col.id, "COLOR");
+    primary.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const primaryHover = figmaMock.variables.createVariable("colors/Primary/Hover", col.id, "COLOR");
+    primaryHover.setValueForMode(mode, { r: 0.9, g: 0.9, b: 0.9 });
+
+    expect(() =>
+      exportToDtcg(
+        figmaMock.variables.getLocalVariableCollections(),
+        figmaMock.variables.getLocalVariables(),
+        figmaMock
+      )
+    ).toThrow(/Tokens\.colors\.Primary/);
+  });
 });
