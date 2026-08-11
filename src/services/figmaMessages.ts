@@ -8,10 +8,14 @@ import type {
 } from "../types";
 
 export function requestExport(): Promise<string> {
-  return new Promise((resolve) => {
-    const cleanup = on<ExportResultHandler>("EXPORT_RESULT", (json) => {
+  return new Promise((resolve, reject) => {
+    const cleanup = on<ExportResultHandler>("EXPORT_RESULT", (success, dtcgJson, error) => {
       cleanup();
-      resolve(json);
+      if (success) {
+        resolve(dtcgJson);
+      } else {
+        reject(new Error(error || "Export failed."));
+      }
     });
     emit<RequestExportHandler>("REQUEST_EXPORT");
   });

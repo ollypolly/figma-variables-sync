@@ -15,10 +15,15 @@ const SETTINGS_KEY = "figma-variables-sync-settings";
 
 export function registerFromFigmaHandlers() {
   on<RequestExportHandler>("REQUEST_EXPORT", function () {
-    const collections = figma.variables.getLocalVariableCollections();
-    const variables = figma.variables.getLocalVariables();
-    const dtcgJson = exportToDtcg(collections, variables, figma);
-    emit<ExportResultHandler>("EXPORT_RESULT", dtcgJson);
+    try {
+      const collections = figma.variables.getLocalVariableCollections();
+      const variables = figma.variables.getLocalVariables();
+      const dtcgJson = exportToDtcg(collections, variables, figma);
+      emit<ExportResultHandler>("EXPORT_RESULT", true, dtcgJson);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Export failed.";
+      emit<ExportResultHandler>("EXPORT_RESULT", false, "", message);
+    }
   });
 
   on<LoadSettingsHandler>("LOAD_SETTINGS", async function () {

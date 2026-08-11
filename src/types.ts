@@ -29,7 +29,7 @@ export interface ResizeWindowHandler extends EventHandler {
 // Main → UI
 export interface ExportResultHandler extends EventHandler {
   name: "EXPORT_RESULT";
-  handler: (dtcgJson: string) => void;
+  handler: (success: boolean, dtcgJson: string, error?: string) => void;
 }
 
 export interface ImportResultHandler extends EventHandler {
