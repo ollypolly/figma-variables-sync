@@ -34,7 +34,7 @@ export interface ExportResultHandler extends EventHandler {
 
 export interface ImportResultHandler extends EventHandler {
   name: "IMPORT_RESULT";
-  handler: (success: boolean, message: string) => void;
+  handler: (success: boolean, message: string, quarantined?: string[]) => void;
 }
 
 export interface SettingsLoadedHandler extends EventHandler {

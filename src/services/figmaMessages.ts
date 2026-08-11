@@ -23,13 +23,13 @@ export function requestExport(): Promise<string> {
 
 export function requestImport(
   dtcgJson: string
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; quarantined: string[] }> {
   return new Promise((resolve) => {
     const cleanup = on<ImportResultHandler>(
       "IMPORT_RESULT",
-      (success, message) => {
+      (success, message, quarantined) => {
         cleanup();
-        resolve({ success, message });
+        resolve({ success, message, quarantined: quarantined || [] });
       }
     );
     emit<RequestImportHandler>("REQUEST_IMPORT", dtcgJson);
