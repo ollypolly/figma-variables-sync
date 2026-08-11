@@ -4,7 +4,9 @@ import { exportToDtcg, NamingCollisionError } from "@common/dtcg";
 import {
   DEFAULT_SETTINGS,
   trimSettings,
+  type ActiveProposalLoadedHandler,
   type ExportResultHandler,
+  type LoadActiveProposalHandler,
   type LoadSettingsHandler,
   type PluginSettings,
   type RequestExportHandler,
@@ -12,6 +14,7 @@ import {
 } from "../types";
 
 const SETTINGS_KEY = "figma-variables-sync-settings";
+const ACTIVE_PROPOSAL_KEY = "figma-variables-sync-active-proposal";
 
 export function registerFromFigmaHandlers() {
   on<RequestExportHandler>("REQUEST_EXPORT", function () {
@@ -31,5 +34,10 @@ export function registerFromFigmaHandlers() {
     const stored = await figma.clientStorage.getAsync(SETTINGS_KEY);
     const settings = trimSettings({ ...DEFAULT_SETTINGS, ...stored });
     emit<SettingsLoadedHandler>("SETTINGS_LOADED", settings);
+  });
+
+  on<LoadActiveProposalHandler>("LOAD_ACTIVE_PROPOSAL", async function () {
+    const stored = await figma.clientStorage.getAsync(ACTIVE_PROPOSAL_KEY);
+    emit<ActiveProposalLoadedHandler>("ACTIVE_PROPOSAL_LOADED", stored ?? null);
   });
 }

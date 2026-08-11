@@ -6,11 +6,13 @@ import {
   type ImportResultHandler,
   type RequestImportHandler,
   type ResizeWindowHandler,
+  type SaveActiveProposalHandler,
   type SaveSettingsHandler,
   type SettingsSavedHandler,
 } from "../types";
 
 const SETTINGS_KEY = "figma-variables-sync-settings";
+const ACTIVE_PROPOSAL_KEY = "figma-variables-sync-active-proposal";
 
 export function registerToFigmaHandlers() {
   on<RequestImportHandler>("REQUEST_IMPORT", async function (dtcgJson) {
@@ -31,6 +33,10 @@ export function registerToFigmaHandlers() {
   on<SaveSettingsHandler>("SAVE_SETTINGS", async function (settings) {
     await figma.clientStorage.setAsync(SETTINGS_KEY, trimSettings(settings));
     emit<SettingsSavedHandler>("SETTINGS_SAVED");
+  });
+
+  on<SaveActiveProposalHandler>("SAVE_ACTIVE_PROPOSAL", async function (activeProposal) {
+    await figma.clientStorage.setAsync(ACTIVE_PROPOSAL_KEY, activeProposal);
   });
 
   on<ResizeWindowHandler>("RESIZE_WINDOW", function (windowSize) {

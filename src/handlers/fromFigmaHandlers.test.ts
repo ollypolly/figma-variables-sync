@@ -59,3 +59,34 @@ describe("REQUEST_EXPORT handler", () => {
     ]);
   });
 });
+
+describe("LOAD_ACTIVE_PROPOSAL handler", () => {
+  it("loads a persisted active proposal from clientStorage", () => {
+    const stored = { number: 4, title: "Update brand colors", html_url: "https://github.com/pull/4", head_ref: "figma/proposal-1" };
+    (globalThis as any).figma.clientStorage.getAsync = vi.fn().mockResolvedValue(stored);
+
+    const postMessage = vi.fn();
+    (globalThis as any).figma.ui.postMessage = postMessage;
+
+    registerFromFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["LOAD_ACTIVE_PROPOSAL"]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(postMessage).toHaveBeenCalledWith(["ACTIVE_PROPOSAL_LOADED", stored]);
+    });
+  });
+
+  it("emits null when nothing has been persisted yet", () => {
+    (globalThis as any).figma.clientStorage.getAsync = vi.fn().mockResolvedValue(undefined);
+
+    const postMessage = vi.fn();
+    (globalThis as any).figma.ui.postMessage = postMessage;
+
+    registerFromFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["LOAD_ACTIVE_PROPOSAL"]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(postMessage).toHaveBeenCalledWith(["ACTIVE_PROPOSAL_LOADED", null]);
+    });
+  });
+});

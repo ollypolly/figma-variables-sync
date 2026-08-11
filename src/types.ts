@@ -21,6 +21,16 @@ export interface SaveSettingsHandler extends EventHandler {
   handler: (settings: PluginSettings) => void;
 }
 
+export interface LoadActiveProposalHandler extends EventHandler {
+  name: "LOAD_ACTIVE_PROPOSAL";
+  handler: () => void;
+}
+
+export interface SaveActiveProposalHandler extends EventHandler {
+  name: "SAVE_ACTIVE_PROPOSAL";
+  handler: (activeProposal: ActiveProposal | null) => void;
+}
+
 export interface ResizeWindowHandler extends EventHandler {
   name: "RESIZE_WINDOW";
   handler: (windowSize: { width: number; height: number }) => void;
@@ -52,7 +62,19 @@ export interface SettingsSavedHandler extends EventHandler {
   handler: () => void;
 }
 
+export interface ActiveProposalLoadedHandler extends EventHandler {
+  name: "ACTIVE_PROPOSAL_LOADED";
+  handler: (activeProposal: ActiveProposal | null) => void;
+}
+
 // Shared types
+export interface ActiveProposal {
+  number: number;
+  title: string;
+  html_url: string;
+  head_ref: string;
+}
+
 export interface PluginSettings {
   pat: string;
   owner: string;

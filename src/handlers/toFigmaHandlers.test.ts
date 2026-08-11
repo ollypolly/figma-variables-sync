@@ -85,3 +85,31 @@ describe("REQUEST_IMPORT handler", () => {
     });
   });
 });
+
+describe("SAVE_ACTIVE_PROPOSAL handler", () => {
+  it("persists the active proposal to clientStorage", () => {
+    const setAsync = vi.fn().mockResolvedValue(undefined);
+    (globalThis as any).figma.clientStorage.setAsync = setAsync;
+
+    const activeProposal = { number: 4, title: "Update brand colors", html_url: "https://github.com/pull/4", head_ref: "figma/proposal-1" };
+
+    registerToFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["SAVE_ACTIVE_PROPOSAL", activeProposal]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal", activeProposal);
+    });
+  });
+
+  it("persists null when resetting to Main", () => {
+    const setAsync = vi.fn().mockResolvedValue(undefined);
+    (globalThis as any).figma.clientStorage.setAsync = setAsync;
+
+    registerToFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["SAVE_ACTIVE_PROPOSAL", null]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal", null);
+    });
+  });
+});
