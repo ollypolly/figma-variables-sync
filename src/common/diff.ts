@@ -43,9 +43,7 @@ function formatTokenVal(t: ParsedToken): string {
 export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals" | "updates"): ComputeDiffResult {
   const figmaData = parseDtcg(figmaJson);
   const gitData = parseDtcg(gitJson);
-  // A path quarantined on either side can't be meaningfully diffed — it's simply
-  // absent from that side's token map, which would otherwise look like a genuine
-  // add/delete instead of an unparseable collision.
+  // Quarantined on either side reads as a genuine add/delete unless excluded here.
   const quarantined = [...new Set([...figmaData.quarantined, ...gitData.quarantined])];
   const quarantinedSet = new Set(quarantined);
 

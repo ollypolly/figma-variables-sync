@@ -14,9 +14,7 @@ interface AppContextValue {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-// Loads plugin settings once at the app root instead of once per tab — Tabs
-// unmounts whichever tab isn't active, so each tab independently calling
-// usePluginSettings() meant a full reload from clientStorage on every switch.
+// Loaded once at the app root — Tabs unmounts inactive tabs, so per-tab loading reloaded on every switch.
 export function AppProvider({ children }: { children: ComponentChildren }) {
   const { settings, setSettings, loading, isConfigured } = usePluginSettings();
 
