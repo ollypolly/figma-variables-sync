@@ -123,7 +123,6 @@ export function useProposals(active: boolean) {
     submitting: submit.loading,
     status,
     collisionNotice,
-    dismissCollisionNotice: () => setCollisionNotice(null),
     checkForChanges: check.execute,
     submitProposal: submit.execute,
   };

@@ -19,7 +19,6 @@ export function ProposalsTab({ active }: { active: boolean }) {
     submitting,
     status,
     collisionNotice,
-    dismissCollisionNotice,
     checkForChanges,
     submitProposal,
   } = useProposals(active);
@@ -37,7 +36,6 @@ export function ProposalsTab({ active }: { active: boolean }) {
               <ContactEngineerNotice
                 message={collisionNotice.message}
                 details={{ paths: collisionNotice.paths }}
-                onDismiss={dismissCollisionNotice}
               />
             )}
 
