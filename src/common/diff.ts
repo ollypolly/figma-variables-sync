@@ -1,11 +1,41 @@
 import { parseDtcg, ParsedToken, TokenParseResult } from "./dtcg";
 
+export interface ChangedField {
+  field: "type" | "description" | "scopes" | "codeSyntax" | "hiddenFromPublishing";
+  figmaVal: string;
+  gitVal: string;
+}
+
 export interface DiffItem {
   path: string[];
   dotPath: string;
   type: "added" | "modified" | "deleted";
   figmaVal: string; // The Figma local value (new state when proposing, old state when updating)
   gitVal: string;   // The Git repository value (old state when proposing, new state when updating)
+  changedFields?: ChangedField[]; // Non-value fields that changed — a type change means Figma will delete-and-recreate the variable
+}
+
+const METADATA_FIELDS: ChangedField["field"][] = [
+  "type",
+  "description",
+  "scopes",
+  "codeSyntax",
+  "hiddenFromPublishing",
+];
+
+function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
+  switch (field) {
+    case "type":
+      return t.type;
+    case "description":
+      return t.description ?? "";
+    case "scopes":
+      return (t.figmaScopes ?? []).join(", ");
+    case "codeSyntax":
+      return JSON.stringify(t.figmaCodeSyntax ?? {});
+    case "hiddenFromPublishing":
+      return String(t.figmaHiddenFromPublishing ?? false);
+  }
 }
 
 export interface ComputeDiffResult extends Pick<TokenParseResult, "quarantined"> {
@@ -77,13 +107,28 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
     } else {
       const targetValStr = formatTokenVal(targetToken);
       const sourceValStr = formatTokenVal(sourceToken);
-      if (targetValStr !== sourceValStr) {
+
+      const changedFields: ChangedField[] = [];
+      for (const field of METADATA_FIELDS) {
+        const targetFieldStr = formatFieldVal(targetToken, field);
+        const sourceFieldStr = formatFieldVal(sourceToken, field);
+        if (targetFieldStr !== sourceFieldStr) {
+          changedFields.push({
+            field,
+            figmaVal: mode === "proposals" ? targetFieldStr : sourceFieldStr,
+            gitVal: mode === "proposals" ? sourceFieldStr : targetFieldStr,
+          });
+        }
+      }
+
+      if (targetValStr !== sourceValStr || changedFields.length > 0) {
         diffs.push({
           path: targetToken.path,
           dotPath: key,
           type: "modified",
           figmaVal: mode === "proposals" ? targetValStr : sourceValStr,
           gitVal: mode === "proposals" ? sourceValStr : targetValStr,
+          ...(changedFields.length > 0 ? { changedFields } : {}),
         });
       }
     }

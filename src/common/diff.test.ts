@@ -191,6 +191,168 @@ describe("computeDiff", () => {
     });
   });
 
+  describe("Metadata-only changes", () => {
+    const withDescriptionA = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { "$type": "color", "$value": "#ffffff", "$description": "Old guidance" },
+        },
+      },
+    });
+
+    const withDescriptionB = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { "$type": "color", "$value": "#ffffff", "$description": "New guidance" },
+        },
+      },
+    });
+
+    it("should detect a description-only change as modified, with changedFields describing it", () => {
+      // Figma has the new description (B), Git still has the old one (A).
+      const { diffs } = computeDiff(withDescriptionB, withDescriptionA, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0]).toEqual({
+        path: ["Tokens", "brand", "primary"],
+        dotPath: "Tokens.brand.primary",
+        type: "modified",
+        figmaVal: "#ffffff",
+        gitVal: "#ffffff",
+        changedFields: [{ field: "description", figmaVal: "New guidance", gitVal: "Old guidance" }],
+      });
+    });
+
+    it("should detect a scopes-only change", () => {
+      const withScopesA = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { scopes: ["FRAME_FILL"] } },
+            },
+          },
+        },
+      });
+      const withScopesB = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
+            },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(withScopesB, withScopesA, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0].changedFields).toEqual([
+        { field: "scopes", figmaVal: "FRAME_FILL, SHAPE_FILL", gitVal: "FRAME_FILL" },
+      ]);
+    });
+
+    it("should detect a codeSyntax-only change", () => {
+      const withCodeSyntaxA = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { codeSyntax: { WEB: "var(--old)" } } },
+            },
+          },
+        },
+      });
+      const withCodeSyntaxB = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { codeSyntax: { WEB: "var(--new)" } } },
+            },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(withCodeSyntaxB, withCodeSyntaxA, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0].changedFields).toEqual([
+        { field: "codeSyntax", figmaVal: '{"WEB":"var(--new)"}', gitVal: '{"WEB":"var(--old)"}' },
+      ]);
+    });
+
+    it("should detect a hiddenFromPublishing-only change", () => {
+      const withHiddenA = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { hiddenFromPublishing: false } },
+            },
+          },
+        },
+      });
+      const withHiddenB = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { hiddenFromPublishing: true } },
+            },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(withHiddenB, withHiddenA, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0].changedFields).toEqual([
+        { field: "hiddenFromPublishing", figmaVal: "true", gitVal: "false" },
+      ]);
+    });
+
+    it("should flag a type-only change distinctly via changedFields", () => {
+      const asColor = JSON.stringify({
+        Tokens: { sizes: { width: { "$type": "color", "$value": "#ffffff" } } },
+      });
+      const asDimension = JSON.stringify({
+        Tokens: { sizes: { width: { "$type": "dimension", "$value": "#ffffff" } } },
+      });
+
+      const { diffs } = computeDiff(asDimension, asColor, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0].changedFields).toEqual([
+        { field: "type", figmaVal: "dimension", gitVal: "color" },
+      ]);
+    });
+
+    it("should report both a value change and a description change without duplicating the value into changedFields", () => {
+      const before = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: { "$type": "color", "$value": "#ffffff", "$description": "Old guidance" },
+          },
+        },
+      });
+      const after = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: { "$type": "color", "$value": "#000000", "$description": "New guidance" },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(after, before, "proposals");
+      expect(diffs).toHaveLength(1);
+      expect(diffs[0]).toEqual({
+        path: ["Tokens", "brand", "primary"],
+        dotPath: "Tokens.brand.primary",
+        type: "modified",
+        figmaVal: "#000000",
+        gitVal: "#ffffff",
+        changedFields: [{ field: "description", figmaVal: "New guidance", gitVal: "Old guidance" }],
+      });
+    });
+  });
+
   describe("Quarantined collisions", () => {
     const figmaWithTwo = JSON.stringify({
       Tokens: {

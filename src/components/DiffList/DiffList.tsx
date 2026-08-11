@@ -31,6 +31,14 @@ const TYPE_COLOR: Record<DiffItem["type"], string> = {
   deleted: "var(--figma-color-text-danger)",
 };
 
+const FIELD_LABEL: Record<NonNullable<DiffItem["changedFields"]>[number]["field"], string> = {
+  type: "Type",
+  description: "Description",
+  scopes: "Scopes",
+  codeSyntax: "Code syntax",
+  hiddenFromPublishing: "Hidden from publishing",
+};
+
 const GROUP_ROW_HEIGHT = 28;
 // Shallower (ancestor) sticky headers must stay in front of deeper ones as they
 // scroll underneath — descending z-index by depth, with enough headroom that no
@@ -152,6 +160,47 @@ function GuideLines({ guideDepths }: { guideDepths: number[] }) {
   );
 }
 
+// create-figma-plugin/ui's Text applies a negative top margin tuned to sit right
+// after a VerticalSpace — stacking Texts directly against each other overlaps them,
+// so every line after the first needs its own VerticalSpace separator.
+function renderModifiedDetailLines(
+  item: DiffItem,
+  oldVal: string,
+  newVal: string,
+  mode: "updates" | "proposals"
+) {
+  const lines: { key: string; color: string; content: ComponentChildren }[] = [];
+
+  if (oldVal !== newVal) {
+    lines.push({ key: "value", color: TYPE_COLOR.modified, content: `${oldVal} → ${newVal}` });
+  }
+
+  for (const cf of item.changedFields ?? []) {
+    const newFieldVal = mode === "proposals" ? cf.figmaVal : cf.gitVal;
+    const oldFieldVal = mode === "proposals" ? cf.gitVal : cf.figmaVal;
+    const isTypeChange = cf.field === "type";
+    lines.push({
+      key: cf.field,
+      color: isTypeChange ? "var(--figma-color-text-danger)" : TYPE_COLOR.modified,
+      content: (
+        <Fragment>
+          {FIELD_LABEL[cf.field]}: {oldFieldVal || "—"} → {newFieldVal || "—"}
+          {isTypeChange && " — will delete and recreate this variable in Figma"}
+        </Fragment>
+      ),
+    });
+  }
+
+  return lines.map((line, i) => (
+    <Fragment key={line.key}>
+      {i > 0 && <VerticalSpace space="extraSmall" />}
+      <Text>
+        <span style={{ color: line.color }}>{line.content}</span>
+      </Text>
+    </Fragment>
+  ));
+}
+
 function DiffTreeRow({
   node,
   mode,
@@ -238,13 +287,8 @@ function DiffTreeRow({
       <GuideLines guideDepths={guideDepths} />
       <Text>{node.name}</Text>
       <VerticalSpace space="extraSmall" />
-      {item.type === "modified" && (
-        <Text>
-          <span style={{ color: TYPE_COLOR[item.type] }}>
-            {oldVal} → {newVal}
-          </span>
-        </Text>
-      )}
+      {item.type === "modified" &&
+        renderModifiedDetailLines(item, oldVal, newVal, mode)}
       {item.type === "added" && (
         <Text>
           <span style={{ color: TYPE_COLOR[item.type] }}>{newVal}</span>
