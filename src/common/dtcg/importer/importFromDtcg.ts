@@ -1,18 +1,21 @@
-import { ParsedToken } from "../types";
+import { ParsedToken, TokenParseResult } from "../types";
 import { sanitizeName } from "../utils/sanitizeName";
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
 import { parseDtcg } from "../parser/parseDtcg";
 import { resolveDtcgValue } from "./resolveDtcgValue";
 import { getVariablePath } from "../utils/getVariablePath";
 
+export type ImportFromDtcgResult = Pick<TokenParseResult, "quarantined"> & { removed: string[] };
+
+const CODE_SYNTAX_PLATFORMS: CodeSyntaxPlatform[] = ["WEB", "ANDROID", "iOS"];
 
 // Import W3C DTCG JSON back into native Figma variables.
 export async function importFromDtcg(
   jsonStr: string,
   figmaInstance: typeof figma
-): Promise<void> {
-  const { modes: rootModes, tokens } = parseDtcg(jsonStr);
-  if (tokens.length === 0) return;
+): Promise<ImportFromDtcgResult> {
+  const { modes: rootModes, tokens, quarantined, collectionMetadata } = parseDtcg(jsonStr);
+  if (tokens.length === 0) return { quarantined, removed: [] };
 
   // Group tokens by collection (first segment of token path)
   const collectionTokensMap = new Map<string, ParsedToken[]>();
@@ -28,10 +31,54 @@ export async function importFromDtcg(
   const existingCollections = figmaInstance.variables.getLocalVariableCollections();
   const existingVariables = figmaInstance.variables.getLocalVariables();
 
+  // A quarantined path means "structurally ambiguous," not "removed" — never delete for it.
+  const quarantinedSanitized = quarantined.map((p) => p.split(".").map(sanitizeName).join("."));
+  const isProtectedByQuarantine = (dotPath: string) =>
+    quarantinedSanitized.some((q) => dotPath === q || dotPath.startsWith(`${q}.`));
+
+  // --- PASS 0: Remove Figma variables/collections whose tokens no longer exist in Git.
+  const removed: string[] = [];
+  for (const collection of existingCollections) {
+    const colName = sanitizeName(collection.name);
+    const colTokens = collectionTokensMap.get(colName);
+    const colHasGitPresence = colTokens !== undefined || quarantinedSanitized.some((q) => q.split(".")[0] === colName);
+    const colVariables = existingVariables.filter((v) => v.variableCollectionId === collection.id);
+
+    if (!colHasGitPresence) {
+      // Whole collection gone from Git — cascades to its variables too.
+      removed.push(...colVariables.map((v) => getVariablePath(collection.name, v.name)));
+      collection.remove();
+      continue;
+    }
+
+    const colTokenVarNames = new Set(
+      colTokens?.map((t) => t.path.slice(1).map(sanitizeName).join("/"))
+    );
+    for (const variable of colVariables) {
+      const dotPath = getVariablePath(collection.name, variable.name);
+      const stillPresent = colTokenVarNames.has(variable.name);
+      if (!stillPresent && !isProtectedByQuarantine(dotPath)) {
+        removed.push(dotPath);
+        variable.remove();
+      }
+    }
+  }
+
+  // PASS 0 may have removed collections/variables — refresh the live snapshot before
+  // anything below resolves paths against Figma, so a removed entity's stale id can't
+  // leak into pathToVariableIdMap or get matched again by PASS 1's lookups.
+  const collectionsAfterCleanup = figmaInstance.variables.getLocalVariableCollections();
+  const variablesAfterCleanup = figmaInstance.variables.getLocalVariables();
+
+  const collectionById = new Map(collectionsAfterCleanup.map((c) => [c.id, c]));
+  const variableByCollectionAndName = new Map(
+    variablesAfterCleanup.map((v) => [`${v.variableCollectionId}::${v.name}`, v])
+  );
+
   const pathToVariableIdMap = new Map<string, string>();
   // Populate mapping with all existing variables first
-  for (const variable of existingVariables) {
-    const col = existingCollections.find((c) => c.id === variable.variableCollectionId);
+  for (const variable of variablesAfterCleanup) {
+    const col = collectionById.get(variable.variableCollectionId);
     if (!col) continue;
     const dotPath = getVariablePath(col.name, variable.name);
     pathToVariableIdMap.set(dotPath, variable.id);
@@ -42,10 +89,11 @@ export async function importFromDtcg(
 
   for (const [colName, colTokens] of collectionTokensMap.entries()) {
     // 1. Find or create collection
-    let collection = existingCollections.find((c) => sanitizeName(c.name) === colName);
+    let collection = collectionsAfterCleanup.find((c) => sanitizeName(c.name) === colName);
     if (!collection) {
       collection = figmaInstance.variables.createVariableCollection(colName);
     }
+    collection.hiddenFromPublishing = collectionMetadata[colName]?.hiddenFromPublishing ?? false;
 
     // 2. Identify and setup modes for this collection
     const neededModes = new Set<string>();
@@ -96,9 +144,7 @@ export async function importFromDtcg(
       const dotPath = getVariablePath(t.path[0], varName);
       const targetType = dtcgTypeToFigma(t.type);
 
-      let variable = existingVariables.find(
-        (v) => v.variableCollectionId === updatedCollection.id && v.name === varName
-      );
+      let variable = variableByCollectionAndName.get(`${updatedCollection.id}::${varName}`);
 
       if (variable && variable.resolvedType !== targetType) {
         variable.remove();
@@ -107,8 +153,23 @@ export async function importFromDtcg(
 
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
-        if (targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
+        if (!t.figmaScopes && targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
           variable.scopes = ["WIDTH_HEIGHT"];
+        }
+      }
+
+      variable.description = t.description ?? "";
+      variable.hiddenFromPublishing = t.figmaHiddenFromPublishing ?? false;
+      if (t.figmaScopes) {
+        variable.scopes = t.figmaScopes as VariableScope[];
+      }
+
+      for (const platform of CODE_SYNTAX_PLATFORMS) {
+        const value = t.figmaCodeSyntax?.[platform];
+        if (value !== undefined) {
+          variable.setVariableCodeSyntax(platform, value);
+        } else if (variable.codeSyntax[platform] !== undefined) {
+          variable.removeVariableCodeSyntax(platform);
         }
       }
 
@@ -150,4 +211,6 @@ export async function importFromDtcg(
       }
     }
   }
+
+  return { quarantined, removed };
 }

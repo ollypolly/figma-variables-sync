@@ -3,7 +3,9 @@ import { exportToDtcg } from "./dtcg/exporter/exportToDtcg";
 import { importFromDtcg } from "./dtcg/importer/importFromDtcg";
 import { computeDiff } from "./diff";
 import { GitHubService } from "../services/github";
+import { submitProposal } from "../services/proposals";
 import { trimSettings, PluginSettings } from "../types";
+import { createMockFigma } from "@common/testUtils/mockFigma";
 
 // Mock Octokit
 const mockRequest = vi.fn();
@@ -15,67 +17,10 @@ vi.mock("@octokit/core", () => {
   };
 });
 
-function createMockFigma() {
-  const collections: any[] = [];
-  const variables: any[] = [];
-
-  const figmaMock: any = {
-    variables: {
-      getLocalVariableCollections() {
-        return collections;
-      },
-      getLocalVariables() {
-        return variables;
-      },
-      getVariableCollectionById(id: string) {
-        return collections.find(c => c.id === id) || null;
-      },
-      getVariableById(id: string) {
-        return variables.find(v => v.id === id) || null;
-      },
-      createVariableCollection(name: string) {
-        const id = `col-${collections.length + 1}`;
-        const newCol = {
-          id,
-          name,
-          modes: [{ modeId: `${id}-mode-1`, name: "Mode 1" }],
-          renameMode(modeId: string, name: string) {
-            const m = this.modes.find((mode: any) => mode.modeId === modeId);
-            if (m) m.name = name;
-          },
-          addMode(name: string) {
-            const modeId = `${id}-mode-${this.modes.length + 1}`;
-            this.modes.push({ modeId, name });
-            return modeId;
-          }
-        };
-        collections.push(newCol);
-        return newCol;
-      },
-      createVariable(name: string, collectionId: string, resolvedType: string) {
-        const id = `var-${variables.length + 1}`;
-        const newVar = {
-          id,
-          name,
-          variableCollectionId: collectionId,
-          resolvedType,
-          valuesByMode: {} as Record<string, any>,
-          setValueForMode(modeId: string, value: any) {
-            this.valuesByMode[modeId] = value;
-          },
-          remove() {
-            const idx = variables.indexOf(this);
-            if (idx > -1) variables.splice(idx, 1);
-          }
-        };
-        variables.push(newVar);
-        return newVar;
-      }
-    }
-  };
-
-  return { figmaMock, collections, variables };
-}
+// submitProposal's module also imports requestExport, which talks to the real Figma sandbox
+// via @create-figma-plugin/utilities — unavailable outside a plugin runtime. Not exercised
+// by these tests (figmaContent is passed in directly), so a stub is enough.
+vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn() }));
 
 describe("Plugin Flow Integration Tests", () => {
   let github: GitHubService;
@@ -84,6 +29,7 @@ describe("Plugin Flow Integration Tests", () => {
     repo: "repo",
     filePath: "tokens.json",
     branch: "main",
+    prLabels: "",
   };
 
   beforeEach(() => {
@@ -129,7 +75,7 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "updates");
+      const { diffs } = computeDiff(figmaJson, gitJson, "updates");
 
       // Verify diff calculation: #ff0000 (figma) vs #00ff00 (git)
       expect(diffs).toHaveLength(1);
@@ -189,7 +135,7 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "proposals");
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
 
       // Verify diff detection
       expect(diffs).toHaveLength(2);
@@ -210,7 +156,7 @@ describe("Plugin Flow Integration Tests", () => {
         gitVal: ""
       });
 
-      // 4. Submit proposal
+      // 4. Submit proposal — goes through submitProposal (merge into git, not raw replace)
       mockRequest
         // mock getLatestCommitSha for createBranch
         .mockResolvedValueOnce({ data: { object: { sha: "parent-commit-sha" } } })
@@ -223,39 +169,110 @@ describe("Plugin Flow Integration Tests", () => {
         // mock createPullRequest POST pulls
         .mockResolvedValueOnce({ data: { number: 99, html_url: "https://github.com/pull/99" } });
 
-      const newBranchName = "figma/proposal-test";
-      await github.createBranch(config, newBranchName);
-
-      const currentFile = await github.getFile(config);
-      const commitSha = await github.updateFile(
-        config,
-        "Update variables",
-        figmaJson,
-        currentFile?.sha,
-        newBranchName
-      );
-
-      const pr = await github.createPullRequest(
-        config,
-        "Update variables",
-        "PR body description",
-        newBranchName,
-        []
-      );
+      const pr = await submitProposal(config, github, figmaJson, diffs, "Update variables");
 
       // Verify PR creation output
-      expect(commitSha).toBe("new-commit-sha");
       expect(pr).toEqual({ number: 99, html_url: "https://github.com/pull/99" });
 
-      // Verify that the file we updated contains the Figma variables we exported
-      expect(mockRequest).toHaveBeenCalledWith("PUT /repos/{owner}/{repo}/contents/{path}", {
+      // Verify the PUT content is the merged tree (here equivalent to the full export,
+      // since git had nothing this fixture's Figma state doesn't also produce).
+      const putCall = mockRequest.mock.calls.find(([endpoint]) => endpoint === "PUT /repos/{owner}/{repo}/contents/{path}");
+      expect(putCall![1]).toMatchObject({
         owner: "owner",
         repo: "repo",
         path: "tokens.json",
         message: "Update variables",
-        content: btoa(figmaJson),
-        sha: "base-sha",
-        branch: newBranchName
+        sha: "base-sha"
+      });
+      const writtenContent = JSON.parse(atob(putCall![1].content));
+      expect(writtenContent).toEqual(JSON.parse(figmaJson));
+    });
+
+    it("preserves an invalid/quarantined subtree the exporter doesn't produce, untouched, through a submit", async () => {
+      const gitTokens = {
+        Tokens: { brand: { primary: { $type: "color", $value: "#ffffff" } } },
+        // Not a valid token (has $value AND a non-"$" child) — quarantined, excluded from diffs.
+        Notes: { readme: { $value: "hand-authored", weird: {} } }
+      };
+      mockRequest.mockResolvedValueOnce({
+        data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" }
+      });
+
+      const { figmaMock } = createMockFigma();
+      const col = figmaMock.variables.createVariableCollection("Tokens");
+      const primaryVar = figmaMock.variables.createVariable("brand/primary", col.id, "COLOR");
+      primaryVar.setValueForMode(col.modes[0].modeId, { r: 0, g: 0, b: 0 }); // modified to #000000
+
+      const fileData = await github.getFile(config);
+      const gitJson = fileData?.content ?? "{}";
+      const figmaJson = exportToDtcg(
+        figmaMock.variables.getLocalVariableCollections(),
+        figmaMock.variables.getLocalVariables(),
+        figmaMock
+      );
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
+      expect(diffs).toHaveLength(1);
+
+      mockRequest
+        .mockResolvedValueOnce({ data: { object: { sha: "parent-commit-sha" } } })
+        .mockResolvedValueOnce({ data: {} })
+        .mockResolvedValueOnce({ data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" } })
+        .mockResolvedValueOnce({ data: { commit: { sha: "new-commit-sha" } } })
+        .mockResolvedValueOnce({ data: { number: 100, html_url: "https://github.com/pull/100" } });
+
+      await submitProposal(config, github, figmaJson, diffs, "Update primary");
+
+      const putCall = mockRequest.mock.calls.find(([endpoint]) => endpoint === "PUT /repos/{owner}/{repo}/contents/{path}");
+      const writtenContent = JSON.parse(atob(putCall![1].content));
+      expect(writtenContent.Notes).toEqual({ readme: { $value: "hand-authored", weird: {} } });
+      expect(writtenContent.Tokens.brand.primary.$value).toBe("#000000");
+    });
+
+    it("removes only the token deleted in Figma, leaving the rest of git's content intact", async () => {
+      const gitTokens = {
+        Tokens: {
+          brand: {
+            primary: { $type: "color", $value: "#ffffff" },
+            secondary: { $type: "color", $value: "#ff0000" }
+          }
+        }
+      };
+      mockRequest.mockResolvedValueOnce({
+        data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" }
+      });
+
+      // Figma only has "primary" now — "secondary" was deleted from the design file.
+      const { figmaMock } = createMockFigma();
+      const col = figmaMock.variables.createVariableCollection("Tokens");
+      const primaryVar = figmaMock.variables.createVariable("brand/primary", col.id, "COLOR");
+      primaryVar.setValueForMode(col.modes[0].modeId, { r: 1, g: 1, b: 1 });
+
+      const fileData = await github.getFile(config);
+      const gitJson = fileData?.content ?? "{}";
+      const figmaJson = exportToDtcg(
+        figmaMock.variables.getLocalVariableCollections(),
+        figmaMock.variables.getLocalVariables(),
+        figmaMock
+      );
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
+      expect(diffs).toEqual([
+        { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "deleted", figmaVal: "", gitVal: "#ff0000" }
+      ]);
+
+      mockRequest
+        .mockResolvedValueOnce({ data: { object: { sha: "parent-commit-sha" } } })
+        .mockResolvedValueOnce({ data: {} })
+        .mockResolvedValueOnce({ data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" } })
+        .mockResolvedValueOnce({ data: { commit: { sha: "new-commit-sha" } } })
+        .mockResolvedValueOnce({ data: { number: 101, html_url: "https://github.com/pull/101" } });
+
+      await submitProposal(config, github, figmaJson, diffs, "Remove secondary");
+
+      const putCall = mockRequest.mock.calls.find(([endpoint]) => endpoint === "PUT /repos/{owner}/{repo}/contents/{path}");
+      const writtenContent = JSON.parse(atob(putCall![1].content));
+      expect(writtenContent).toEqual({
+        $modes: { "Mode-1": {} },
+        Tokens: { brand: { primary: { $type: "color", $value: "#ffffff" } } }
       });
     });
   });
@@ -308,8 +325,8 @@ describe("Plugin Flow Integration Tests", () => {
         figmaMock
       );
 
-      const diffs = computeDiff(figmaJson, gitJson, "proposals");
-      
+      const { diffs } = computeDiff(figmaJson, gitJson, "proposals");
+
       // All variables in Figma are detected as "added"
       expect(diffs).toHaveLength(1);
       expect(diffs[0].type).toBe("added");

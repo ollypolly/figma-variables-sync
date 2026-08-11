@@ -1,5 +1,7 @@
 import { Octokit } from "@octokit/core";
 
+import type { PluginSettings } from "../types";
+
 function utf8ToBase64(str: string): string {
   const bytes = new TextEncoder().encode(str);
   let binary = "";
@@ -13,13 +15,7 @@ function base64ToUtf8(base64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-export interface GitHubConfig {
-  pat: string;
-  owner: string;
-  repo: string;
-  filePath: string;
-  branch: string;
-}
+export type GitHubConfig = Omit<PluginSettings, "prLabels">;
 
 export const PROPOSAL_BRANCH_PREFIX = "figma/proposal-";
 

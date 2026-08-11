@@ -1,87 +1,32 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { computeDiff, type DiffItem } from "@common/diff";
+import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
-import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport } from "@services/figmaMessages";
-import { PROPOSAL_BRANCH_PREFIX } from "@services/github";
-import { parsePrLabels } from "../../types";
-
-export interface Proposal {
-  number: number;
-  title: string;
-  state: string;
-  html_url: string;
-  head_ref: string;
-}
-
-interface CheckResult {
-  diffs: DiffItem[];
-  figmaContent: string;
-  proposals: Proposal[];
-}
+import { checkForProposalChanges, submitProposal, type ProposalCheckResult } from "@services/proposals";
 
 export function useProposals(active: boolean) {
-  const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
+  const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");
 
-  const check = useAsync<CheckResult>(
+  const check = useAsync<ProposalCheckResult>(
     useCallback(async () => {
       if (!github) throw new Error("Not configured.");
-      const fileData = await github.getFile({
-        owner: settings.owner,
-        repo: settings.repo,
-        filePath: settings.filePath,
-        branch: settings.branch,
-      });
-      const gitContent = fileData?.content ?? "{}";
-      const figmaContent = await requestExport();
-      const diffs = computeDiff(figmaContent, gitContent, "proposals");
-      const proposals = await github.listPullRequests(
-        settings.owner,
-        settings.repo,
-        settings.branch
-      );
-      return { diffs, figmaContent, proposals };
+      return checkForProposalChanges(settings, github);
     }, [settings, github])
   );
+
+  const exportPreview = useAsync<string>(useCallback(() => requestExport(), []));
 
   const submit = useAsync<{ number: number; html_url: string }>(
     useCallback(async () => {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
       }
-
-      const config = {
-        owner: settings.owner,
-        repo: settings.repo,
-        filePath: settings.filePath,
-        branch: settings.branch,
-      };
-
-      const branchName = `${PROPOSAL_BRANCH_PREFIX}${Date.now()}`;
-      await github.createBranch(config, branchName);
-
-      const fileData = await github.getFile(config);
-      await github.updateFile(
-        config,
-        description,
-        check.data.figmaContent,
-        fileData?.sha,
-        branchName
-      );
-
-      const pr = await github.createPullRequest(
-        config,
-        description,
-        `Design variable changes exported from Figma.\n\n${description}`,
-        branchName,
-        parsePrLabels(settings.prLabels)
-      );
-
+      const pr = await submitProposal(settings, github, check.data.figmaContent, check.data.diffs, description);
       setDescription("");
       return pr;
     }, [check.data, description, settings, github])
@@ -115,7 +60,12 @@ export function useProposals(active: boolean) {
     setDescription,
     submitting: submit.loading,
     status,
+    collisionNotice: check.data?.collisionNotice ?? null,
     checkForChanges: check.execute,
     submitProposal: submit.execute,
+    exportPreviewJson: exportPreview.data,
+    exportPreviewLoading: exportPreview.loading,
+    exportPreviewError: exportPreview.error,
+    loadExportPreview: exportPreview.execute,
   };
 }

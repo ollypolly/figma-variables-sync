@@ -15,8 +15,13 @@ const SETTINGS_KEY = "figma-variables-sync-settings";
 export function registerToFigmaHandlers() {
   on<RequestImportHandler>("REQUEST_IMPORT", async function (dtcgJson) {
     try {
-      await importFromDtcg(dtcgJson, figma);
-      emit<ImportResultHandler>("IMPORT_RESULT", true, "Variables imported successfully.");
+      const { quarantined } = await importFromDtcg(dtcgJson, figma);
+      emit<ImportResultHandler>(
+        "IMPORT_RESULT",
+        true,
+        "Variables imported successfully.",
+        quarantined
+      );
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : "Import failed.";
       emit<ImportResultHandler>("IMPORT_RESULT", false, message);

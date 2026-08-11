@@ -3,6 +3,7 @@ import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 
+import { AppProvider } from "@hooks/useAppContext";
 import { ProposalsTab } from "@tabs/ProposalsTab";
 import { SettingsTab } from "@tabs/SettingsTab";
 import { UpdatesTab } from "@tabs/UpdatesTab";
@@ -33,7 +34,7 @@ function Plugin() {
   ];
 
   return (
-    <div class="flex flex-col h-screen overflow-hidden">
+    <div class="flex flex-col h-screen overflow-hidden isolate">
       <Tabs
         options={tabOptions}
         value={tabValue}
@@ -43,4 +44,12 @@ function Plugin() {
   );
 }
 
-export default render(Plugin);
+function Root() {
+  return (
+    <AppProvider>
+      <Plugin />
+    </AppProvider>
+  );
+}
+
+export default render(Root);

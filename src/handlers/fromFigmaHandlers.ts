@@ -1,5 +1,5 @@
 import { emit, on } from "@create-figma-plugin/utilities";
-import { exportToDtcg } from "@common/dtcg";
+import { exportToDtcg, NamingCollisionError } from "@common/dtcg";
 
 import {
   DEFAULT_SETTINGS,
@@ -15,10 +15,16 @@ const SETTINGS_KEY = "figma-variables-sync-settings";
 
 export function registerFromFigmaHandlers() {
   on<RequestExportHandler>("REQUEST_EXPORT", function () {
-    const collections = figma.variables.getLocalVariableCollections();
-    const variables = figma.variables.getLocalVariables();
-    const dtcgJson = exportToDtcg(collections, variables, figma);
-    emit<ExportResultHandler>("EXPORT_RESULT", dtcgJson);
+    try {
+      const collections = figma.variables.getLocalVariableCollections();
+      const variables = figma.variables.getLocalVariables();
+      const dtcgJson = exportToDtcg(collections, variables, figma);
+      emit<ExportResultHandler>("EXPORT_RESULT", true, dtcgJson);
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "Export failed.";
+      const collidingPaths = e instanceof NamingCollisionError ? e.collidingPaths : undefined;
+      emit<ExportResultHandler>("EXPORT_RESULT", false, "", message, collidingPaths);
+    }
   });
 
   on<LoadSettingsHandler>("LOAD_SETTINGS", async function () {

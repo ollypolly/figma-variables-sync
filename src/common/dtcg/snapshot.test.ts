@@ -112,6 +112,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "COLOR",
         scopes: ["FRAME_FILL", "SHAPE_FILL"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": { r: 2/255, g: 132/255, b: 199/255, a: 1 },
           "mode-dark": { r: 56/255, g: 189/255, b: 248/255, a: 1 }
@@ -123,6 +124,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "COLOR",
         scopes: ["FRAME_FILL", "SHAPE_FILL"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": { r: 79/255, g: 70/255, b: 229/255, a: 1 },
           "mode-dark": { r: 129/255, g: 140/255, b: 248/255, a: 1 }
@@ -134,6 +136,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "COLOR",
         scopes: ["FRAME_FILL", "SHAPE_FILL"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": { r: 1, g: 1, b: 1, a: 1 },
           "mode-dark": { r: 15/255, g: 23/255, b: 42/255, a: 1 }
@@ -145,6 +148,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "COLOR",
         scopes: ["TEXT_FILL"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": { r: 15/255, g: 23/255, b: 42/255, a: 1 },
           "mode-dark": { r: 248/255, g: 250/255, b: 252/255, a: 1 }
@@ -156,6 +160,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["GAP"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 8,
           "mode-dark": 8
@@ -167,6 +172,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["GAP"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 16,
           "mode-dark": 16
@@ -178,6 +184,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["GAP"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 24,
           "mode-dark": 24
@@ -189,6 +196,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["CORNER_RADIUS"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 4,
           "mode-dark": 4
@@ -200,6 +208,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["CORNER_RADIUS"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 9999,
           "mode-dark": 9999
@@ -211,6 +220,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["FONT_SIZE"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 16,
           "mode-dark": 16
@@ -222,6 +232,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "STRING",
         scopes: ["ALL_SCOPES"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": "bold",
           "mode-dark": "bold"
@@ -233,6 +244,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: ["GAP"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 0,
           "mode-dark": 0
@@ -244,6 +256,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "FLOAT",
         scopes: [],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": 0.123456789,
           "mode-dark": 0.123456789
@@ -255,6 +268,7 @@ describe("Multi-mode and edge cases round-trip", () => {
         variableCollectionId: "col-tokens",
         resolvedType: "COLOR",
         scopes: ["FRAME_FILL"],
+        codeSyntax: {},
         valuesByMode: {
           "mode-light": { type: "VARIABLE_ALIAS", id: "var-brand-primary" },
           "mode-dark": { type: "VARIABLE_ALIAS", id: "var-brand-primary" }

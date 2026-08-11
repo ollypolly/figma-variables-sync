@@ -1,7 +1,10 @@
-import { Container, VerticalSpace } from "@create-figma-plugin/ui";
+import { Button, Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
+import { useState } from "preact/hooks";
 
+import { WarningNotice } from "@components/WarningNotice";
 import { DiffList } from "@components/DiffList";
+import { ExportPreviewModal } from "@components/ExportPreviewModal";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
@@ -17,31 +20,58 @@ export function ProposalsTab({ active }: { active: boolean }) {
     setDescription,
     submitting,
     status,
+    collisionNotice,
     checkForChanges,
     submitProposal,
+    exportPreviewJson,
+    exportPreviewLoading,
+    exportPreviewError,
+    loadExportPreview,
   } = useProposals(active);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const showForm = !checking && diffItems.length > 0;
+  const showTopArea = Boolean(collisionNotice || status || showForm);
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <div class="flex flex-col h-full">
-        <Container space="medium">
-          <VerticalSpace space="small" />
+        {showTopArea && (
+          <Fragment>
+            <Container space="medium">
+              <VerticalSpace space="small" />
 
-          <StatusBanner status={status} />
+              <div class="flex flex-col gap-4">
+                {collisionNotice && (
+                  <WarningNotice
+                    message={collisionNotice.message}
+                    resolution={collisionNotice.resolution}
+                    details={{
+                      paths: collisionNotice.paths,
+                      fixInstructions: collisionNotice.fixInstructions,
+                    }}
+                  />
+                )}
 
-          {!checking && diffItems.length > 0 && (
-            <ProposalForm
-              description={description}
-              onDescriptionChange={setDescription}
-              onSubmit={submitProposal}
-              submitting={submitting}
-            />
-          )}
+                <StatusBanner status={status} />
 
-          <VerticalSpace space="small" />
-        </Container>
+                {showForm && (
+                  <ProposalForm
+                    description={description}
+                    onDescriptionChange={setDescription}
+                    onSubmit={submitProposal}
+                    submitting={submitting}
+                  />
+                )}
+              </div>
 
-        <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+              <VerticalSpace space="small" />
+            </Container>
+
+            <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+          </Fragment>
+        )}
 
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Container space="extraSmall">
@@ -57,10 +87,28 @@ export function ProposalsTab({ active }: { active: boolean }) {
                   <strong>{String(count)}</strong> change{count === 1 ? "" : "s"} to propose
                 </Fragment>
               )}
+              headerAction={
+                <Button
+                  secondary
+                  onClick={() => {
+                    setPreviewOpen(true);
+                    loadExportPreview();
+                  }}
+                >
+                  View export
+                </Button>
+              }
             />
           </Container>
         </div>
       </div>
+      <ExportPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        json={exportPreviewJson ?? undefined}
+        loading={exportPreviewLoading}
+        error={exportPreviewError}
+      />
     </TabGuard>
   );
 }

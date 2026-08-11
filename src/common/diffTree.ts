@@ -22,6 +22,9 @@ export type DiffTreeNode = DiffTreeGroup | DiffTreeLeaf;
  */
 export function buildDiffTree(items: DiffItem[]): DiffTreeNode[] {
   const root: DiffTreeNode[] = [];
+  // dotPath is unique per group regardless of depth, so one Map covers the whole
+  // tree — avoids re-scanning a depth level's sibling array for every item.
+  const groupsByDotPath = new Map<string, DiffTreeGroup>();
 
   for (const item of items) {
     let siblings = root;
@@ -29,11 +32,10 @@ export function buildDiffTree(items: DiffItem[]): DiffTreeNode[] {
     for (let depth = 0; depth < item.path.length - 1; depth++) {
       const segment = item.path[depth];
       const dotPath = item.path.slice(0, depth + 1).join(".");
-      let group = siblings.find(
-        (node): node is DiffTreeGroup => node.type === "group" && node.dotPath === dotPath
-      );
+      let group = groupsByDotPath.get(dotPath);
       if (!group) {
         group = { type: "group", name: segment, dotPath, children: [] };
+        groupsByDotPath.set(dotPath, group);
         siblings.push(group);
       }
       siblings = group.children;

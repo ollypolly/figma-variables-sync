@@ -1,4 +1,10 @@
-import { parseDtcg, ParsedToken } from "./dtcg";
+import { parseDtcg, ParsedToken, TokenParseResult } from "./dtcg";
+
+export interface ChangedField {
+  field: "type" | "description" | "scopes" | "codeSyntax" | "hiddenFromPublishing";
+  figmaVal: string;
+  gitVal: string;
+}
 
 export interface DiffItem {
   path: string[];
@@ -6,6 +12,37 @@ export interface DiffItem {
   type: "added" | "modified" | "deleted";
   figmaVal: string; // The Figma local value (new state when proposing, old state when updating)
   gitVal: string;   // The Git repository value (old state when proposing, new state when updating)
+  changedFields?: ChangedField[]; // Non-value fields that changed — a type change means Figma will delete-and-recreate the variable
+}
+
+const METADATA_FIELDS: ChangedField["field"][] = [
+  "type",
+  "description",
+  "scopes",
+  "codeSyntax",
+  "hiddenFromPublishing",
+];
+
+function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
+  switch (field) {
+    case "type":
+      return t.type;
+    case "description":
+      return t.description ?? "";
+    case "scopes":
+      return [...(t.figmaScopes ?? [])].sort().join(", ");
+    case "codeSyntax": {
+      const codeSyntax = t.figmaCodeSyntax ?? {};
+      const sortedKeys = Object.keys(codeSyntax).sort();
+      return JSON.stringify(codeSyntax, sortedKeys);
+    }
+    case "hiddenFromPublishing":
+      return String(t.figmaHiddenFromPublishing ?? false);
+  }
+}
+
+export interface ComputeDiffResult extends Pick<TokenParseResult, "quarantined"> {
+  diffs: DiffItem[];
 }
 
 function formatTokenVal(t: ParsedToken): string {
@@ -36,9 +73,12 @@ function formatTokenVal(t: ParsedToken): string {
  *   - "modified": values differ.
  *   - "deleted": variable exists in Figma but not Git.
  */
-export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals" | "updates"): DiffItem[] {
+export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals" | "updates"): ComputeDiffResult {
   const figmaData = parseDtcg(figmaJson);
   const gitData = parseDtcg(gitJson);
+  // Quarantined on either side reads as a genuine add/delete unless excluded here.
+  const quarantined = [...new Set([...figmaData.quarantined, ...gitData.quarantined])];
+  const quarantinedSet = new Set(quarantined);
 
   const figmaMap = new Map<string, ParsedToken>();
   for (const t of figmaData.tokens) {
@@ -57,6 +97,7 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
 
   // Added and modified in target (new)
   for (const [key, targetToken] of targetMap.entries()) {
+    if (quarantinedSet.has(key)) continue;
     const sourceToken = sourceMap.get(key);
     if (!sourceToken) {
       diffs.push({
@@ -69,13 +110,28 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
     } else {
       const targetValStr = formatTokenVal(targetToken);
       const sourceValStr = formatTokenVal(sourceToken);
-      if (targetValStr !== sourceValStr) {
+
+      const changedFields: ChangedField[] = [];
+      for (const field of METADATA_FIELDS) {
+        const targetFieldStr = formatFieldVal(targetToken, field);
+        const sourceFieldStr = formatFieldVal(sourceToken, field);
+        if (targetFieldStr !== sourceFieldStr) {
+          changedFields.push({
+            field,
+            figmaVal: mode === "proposals" ? targetFieldStr : sourceFieldStr,
+            gitVal: mode === "proposals" ? sourceFieldStr : targetFieldStr,
+          });
+        }
+      }
+
+      if (targetValStr !== sourceValStr || changedFields.length > 0) {
         diffs.push({
           path: targetToken.path,
           dotPath: key,
           type: "modified",
           figmaVal: mode === "proposals" ? targetValStr : sourceValStr,
           gitVal: mode === "proposals" ? sourceValStr : targetValStr,
+          ...(changedFields.length > 0 ? { changedFields } : {}),
         });
       }
     }
@@ -83,6 +139,7 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
 
   // Deleted in target (new)
   for (const [key, sourceToken] of sourceMap.entries()) {
+    if (quarantinedSet.has(key)) continue;
     if (!targetMap.has(key)) {
       diffs.push({
         path: sourceToken.path,
@@ -94,5 +151,5 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
     }
   }
 
-  return diffs;
+  return { diffs, quarantined };
 }
