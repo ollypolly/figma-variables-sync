@@ -18,12 +18,7 @@ export function useUpdates(active: boolean) {
   const check = useAsync<CheckResult>(
     useCallback(async () => {
       if (!github) throw new Error("Not configured.");
-      const fileData = await github.getFile({
-        owner: settings.owner,
-        repo: settings.repo,
-        filePath: settings.filePath,
-        branch: settings.branch,
-      });
+      const fileData = await github.getFile(settings);
       if (!fileData) {
         throw new Error(
           `Token file not found at ${settings.filePath} on branch "${settings.branch}". Push the file to GitHub first.`

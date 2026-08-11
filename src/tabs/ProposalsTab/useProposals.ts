@@ -31,12 +31,7 @@ export function useProposals(active: boolean) {
   const check = useAsync<CheckResult>(
     useCallback(async () => {
       if (!github) throw new Error("Not configured.");
-      const fileData = await github.getFile({
-        owner: settings.owner,
-        repo: settings.repo,
-        filePath: settings.filePath,
-        branch: settings.branch,
-      });
+      const fileData = await github.getFile(settings);
       const gitContent = fileData?.content ?? "{}";
       const figmaContent = await requestExport();
       const diffs = computeDiff(figmaContent, gitContent, "proposals");
@@ -55,19 +50,12 @@ export function useProposals(active: boolean) {
         throw new Error("Please enter a description.");
       }
 
-      const config = {
-        owner: settings.owner,
-        repo: settings.repo,
-        filePath: settings.filePath,
-        branch: settings.branch,
-      };
-
       const branchName = `${PROPOSAL_BRANCH_PREFIX}${Date.now()}`;
-      await github.createBranch(config, branchName);
+      await github.createBranch(settings, branchName);
 
-      const fileData = await github.getFile(config);
+      const fileData = await github.getFile(settings);
       await github.updateFile(
-        config,
+        settings,
         description,
         check.data.figmaContent,
         fileData?.sha,
@@ -75,7 +63,7 @@ export function useProposals(active: boolean) {
       );
 
       const pr = await github.createPullRequest(
-        config,
+        settings,
         description,
         `Design variable changes exported from Figma.\n\n${description}`,
         branchName,
