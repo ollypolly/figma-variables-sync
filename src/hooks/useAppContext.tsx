@@ -5,9 +5,18 @@ import type { ComponentChildren } from "preact";
 import { usePluginSettings } from "./usePluginSettings";
 import type { PluginSettings } from "../types";
 
+// Structured detail payload for ContactEngineerNotice's "Copy details" button.
+export interface NoticeDetails {
+  paths?: string[];
+  file?: string;
+  branch?: string;
+  error?: string;
+}
+
 export interface Notice {
   id: number;
   message: string;
+  details?: NoticeDetails;
 }
 
 interface AppContextValue {
@@ -16,7 +25,7 @@ interface AppContextValue {
   settingsLoading: boolean;
   isConfigured: boolean;
   notices: Notice[];
-  addNotice: (message: string) => void;
+  addNotice: (message: string, details?: NoticeDetails) => void;
   dismissNotice: (id: number) => void;
 }
 
@@ -30,9 +39,9 @@ export function AppProvider({ children }: { children: ComponentChildren }) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const nextNoticeId = useRef(0);
 
-  const addNotice = useCallback((message: string) => {
+  const addNotice = useCallback((message: string, details?: NoticeDetails) => {
     const id = nextNoticeId.current++;
-    setNotices((prev) => [...prev, { id, message }]);
+    setNotices((prev) => [...prev, { id, message, details }]);
   }, []);
 
   const dismissNotice = useCallback((id: number) => {

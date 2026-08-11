@@ -3,6 +3,7 @@ import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
 import { useState } from "preact/hooks";
 
+import { ContactEngineerNotice } from "@components/ContactEngineerNotice";
 import { AppProvider, useAppContext } from "@hooks/useAppContext";
 import { ProposalsTab } from "@tabs/ProposalsTab";
 import { SettingsTab } from "@tabs/SettingsTab";
@@ -18,13 +19,12 @@ function Notices() {
   return (
     <div class="flex flex-col">
       {notices.map((notice) => (
-        <div
+        <ContactEngineerNotice
           key={notice.id}
-          class="flex items-center justify-between px-2 py-1 bg-yellow-100 text-yellow-900 text-xs"
-        >
-          <span>{notice.message}</span>
-          <button onClick={() => dismissNotice(notice.id)}>Dismiss</button>
-        </div>
+          message={notice.message}
+          details={notice.details}
+          onDismiss={() => dismissNotice(notice.id)}
+        />
       ))}
     </div>
   );
