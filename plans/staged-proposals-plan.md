@@ -59,7 +59,7 @@ A read-only "already proposed" indicator on its own isn't enough to be worth shi
 
 ### Slice 3 — PR status check-in, staleness warning (on a PR *or* on Main), and retiring the Updates tab
 
-Three related problems, solved together — this also absorbs the old "background sync check + auto-apply" goal, generalized beyond just PRs:
+Four related problems, solved together — this also absorbs the old "background sync check + auto-apply" goal, generalized beyond just PRs:
 
 **3a. Is the selected PR still valid?** If it's merged or closed on GitHub while it's selected in the dropdown, the plugin shouldn't silently keep pushing to a dead branch. Needs a periodic/on-`check()` status check against that PR number — if it's no longer open, reset the dropdown to "Main," tell the designer ("PR #4 was merged — you're back on main"), and fall back to diffing against `main`.
 
@@ -67,7 +67,9 @@ Three related problems, solved together — this also absorbs the old "backgroun
 
 **3c. Is `main` ahead of what the designer last saw, while they're just browsing Main (no active PR)?** This is the same staleness problem as 3b, just without a PR branch in the picture — e.g. a dev pushes a token change directly to `main` while a designer has the plugin open. Since `check()`'s diff base when `activeProposal` is `null` is `settings.branch` (i.e. `main` itself), this is naturally caught on the next `check()`/Refresh: the diff simply picks up main's latest content, no separate mechanism needed. The only decision left is whether to auto-apply that when there's no local Figma drift for the affected paths (silent, safe) versus always surfacing it as a change to review (matches Slice 4 staging once it exists — a git-side change appears as an "incoming" item alongside anything a designer is proposing). Lean toward auto-apply when safe, since that's what the original "background sync check" idea wanted and there's no reason to make a designer manually accept a change they have no conflicting local edit against.
 
-**How:** GitHub's compare API (`GET /repos/{owner}/{repo}/compare/{base}...{head}`) gives ahead/behind counts and PR state in one place — cleaner than separate `getLatestCommitSha` calls. Surface `behind_by > 0` as the staleness trigger for 3b; surface a closed/merged PR via `listPullRequests`' existing state field for 3a. 3c doesn't need the compare API at all — it falls out of `check()`'s existing diff-against-`main` behavior when no PR is selected.
+**3d. Designer changes which branch the plugin points at, in Settings.** Same underlying question as 3c — is it safe to overwrite Figma's local variables with what's now on `settings.branch` — just a different trigger: a deliberate Settings save instead of main quietly advancing while stationary. Reuses 3c's exact auto-apply-when-no-local-drift logic and needs no new mechanism of its own; the goal across 3c and 3d together is the same one the designer described it as: keep Figma's variables in line with wherever the plugin is pointed, with as little manual "remember to click Import" as possible.
+
+**How:** GitHub's compare API (`GET /repos/{owner}/{repo}/compare/{base}...{head}`) gives ahead/behind counts and PR state in one place — cleaner than separate `getLatestCommitSha` calls. Surface `behind_by > 0` as the staleness trigger for 3b; surface a closed/merged PR via `listPullRequests`' existing state field for 3a. Neither 3c nor 3d need the compare API — 3c falls out of `check()`'s existing diff-against-`main` behavior when no PR is selected, and 3d is the same check re-run once against the newly-saved `settings.branch`.
 
 **Conflict / eject-to-dev philosophy (applies here and to Slice 2 push failures):** Designers shouldn't be asked to resolve a git conflict. If a push to an existing branch fails, or main has diverged in a way the plugin can't safely reconcile (e.g. the same token changed on both sides), the UI should:
 - Localise the error to that one PR — don't break the rest of the tab.
@@ -76,9 +78,9 @@ Three related problems, solved together — this also absorbs the old "backgroun
 
 **Auto-rebase: dropped.** A one-click "pull main into this branch" button was considered (Slice 6 in an earlier draft of this plan) and cut. Once a designer is always either on main or on a PR that's being kept in sync via this staleness check, a separate auto-rebase mechanism isn't pulling its weight — the manual "View on GitHub" link is enough, and it keeps the conflict-handling surface area smaller.
 
-**Updates tab: retired as part of this slice.** With this model, a designer is always in one of two states — "on main" (kept in sync via 3c, auto-applying safe git-side changes) or "on a PR" (kept in sync via 3a/3b). There's no longer a scenario where a standalone "incoming updates" tab is the right surface — removing the tab entirely rather than reshaping it, and folding the old background-sync-check idea into 3c instead of a dedicated notification system.
+**Updates tab: retired as part of this slice.** With this model, a designer is always in one of two states — "on main" (kept in sync via 3c/3d, auto-applying safe git-side changes) or "on a PR" (kept in sync via 3a/3b). There's no longer a scenario where a standalone "incoming updates" tab is the right surface — removing the tab entirely rather than reshaping it, and folding the old background-sync-check idea into 3c/3d instead of a dedicated notification system.
 
-**Risk:** Medium — needs the new compare-API call and the PR-status check-in wired into `check()`, careful copy so staleness reads as informative not alarming, deciding 3c's auto-apply-vs-surface-as-change behavior, and removing the Updates tab touches `ui.tsx`'s tab list and whatever of `useUpdates`/`UpdatesTab` isn't reused elsewhere.
+**Risk:** Medium — needs the new compare-API call and the PR-status check-in wired into `check()`, careful copy so staleness reads as informative not alarming, deciding 3c/3d's auto-apply-vs-surface-as-change behavior, and removing the Updates tab touches `ui.tsx`'s tab list and whatever of `useUpdates`/`UpdatesTab` isn't reused elsewhere.
 
 ### Slice 4 — Staging (VS Code-style +/− on the diff tree)
 
