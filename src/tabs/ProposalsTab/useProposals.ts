@@ -1,85 +1,21 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { computeDiff, type DiffItem } from "@common/diff";
-import { NamingCollisionError } from "@common/dtcg";
 import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
 import { requestExport } from "@services/figmaMessages";
-import { PROPOSAL_BRANCH_PREFIX } from "@services/github";
-import { parsePrLabels } from "../../types";
-
-export interface Proposal {
-  number: number;
-  title: string;
-  state: string;
-  html_url: string;
-  head_ref: string;
-}
-
-interface CheckResult {
-  diffs: DiffItem[];
-  figmaContent: string;
-  proposals: Proposal[];
-}
+import { checkForProposalChanges, submitProposal, type ProposalCheckResult } from "@services/proposals";
 
 export function useProposals(active: boolean) {
   const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");
-  // Overwritten (not appended) on every check, so it can't stack or go stale.
-  const [collisionNotice, setCollisionNotice] = useState<
-    {
-      message: string;
-      paths: string[];
-      resolution: "designer" | "engineer";
-      fixInstructions?: string;
-    } | null
-  >(null);
 
-  const check = useAsync<CheckResult>(
+  const check = useAsync<ProposalCheckResult>(
     useCallback(async () => {
       if (!github) throw new Error("Not configured.");
-      const fileData = await github.getFile(settings);
-      const gitContent = fileData?.content ?? "{}";
-
-      let figmaContent: string;
-      try {
-        figmaContent = await requestExport();
-      } catch (e) {
-        if (e instanceof NamingCollisionError) {
-          setCollisionNotice({
-            message: e.message,
-            paths: e.collidingPaths,
-            resolution: "designer",
-          });
-          return { diffs: [], figmaContent: "", proposals: [] };
-        }
-        throw e;
-      }
-
-      const { diffs, quarantined } = computeDiff(figmaContent, gitContent, "proposals");
-      setCollisionNotice(
-        quarantined.length > 0
-          ? {
-              message: `The repository's token file has ${quarantined.length} token group(s) that are invalid — a token name is also used as a group name (e.g. "Primary" and "Primary/Hover"), which isn't allowed. This isn't fixable from Figma; an engineer needs to edit the token file directly to remove the conflict.`,
-              paths: quarantined,
-              resolution: "engineer",
-              fixInstructions:
-                `Each path below has both a "$value" and at least one non-"$"-prefixed child key at the same level in ${settings.filePath} (branch: ${settings.branch}) — invalid per the W3C DTCG spec, since a token can't also be a group.\n` +
-                `To fix: either (a) move the child key(s) out to be a sibling of the token instead of nested under it, or (b) nest the token's own value under a new child key (e.g. rename the "$value" holder from "Primary" to "Primary/Default") so the parent becomes a pure group.\n` +
-                `After editing, re-import the file in the plugin to confirm it parses cleanly with no quarantined paths.`,
-            }
-          : null
-      );
-
-      const proposals = await github.listPullRequests(
-        settings.owner,
-        settings.repo,
-        settings.branch
-      );
-      return { diffs, figmaContent, proposals };
+      return checkForProposalChanges(settings, github);
     }, [settings, github])
   );
 
@@ -90,27 +26,7 @@ export function useProposals(active: boolean) {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
       }
-
-      const branchName = `${PROPOSAL_BRANCH_PREFIX}${Date.now()}`;
-      await github.createBranch(settings, branchName);
-
-      const fileData = await github.getFile(settings);
-      await github.updateFile(
-        settings,
-        description,
-        check.data.figmaContent,
-        fileData?.sha,
-        branchName
-      );
-
-      const pr = await github.createPullRequest(
-        settings,
-        description,
-        `Design variable changes exported from Figma.\n\n${description}`,
-        branchName,
-        parsePrLabels(settings.prLabels)
-      );
-
+      const pr = await submitProposal(settings, github, check.data.figmaContent, check.data.diffs, description);
       setDescription("");
       return pr;
     }, [check.data, description, settings, github])
@@ -144,7 +60,7 @@ export function useProposals(active: boolean) {
     setDescription,
     submitting: submit.loading,
     status,
-    collisionNotice,
+    collisionNotice: check.data?.collisionNotice ?? null,
     checkForChanges: check.execute,
     submitProposal: submit.execute,
     exportPreviewJson: exportPreview.data,
