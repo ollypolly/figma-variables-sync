@@ -1,11 +1,14 @@
 import { Button, TextboxMultiline } from '@create-figma-plugin/ui';
 import { Fragment, h } from 'preact';
 
+import type { ActiveProposal } from '../../types';
+
 interface ProposalFormProps {
   description: string;
   onDescriptionChange: (value: string) => void;
   onSubmit: () => void;
   submitting: boolean;
+  activeProposal: ActiveProposal | null;
 }
 
 export function ProposalForm({
@@ -13,6 +16,7 @@ export function ProposalForm({
   onDescriptionChange,
   onSubmit,
   submitting,
+  activeProposal,
 }: ProposalFormProps) {
   return (
     <Fragment>
@@ -28,7 +32,7 @@ export function ProposalForm({
         disabled={!description.trim()}
         fullWidth
       >
-        Create Pull Request
+        {activeProposal ? `Update PR #${activeProposal.number}` : 'Create Pull Request'}
       </Button>
     </Fragment>
   );

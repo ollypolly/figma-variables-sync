@@ -5,6 +5,7 @@ import { useState } from "preact/hooks";
 import { WarningNotice } from "@components/WarningNotice";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
+import { PrSelector } from "@components/PrSelector";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
@@ -16,6 +17,9 @@ export function ProposalsTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
+    openProposals,
+    activeProposal,
+    setActiveProposal,
     description,
     setDescription,
     submitting,
@@ -37,6 +41,19 @@ export function ProposalsTab({ active }: { active: boolean }) {
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <div class="flex flex-col h-full">
+        <Container space="medium">
+          <VerticalSpace space="small" />
+          <PrSelector
+            activeProposal={activeProposal}
+            openProposals={openProposals}
+            onSelect={setActiveProposal}
+            disabled={submitting}
+          />
+          <VerticalSpace space="small" />
+        </Container>
+
+        <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+
         {showTopArea && (
           <Fragment>
             <Container space="medium">
@@ -62,6 +79,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
                     onDescriptionChange={setDescription}
                     onSubmit={submitProposal}
                     submitting={submitting}
+                    activeProposal={activeProposal}
                   />
                 )}
               </div>
