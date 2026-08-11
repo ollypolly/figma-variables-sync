@@ -12,7 +12,7 @@ interface CheckResult {
 }
 
 export function useUpdates(active: boolean) {
-  const { settings, settingsLoading, isConfigured, addNotice } = useAppContext();
+  const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const check = useAsync<CheckResult>(
@@ -36,19 +36,9 @@ export function useUpdates(active: boolean) {
       if (!check.data?.gitContent) throw new Error("No updates to import.");
       const result = await requestImport(check.data.gitContent);
       if (!result.success) throw new Error(result.message);
-      if (result.quarantined.length > 0) {
-        addNotice(
-          `${result.quarantined.length} token group(s) couldn't be imported because a name collides with a sibling's path.`,
-          {
-            paths: result.quarantined,
-            file: settings.filePath,
-            branch: settings.branch,
-          }
-        );
-      }
       await check.execute();
       return result.message;
-    }, [check.data, check.execute, settings, addNotice])
+    }, [check.data, check.execute])
   );
 
   useEffect(() => {

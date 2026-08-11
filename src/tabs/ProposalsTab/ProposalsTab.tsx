@@ -1,6 +1,7 @@
 import { Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
+import { ContactEngineerNotice } from "@components/ContactEngineerNotice";
 import { DiffList } from "@components/DiffList";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
@@ -17,29 +18,43 @@ export function ProposalsTab({ active }: { active: boolean }) {
     setDescription,
     submitting,
     status,
+    collisionNotice,
+    dismissCollisionNotice,
     checkForChanges,
     submitProposal,
   } = useProposals(active);
 
+  const showForm = !checking && diffItems.length > 0;
+
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <div class="flex flex-col h-full">
-        <Container space="medium">
-          <VerticalSpace space="small" />
+        {(collisionNotice || status || showForm) && (
+          <Container space="medium">
+            <VerticalSpace space="small" />
 
-          <StatusBanner status={status} />
+            {collisionNotice && (
+              <ContactEngineerNotice
+                message={collisionNotice.message}
+                details={{ paths: collisionNotice.paths }}
+                onDismiss={dismissCollisionNotice}
+              />
+            )}
 
-          {!checking && diffItems.length > 0 && (
-            <ProposalForm
-              description={description}
-              onDescriptionChange={setDescription}
-              onSubmit={submitProposal}
-              submitting={submitting}
-            />
-          )}
+            <StatusBanner status={status} />
 
-          <VerticalSpace space="small" />
-        </Container>
+            {showForm && (
+              <ProposalForm
+                description={description}
+                onDescriptionChange={setDescription}
+                onSubmit={submitProposal}
+                submitting={submitting}
+              />
+            )}
+
+            <VerticalSpace space="small" />
+          </Container>
+        )}
 
         <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
 

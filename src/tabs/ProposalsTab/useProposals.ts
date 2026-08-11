@@ -24,10 +24,16 @@ interface CheckResult {
 }
 
 export function useProposals(active: boolean) {
-  const { settings, settingsLoading, isConfigured, addNotice } = useAppContext();
+  const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");
+  // Overwritten (not appended to) on every check — a stale collision notice
+  // from a previous check must not linger once the collision is resolved,
+  // and re-checking repeatedly must not stack duplicate notices.
+  const [collisionNotice, setCollisionNotice] = useState<
+    { message: string; paths: string[] } | null
+  >(null);
 
   const check = useAsync<CheckResult>(
     useCallback(async () => {
@@ -38,9 +44,10 @@ export function useProposals(active: boolean) {
       let figmaContent: string;
       try {
         figmaContent = await requestExport();
+        setCollisionNotice(null);
       } catch (e) {
         if (e instanceof NamingCollisionError) {
-          addNotice(e.message, { paths: e.collidingPaths });
+          setCollisionNotice({ message: e.message, paths: e.collidingPaths });
           return { diffs: [], figmaContent: "", proposals: [] };
         }
         throw e;
@@ -53,7 +60,7 @@ export function useProposals(active: boolean) {
         settings.branch
       );
       return { diffs, figmaContent, proposals };
-    }, [settings, github, addNotice])
+    }, [settings, github])
   );
 
   const submit = useAsync<{ number: number; html_url: string }>(
@@ -115,6 +122,8 @@ export function useProposals(active: boolean) {
     setDescription,
     submitting: submit.loading,
     status,
+    collisionNotice,
+    dismissCollisionNotice: () => setCollisionNotice(null),
     checkForChanges: check.execute,
     submitProposal: submit.execute,
   };
