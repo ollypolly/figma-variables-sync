@@ -9,6 +9,7 @@ export default defineConfig({
       "@hooks": resolve(__dirname, "src/hooks"),
       "@services": resolve(__dirname, "src/services"),
       "@tabs": resolve(__dirname, "src/tabs"),
+      "@utils": resolve(__dirname, "src/utils"),
     },
   },
 });

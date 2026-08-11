@@ -1,8 +1,10 @@
-import { Container, VerticalSpace } from "@create-figma-plugin/ui";
+import { Button, Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
+import { useState } from "preact/hooks";
 
 import { ContactEngineerNotice } from "@components/ContactEngineerNotice";
 import { DiffList } from "@components/DiffList";
+import { ExportPreviewModal } from "@components/ExportPreviewModal";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
@@ -21,7 +23,13 @@ export function ProposalsTab({ active }: { active: boolean }) {
     collisionNotice,
     checkForChanges,
     submitProposal,
+    exportPreviewJson,
+    exportPreviewLoading,
+    exportPreviewError,
+    loadExportPreview,
   } = useProposals(active);
+
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   const showForm = !checking && diffItems.length > 0;
   const showTopArea = Boolean(collisionNotice || status || showForm);
@@ -77,10 +85,28 @@ export function ProposalsTab({ active }: { active: boolean }) {
                   <strong>{String(count)}</strong> change{count === 1 ? "" : "s"} to propose
                 </Fragment>
               )}
+              headerAction={
+                <Button
+                  secondary
+                  onClick={() => {
+                    setPreviewOpen(true);
+                    loadExportPreview();
+                  }}
+                >
+                  View export
+                </Button>
+              }
             />
           </Container>
         </div>
       </div>
+      <ExportPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        json={exportPreviewJson ?? undefined}
+        loading={exportPreviewLoading}
+        error={exportPreviewError}
+      />
     </TabGuard>
   );
 }

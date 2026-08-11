@@ -28,9 +28,7 @@ export function useProposals(active: boolean) {
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");
-  // Overwritten (not appended to) on every check — a stale collision notice
-  // from a previous check must not linger once the collision is resolved,
-  // and re-checking repeatedly must not stack duplicate notices.
+  // Overwritten (not appended) on every check, so it can't stack or go stale.
   const [collisionNotice, setCollisionNotice] = useState<
     {
       message: string;
@@ -84,6 +82,8 @@ export function useProposals(active: boolean) {
       return { diffs, figmaContent, proposals };
     }, [settings, github])
   );
+
+  const exportPreview = useAsync<string>(useCallback(() => requestExport(), []));
 
   const submit = useAsync<{ number: number; html_url: string }>(
     useCallback(async () => {
@@ -147,5 +147,9 @@ export function useProposals(active: boolean) {
     collisionNotice,
     checkForChanges: check.execute,
     submitProposal: submit.execute,
+    exportPreviewJson: exportPreview.data,
+    exportPreviewLoading: exportPreview.loading,
+    exportPreviewError: exportPreview.error,
+    loadExportPreview: exportPreview.execute,
   };
 }

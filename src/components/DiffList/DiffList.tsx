@@ -22,6 +22,7 @@ interface DiffListProps {
   refreshDisabled?: boolean;
   emptyMessage: string;
   countLabel: (count: number) => ComponentChildren;
+  headerAction?: ComponentChildren;
 }
 
 const TYPE_COLOR: Record<DiffItem["type"], string> = {
@@ -31,6 +32,10 @@ const TYPE_COLOR: Record<DiffItem["type"], string> = {
 };
 
 const GROUP_ROW_HEIGHT = 28;
+// Shallower (ancestor) sticky headers must stay in front of deeper ones as they
+// scroll underneath — descending z-index by depth, with enough headroom that no
+// realistic nesting depth reaches 0.
+const STICKY_Z_INDEX_BASE = 100;
 const INDENT_STEP = 16;
 const BASE_INDENT = 8;
 const ROW_GAP = 2;
@@ -53,6 +58,7 @@ export function DiffList({
   refreshDisabled,
   emptyMessage,
   countLabel,
+  headerAction,
 }: DiffListProps) {
   const tree = buildDiffTree(items);
   const allGroupDotPaths = collectGroupDotPaths(tree);
@@ -89,6 +95,7 @@ export function DiffList({
           </Muted>
         </Text>
         <div style={{ display: "flex", gap: "8px" }}>
+          {headerAction}
           {allGroupDotPaths.length > 0 && (
             <Button
               onClick={() =>
@@ -165,13 +172,16 @@ function DiffTreeRow({
   if (node.type === "group") {
     const open = openGroups.has(node.dotPath);
     return (
-      <Fragment>
+      // A real element (not a Fragment) so the sticky header's containing block is
+      // scoped to this group's own subtree — otherwise it never releases on scroll,
+      // since sticky un-sticks relative to its parent's bounds, and a Fragment has none.
+      <div>
         <div
           onClick={() => onToggleGroup(node.dotPath)}
           style={{
             position: "sticky",
             top: `${depth * GROUP_ROW_HEIGHT}px`,
-            zIndex: 10,
+            zIndex: STICKY_Z_INDEX_BASE - depth,
             height: `${GROUP_ROW_HEIGHT}px`,
             marginBottom: `${ROW_GAP}px`,
             display: "flex",
@@ -209,7 +219,7 @@ function DiffTreeRow({
               onToggleGroup={onToggleGroup}
             />
           ))}
-      </Fragment>
+      </div>
     );
   }
 
