@@ -80,7 +80,13 @@ export function DiffList({
     <div style={{ padding: "8px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 8px 6px" }}>
         <Text>
-          <Muted>{checking ? "Refreshing…" : countLabel(items.length)}</Muted>
+          <Muted>
+            {checking
+              ? "Refreshing…"
+              : items.length === 0
+                ? emptyMessage
+                : countLabel(items.length)}
+          </Muted>
         </Text>
         <div style={{ display: "flex", gap: "8px" }}>
           {allGroupDotPaths.length > 0 && (
@@ -101,11 +107,7 @@ export function DiffList({
 
       {checking ? (
         <LoadingIndicator />
-      ) : items.length === 0 ? (
-        <Text>
-          <Muted>{emptyMessage}</Muted>
-        </Text>
-      ) : (
+      ) : items.length === 0 ? null : (
         tree.map((node) => (
           <DiffTreeRow
             key={node.dotPath}
