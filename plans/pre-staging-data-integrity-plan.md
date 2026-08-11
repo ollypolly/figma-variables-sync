@@ -74,6 +74,22 @@ This is the compound risk: even after Bugs 1–3 are fixed, a full-file replacem
 - [ ] Test: a variable was deleted in Figma → the PR removes only that token from the Git file, nothing else
 - [ ] Implement a merge function using `computeDiff`'s output to surgically patch the Git JSON instead of replacing it wholesale — note this is close in shape to `applyStagedDiffs` from `staged-proposals-plan.md` Slice 4 (apply a specific set of diffs onto a base JSON); worth designing them together or reusing the same core function, since "submit everything" is just "stage everything" in that model
 
+## Bug 5 — Diff tree doesn't surface metadata or type changes (found during Bug 2 testing)
+
+`computeDiff`'s `formatTokenVal` (`src/common/diff.ts`) only compares a token's `value` and `modes`. It ignores `type` entirely, and — now that Bug 2 round-trips them — also ignores `description`/`scopes`/`codeSyntax`/`hiddenFromPublishing`. Two distinct consequences:
+
+- **Metadata-only changes are invisible and unproposable.** If a designer only edits a description or narrows a variable's scopes in Figma, `computeDiff` finds zero diffs: nothing shows in the Changes tab, and the "Create Pull Request" form doesn't even appear. The change is stuck — it'll only ever ship piggybacked on an unrelated value edit to the same token.
+- **Type changes are silently destructive, with no warning.** A `$type` change isn't just a value update: `importFromDtcg.ts` (~line 107) detects a `resolvedType` mismatch and calls `variable.remove()` before creating a fresh variable. That's delete-and-recreate — the new variable gets a new Figma ID, so any canvas node already bound to the old variable becomes an orphaned/broken binding. This isn't shown in the diff tree as anything more than an ordinary "modified" row (and only gets flagged as "modified" at all because the value's string representation usually — not always — differs incidentally alongside the type).
+
+**Why this matters before staging work:** `staged-proposals-plan.md`'s stage/unstage and Bug 4's merge-based proposals both build on `computeDiff`'s output as the source of truth for "what would this sync actually do." If that output is blind to metadata-only changes and mislabels destructive type changes as routine edits, those gaps propagate into the staging UI too.
+
+**Tasks:**
+- [ ] Decide the display approach: fold metadata into `formatTokenVal`'s comparison string (cheap, but noisy — every row would show full scope/codeSyntax text even when only the color value changed), vs. a structured `changedFields` list on `DiffItem` with `DiffList.tsx` rendering per-field annotations (more work, clearer UX)
+- [ ] Compare `type` explicitly (not just incidentally via the value string) and flag a type change distinctly from a value change
+- [ ] Surface type changes as "will delete and recreate this variable" rather than a plain "modified" row — this is a different risk tier than a value edit and designers should know before proposing/accepting it
+- [ ] Test: a token with only its description/scopes/codeSyntax/hiddenFromPublishing changed produces a diff item and is proposable on its own
+- [ ] Test: a token with only its `$type` changed is flagged distinctly from an ordinary value change
+
 ## Shared component: `ContactEngineerNotice`
 
 Referenced by Bug 1's quarantine warning here, and by the "eject to dev" conflict handling in `staged-proposals-plan.md` Slice 3. Confirmed nothing like this exists in `src/` yet — `StatusBanner` is the only banner primitive today, and it's a plain pass/fail string with no structured detail payload or actions.
@@ -101,3 +117,5 @@ The old branch's `example/goodlord-tokens.json` and the cross-exporter compariso
 ## Suggested order
 
 Bug 1 → Bug 4 → Bug 3 → Bug 2, then hardening. Reasoning: Bug 1 is the most acute (an active corruption path on every export today) and unblocks trustworthy fixture re-generation for the others. Bug 4 (merge-not-replace) is what makes every other fix durable rather than just reducing loss frequency, and its core mechanism overlaps with `staged-proposals-plan.md`'s `applyStagedDiffs` — worth sequencing before that plan's Slice 4 starts, ideally designed together. Bug 3 (orphan deletion) and Bug 2 (metadata) are real but lower-urgency data-loss/data-fidelity issues that don't block the PR-selection workflow from being safe to build on.
+
+Bug 5 (diff visibility) was found while testing Bug 2 and isn't part of the original four — do it after Bugs 1–4 are closed, but before `staged-proposals-plan.md` work starts, since that plan builds directly on `computeDiff`'s output.
