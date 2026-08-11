@@ -2,7 +2,7 @@
 
 Supersedes and consolidates the multi-proposal branch management, duplicate-proposal suppression, Updates tab retirement, and staged-changes ideas that used to live in `future-ideas-plan.md` (now moved here — see that doc's "Superseded" section).
 
-⚠️ **Gated by [`pre-staging-data-integrity-plan.md`](./pre-staging-data-integrity-plan.md)** — that plan's Bug 4 (proposals replace the entire Git file instead of merging) shares its core mechanism with this plan's Slice 4 `applyStagedDiffs`. Fix the data-integrity bugs first; the "submit everything" path here is really just "stage everything" once that groundwork exists, so building it twice would be wasted effort.
+✅ **Unblocked** — the data-integrity plan this was gated on (naming collisions, metadata round-trip, orphan cleanup, and Bug 4's merge-based proposals via `applyStagedDiffs`) has shipped (PR #11). This plan's Slice 4 can reuse `applyStagedDiffs` directly rather than building the same merge mechanism twice.
 
 ## Why this is the priority
 

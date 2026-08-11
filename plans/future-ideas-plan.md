@@ -1,6 +1,6 @@
 # Future Ideas
 
-Loosely-scoped improvements not currently in active development. Unlike [`staged-proposals-plan.md`](./staged-proposals-plan.md) and [`pre-staging-data-integrity-plan.md`](./pre-staging-data-integrity-plan.md), nothing here is blocking or sequenced — pull an item into its own plan doc when it's actually being picked up.
+Loosely-scoped improvements not currently in active development. Unlike [`staged-proposals-plan.md`](./staged-proposals-plan.md), nothing here is blocking or sequenced — pull an item into its own plan doc when it's actually being picked up.
 
 > ✅ **Already shipped, kept here as a log:** Proposals/Changes tab defaults to the landing tab and leads the tab order. Recent Proposals is scoped to PRs this plugin created (via the `figma/proposal-` branch prefix). PR labels are a separate, user-configurable setting for external tagging (e.g. `patch`), decoupled from filtering. The diff list is a collapsible tree matching Figma's own Variables panel (sticky stacking headers, guide lines, colour-coded rows, expand/collapse all).
 
@@ -28,15 +28,24 @@ Currently the plugin syncs variable **values** but not variable **bindings** —
 
 ## Stale Data After Merge
 
-The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging, the plugin may briefly show stale diffs. Consider a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay. Distinct from the actual data-loss bugs in `pre-staging-data-integrity-plan.md` — this is read-after-write API lag, not a correctness bug.
+The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging, the plugin may briefly show stale diffs. Consider a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay. Distinct from the data-loss bugs already fixed (naming collisions, metadata round-trip, orphan cleanup, merge-based proposals, diff visibility) — this is read-after-write API lag, not a correctness bug.
 
 ## Self-Service Fix for Git-Side Naming Collisions
 
 When `computeDiff` finds a path that's quarantined on the git side but clean on Figma's side (invalid DTCG already committed to the repo — a token name doubling as a group name), today's `ContactEngineerNotice` says an engineer has to edit the file directly. But Figma is the real source of truth here, and export already guarantees Figma's current state can't have this collision — so the "correct" content for that path is knowable: whatever Figma currently has for it.
 
-The blocker isn't knowledge, it's mechanism: today submitting a proposal replaces the *entire* git file with a full Figma export, which would fix the collision as a side effect but also clobber anything else in git that Figma doesn't have yet (another designer's pending change, dev-added metadata) — the exact data-loss risk `pre-staging-data-integrity-plan.md`'s Bug 4 already exists to fix.
+The blocker used to be mechanism: submitting a proposal replaced the *entire* git file with a full Figma export, which would fix the collision as a side effect but also clobber anything else in git that Figma doesn't have yet (another designer's pending change, dev-added metadata).
 
-Once Bug 4's merge-based proposals land (patching only the paths that actually changed, rather than replacing the whole file), revisit this: detect "quarantined on git, clean on Figma" paths specifically and surface them as a normal, safe, proposable diff item (e.g. "Fix invalid token structure") instead of a dead-end engineer notice. Not pressing — Bug 4 needs to exist first regardless of this use case.
+That's no longer true — merge-based proposals (`applyStagedDiffs`, patching only the paths that actually changed) have landed. This is now actionable: detect "quarantined on git, clean on Figma" paths specifically and surface them as a normal, safe, proposable diff item (e.g. "Fix invalid token structure") instead of a dead-end engineer notice.
+
+## Hardening Backlog (carried over from the now-removed data-integrity plan)
+
+Re-checked against the codebase after Bugs 1-5 landed (`data-integrity-fixes`) — none of these were touched by that work, so they're still open. Two other items from the original hardening list ("guard against zero-diff submits" and "prevent double-submission") turned out to already be solved pre-existing, unrelated to Bugs 1-5, so they're dropped rather than carried forward.
+
+- **Raw Octokit errors reach the designer as-is.** `src/services/github.ts` only special-cases a 404 in `getFile`; every other call (`createBranch`, `updateFile`, `createPullRequest`, etc.) has no try/catch, so a 409 conflict, bad PAT, or rate-limit error surfaces GitHub's own API message verbatim via `StatusBanner`. Needs a mapping from common Octokit failure modes to a designer-facing message.
+- **`isConfigured` doesn't validate `filePath`/`branch`.** `usePluginSettings.ts` only checks `pat`/`owner`/`repo` are truthy — a blanked `filePath` or `branch` still reads as "configured."
+- **Color parsing silently falls back to black on malformed input.** `parseColor.ts` intentionally returns `{r:0,g:0,b:0,a:1}` for anything it can't parse (covered by an existing test), but this is a silent-corruption risk with no signal back to the user — worth revisiting whether it should quarantine/warn instead, consistent with how Bug 1 handles other invalid input.
+- **Unresolved alias references fail silently.** `resolveDtcgValue.ts` only `console.warn`s when an alias path doesn't resolve, then falls through — for a color token this hits the color-parsing fallback above (writes solid black), for other types it writes the raw unresolved `{path}` string into the variable. No quarantine, no user-facing notice, unlike Bug 1's collision handling.
 
 ## Superseded (see linked plans)
 
@@ -46,7 +55,7 @@ The following used to live here as open sections but have moved to dedicated, ac
 - **"Updates" tab redesign / retirement, duplicate-proposal suppression** → [`staged-proposals-plan.md`](./staged-proposals-plan.md) Slice 3
 - **Staged changes (VS Code-style stage/unstage)** → [`staged-proposals-plan.md`](./staged-proposals-plan.md) Slice 4
 - **Background sync check + auto-apply** → folded into [`staged-proposals-plan.md`](./staged-proposals-plan.md) Slice 3 (3c)
-- **MVP data-loss bugs, metadata round-tripping** → [`pre-staging-data-integrity-plan.md`](./pre-staging-data-integrity-plan.md)
+- **MVP data-loss bugs, metadata round-tripping** → ✅ shipped, see PR [#11](https://github.com/ollypolly/figma-variables-sync/pull/11)
 
 Sticky tab memory (persisting the last-active tab across sessions) was considered and dropped — the tab list is shrinking to just Changes + Settings once the Updates tab retires, so it's no longer worth the effort.
 
