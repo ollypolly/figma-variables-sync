@@ -83,7 +83,9 @@ Build it generically now rather than as a one-off for either consumer:
 - [ ] "Copy details" button (clipboard) — the structured details, formatted for pasting into Slack/Teams
 - [ ] Optional context-specific escape-hatch action slot (e.g. "Delete proposal" for the staged-proposals conflict case; none needed for a quarantine warning)
 
-## Hardening (lower priority than the four data-loss bugs, worth a pass before or during the same cycle)
+## Hardening (deferred until the data-loss bugs are closed)
+
+Hardening around flows that are about to change shape (Bug 4's merge-based proposals, Bug 3's importer cleanup) is wasted effort if done first — the error paths, edge cases, and even which functions exist will shift once those land. Do this pass after, not alongside.
 
 - [ ] Audit which raw Octokit errors currently reach the designer as-is, and improve the worst ones
 - [ ] Guard against submitting a PR with zero diffs
