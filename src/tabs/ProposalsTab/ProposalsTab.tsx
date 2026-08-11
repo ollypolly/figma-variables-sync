@@ -24,37 +24,40 @@ export function ProposalsTab({ active }: { active: boolean }) {
   } = useProposals(active);
 
   const showForm = !checking && diffItems.length > 0;
+  const showTopArea = Boolean(collisionNotice || status || showForm);
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <div class="flex flex-col h-full">
-        {(collisionNotice || status || showForm) && (
-          <Container space="medium">
-            <VerticalSpace space="small" />
+        {showTopArea && (
+          <Fragment>
+            <Container space="medium">
+              <VerticalSpace space="small" />
 
-            {collisionNotice && (
-              <ContactEngineerNotice
-                message={collisionNotice.message}
-                details={{ paths: collisionNotice.paths }}
-              />
-            )}
+              {collisionNotice && (
+                <ContactEngineerNotice
+                  message={collisionNotice.message}
+                  details={{ paths: collisionNotice.paths }}
+                />
+              )}
 
-            <StatusBanner status={status} />
+              <StatusBanner status={status} />
 
-            {showForm && (
-              <ProposalForm
-                description={description}
-                onDescriptionChange={setDescription}
-                onSubmit={submitProposal}
-                submitting={submitting}
-              />
-            )}
+              {showForm && (
+                <ProposalForm
+                  description={description}
+                  onDescriptionChange={setDescription}
+                  onSubmit={submitProposal}
+                  submitting={submitting}
+                />
+              )}
 
-            <VerticalSpace space="small" />
-          </Container>
+              <VerticalSpace space="small" />
+            </Container>
+
+            <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+          </Fragment>
         )}
-
-        <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
 
         <div class="flex-1 min-h-0 overflow-y-auto">
           <Container space="extraSmall">
