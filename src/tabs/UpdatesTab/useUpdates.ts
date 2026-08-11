@@ -1,9 +1,9 @@
 import { useCallback, useEffect } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
+import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
-import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport, requestImport } from "@services/figmaMessages";
 
 interface CheckResult {
@@ -12,7 +12,7 @@ interface CheckResult {
 }
 
 export function useUpdates(active: boolean) {
-  const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
+  const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const check = useAsync<CheckResult>(

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "preact/hooks";
 
 import { computeDiff, type DiffItem } from "@common/diff";
+import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
-import { usePluginSettings } from "@hooks/usePluginSettings";
 import { requestExport } from "@services/figmaMessages";
 import { PROPOSAL_BRANCH_PREFIX } from "@services/github";
 import { parsePrLabels } from "../../types";
@@ -23,7 +23,7 @@ interface CheckResult {
 }
 
 export function useProposals(active: boolean) {
-  const { settings, loading: settingsLoading, isConfigured } = usePluginSettings();
+  const { settings, settingsLoading, isConfigured } = useAppContext();
   const github = useGitHub(settings);
 
   const [description, setDescription] = useState("");

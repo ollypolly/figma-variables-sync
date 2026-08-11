@@ -1,9 +1,9 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
+import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
-import { usePluginSettings } from "@hooks/usePluginSettings";
 import type {
   PluginSettings,
   SaveSettingsHandler,
@@ -11,7 +11,7 @@ import type {
 } from "../../types";
 
 export function useSettings() {
-  const { settings, setSettings, loading } = usePluginSettings();
+  const { settings, setSettings, settingsLoading: loading } = useAppContext();
   const github = useGitHub(settings);
 
   const [saving, setSaving] = useState(false);
