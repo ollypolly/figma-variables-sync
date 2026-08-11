@@ -77,9 +77,20 @@ export function DiffList({
   // tab mount), so the auto-expand-by-count decision can't be made from useState's one-shot
   // initializer — it would always see an empty list. Apply it once real data lands instead, and
   // only once per mount, so it doesn't fight a designer's own manual expand/collapse afterward.
+  //
+  // `checking` is actually still `false` on this very first render too — a child's effects run
+  // before its parent's, so this fires before useProposals's mount effect has even called
+  // check.execute() yet. Guarding on "not checking" alone would fire immediately with the still-
+  // empty items and never get a second chance — has to watch for a true→false transition instead,
+  // to tell "hasn't started checking" apart from "finished checking".
+  const hasSeenChecking = useRef(false);
   const appliedInitialDefault = useRef(false);
   useEffect(() => {
-    if (checking || appliedInitialDefault.current) return;
+    if (checking) {
+      hasSeenChecking.current = true;
+      return;
+    }
+    if (!hasSeenChecking.current || appliedInitialDefault.current) return;
     appliedInitialDefault.current = true;
     // A small diff is quick to scan fully expanded — nothing to choose between. Once it's large
     // enough that expanding everything would just be a wall of rows, default to collapsed (or,
