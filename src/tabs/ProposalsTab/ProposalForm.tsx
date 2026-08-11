@@ -1,5 +1,5 @@
-import { Button, TextboxMultiline, VerticalSpace } from "@create-figma-plugin/ui";
-import { Fragment, h } from "preact";
+import { Button, TextboxMultiline } from '@create-figma-plugin/ui';
+import { Fragment, h } from 'preact';
 
 interface ProposalFormProps {
   description: string;
@@ -22,7 +22,6 @@ export function ProposalForm({
         placeholder="What changed in this proposal?"
         rows={3}
       />
-      <VerticalSpace space="small" />
       <Button
         onClick={onSubmit}
         loading={submitting}

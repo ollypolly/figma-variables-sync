@@ -42,27 +42,29 @@ export function ProposalsTab({ active }: { active: boolean }) {
             <Container space="medium">
               <VerticalSpace space="small" />
 
-              {collisionNotice && (
-                <ContactEngineerNotice
-                  message={collisionNotice.message}
-                  resolution={collisionNotice.resolution}
-                  details={{
-                    paths: collisionNotice.paths,
-                    fixInstructions: collisionNotice.fixInstructions,
-                  }}
-                />
-              )}
+              <div class="flex flex-col gap-4">
+                {collisionNotice && (
+                  <ContactEngineerNotice
+                    message={collisionNotice.message}
+                    resolution={collisionNotice.resolution}
+                    details={{
+                      paths: collisionNotice.paths,
+                      fixInstructions: collisionNotice.fixInstructions,
+                    }}
+                  />
+                )}
 
-              <StatusBanner status={status} />
+                <StatusBanner status={status} />
 
-              {showForm && (
-                <ProposalForm
-                  description={description}
-                  onDescriptionChange={setDescription}
-                  onSubmit={submitProposal}
-                  submitting={submitting}
-                />
-              )}
+                {showForm && (
+                  <ProposalForm
+                    description={description}
+                    onDescriptionChange={setDescription}
+                    onSubmit={submitProposal}
+                    submitting={submitting}
+                  />
+                )}
+              </div>
 
               <VerticalSpace space="small" />
             </Container>
