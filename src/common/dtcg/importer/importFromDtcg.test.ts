@@ -4,6 +4,8 @@ import { importFromDtcg } from "./importFromDtcg";
 function createMockFigma() {
   const collections: any[] = [];
   const variables: any[] = [];
+  let nextCollectionId = 1;
+  let nextVariableId = 1;
 
   const figmaMock: any = {
     variables: {
@@ -20,7 +22,7 @@ function createMockFigma() {
         return variables.find(v => v.id === id) || null;
       },
       createVariableCollection(name: string) {
-        const id = `col-${collections.length + 1}`;
+        const id = `col-${nextCollectionId++}`;
         const newCol = {
           id,
           name,
@@ -34,13 +36,20 @@ function createMockFigma() {
             const modeId = `${id}-mode-${this.modes.length + 1}`;
             this.modes.push({ modeId, name });
             return modeId;
+          },
+          remove() {
+            const idx = collections.indexOf(this);
+            if (idx > -1) collections.splice(idx, 1);
+            for (let i = variables.length - 1; i >= 0; i--) {
+              if (variables[i].variableCollectionId === this.id) variables.splice(i, 1);
+            }
           }
         };
         collections.push(newCol);
         return newCol;
       },
       createVariable(name: string, collectionId: string, resolvedType: string) {
-        const id = `var-${variables.length + 1}`;
+        const id = `var-${nextVariableId++}`;
         const newVar = {
           id,
           name,
@@ -370,6 +379,162 @@ describe("importFromDtcg", () => {
 
     const primaryVar = figmaMock.variables.getLocalVariables()[0];
     expect(primaryVar.hiddenFromPublishing).toBe(true);
+  });
+
+  it("removes a Figma variable whose token was removed from a later import, leaving its sibling untouched", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const withBothTokens = {
+      Tokens: {
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+          secondary: { $type: "color", $value: "#000000" },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withBothTokens), figmaMock);
+
+    const withPrimaryOnly = {
+      Tokens: {
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+        },
+      },
+    };
+    const result = await importFromDtcg(JSON.stringify(withPrimaryOnly), figmaMock);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.length).toBe(1);
+    expect(variables[0].name).toBe("colors/primary");
+    expect(result.removed).toEqual(["Tokens.colors.secondary"]);
+  });
+
+  it("removes a whole collection and its variables when the collection is removed from a later import", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const withBothCollections = {
+      Tokens: {
+        colors: { primary: { $type: "color", $value: "#ffffff" } },
+      },
+      Spacing: {
+        sizes: { sm: { $type: "dimension", $value: "4px" } },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withBothCollections), figmaMock);
+
+    const withoutSpacing = {
+      Tokens: {
+        colors: { primary: { $type: "color", $value: "#ffffff" } },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withoutSpacing), figmaMock);
+
+    const collections = figmaMock.variables.getLocalVariableCollections();
+    expect(collections.map((c: any) => c.name)).toEqual(["Tokens"]);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.length).toBe(1);
+    expect(variables[0].name).toBe("colors/primary");
+  });
+
+  it("re-importing identical DTCG JSON deletes nothing", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+          secondary: { $type: "color", $value: "#000000" },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(figmaMock.variables.getLocalVariableCollections().length).toBe(1);
+    expect(figmaMock.variables.getLocalVariables().length).toBe(2);
+  });
+
+  it("still recreates a variable whose $type changed, without the orphan-cleanup pass also touching it", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const asColor = {
+      Tokens: { primary: { $type: "color", $value: "#ffffff" } },
+    };
+    await importFromDtcg(JSON.stringify(asColor), figmaMock);
+    const originalId = figmaMock.variables.getLocalVariables()[0].id;
+
+    const asDimension = {
+      Tokens: { primary: { $type: "dimension", $value: "16px" } },
+    };
+    await importFromDtcg(JSON.stringify(asDimension), figmaMock);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.length).toBe(1);
+    expect(variables[0].resolvedType).toBe("FLOAT");
+    expect(variables[0].id).not.toBe(originalId);
+  });
+
+  it("does not delete a variable whose token became quarantined in a later import, even with valid siblings present", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const clean = {
+      Tokens: {
+        colors: {
+          Primary: { $type: "color", $value: "#ffffff" },
+          secondary: { $type: "color", $value: "#000000" },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(clean), figmaMock);
+    expect(figmaMock.variables.getLocalVariables().length).toBe(2);
+
+    // "Primary" becomes structurally ambiguous (both $value and a non-"$" child) —
+    // quarantined by parseDtcg, so it's absent from `tokens`, not proof it was removed.
+    // "secondary" stays valid, so the collection itself is very much still present in Git.
+    const nowQuarantined = {
+      Tokens: {
+        colors: {
+          Primary: {
+            $type: "color",
+            $value: "#ffffff",
+            Hover: { $type: "color", $value: "#eeeeee" },
+          },
+          secondary: { $type: "color", $value: "#000000" },
+        },
+      },
+    };
+    const result = await importFromDtcg(JSON.stringify(nowQuarantined), figmaMock);
+
+    expect(result.quarantined).toEqual(["Tokens.colors.Primary"]);
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.map((v: any) => v.name).sort()).toEqual(["colors/Primary", "colors/secondary"]);
+  });
+
+  it("does nothing, including no deletions, when a later import has zero parseable tokens", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const withTokens = {
+      Tokens: { primary: { $type: "color", $value: "#ffffff" } },
+    };
+    await importFromDtcg(JSON.stringify(withTokens), figmaMock);
+    expect(figmaMock.variables.getLocalVariables().length).toBe(1);
+
+    // Wholly ambiguous — quarantined, so `tokens` ends up empty. Not proof of an
+    // intentional wipe, so this must be a no-op rather than deleting everything.
+    const whollyQuarantined = {
+      Tokens: {
+        primary: {
+          $type: "color",
+          $value: "#ffffff",
+          weird: {},
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(whollyQuarantined), figmaMock);
+
+    expect(figmaMock.variables.getLocalVariableCollections().length).toBe(1);
+    expect(figmaMock.variables.getLocalVariables().length).toBe(1);
   });
 
   it("sets a collection's hiddenFromPublishing from the collection's own $extensions.figma", async () => {
