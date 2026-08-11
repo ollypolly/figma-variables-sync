@@ -51,9 +51,12 @@ export async function importFromDtcg(
       continue;
     }
 
+    const colTokenVarNames = new Set(
+      colTokens?.map((t) => t.path.slice(1).map(sanitizeName).join("/"))
+    );
     for (const variable of colVariables) {
       const dotPath = getVariablePath(collection.name, variable.name);
-      const stillPresent = colTokens?.some((t) => t.path.slice(1).map(sanitizeName).join("/") === variable.name);
+      const stillPresent = colTokenVarNames.has(variable.name);
       if (!stillPresent && !isProtectedByQuarantine(dotPath)) {
         removed.push(dotPath);
         variable.remove();
@@ -61,10 +64,21 @@ export async function importFromDtcg(
     }
   }
 
+  // PASS 0 may have removed collections/variables — refresh the live snapshot before
+  // anything below resolves paths against Figma, so a removed entity's stale id can't
+  // leak into pathToVariableIdMap or get matched again by PASS 1's lookups.
+  const collectionsAfterCleanup = figmaInstance.variables.getLocalVariableCollections();
+  const variablesAfterCleanup = figmaInstance.variables.getLocalVariables();
+
+  const collectionById = new Map(collectionsAfterCleanup.map((c) => [c.id, c]));
+  const variableByCollectionAndName = new Map(
+    variablesAfterCleanup.map((v) => [`${v.variableCollectionId}::${v.name}`, v])
+  );
+
   const pathToVariableIdMap = new Map<string, string>();
   // Populate mapping with all existing variables first
-  for (const variable of existingVariables) {
-    const col = existingCollections.find((c) => c.id === variable.variableCollectionId);
+  for (const variable of variablesAfterCleanup) {
+    const col = collectionById.get(variable.variableCollectionId);
     if (!col) continue;
     const dotPath = getVariablePath(col.name, variable.name);
     pathToVariableIdMap.set(dotPath, variable.id);
@@ -75,7 +89,7 @@ export async function importFromDtcg(
 
   for (const [colName, colTokens] of collectionTokensMap.entries()) {
     // 1. Find or create collection
-    let collection = existingCollections.find((c) => sanitizeName(c.name) === colName);
+    let collection = collectionsAfterCleanup.find((c) => sanitizeName(c.name) === colName);
     if (!collection) {
       collection = figmaInstance.variables.createVariableCollection(colName);
     }
@@ -130,9 +144,7 @@ export async function importFromDtcg(
       const dotPath = getVariablePath(t.path[0], varName);
       const targetType = dtcgTypeToFigma(t.type);
 
-      let variable = existingVariables.find(
-        (v) => v.variableCollectionId === updatedCollection.id && v.name === varName
-      );
+      let variable = variableByCollectionAndName.get(`${updatedCollection.id}::${varName}`);
 
       if (variable && variable.resolvedType !== targetType) {
         variable.remove();

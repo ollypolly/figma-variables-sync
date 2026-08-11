@@ -537,6 +537,44 @@ describe("importFromDtcg", () => {
     expect(figmaMock.variables.getLocalVariables().length).toBe(1);
   });
 
+  it("does not alias a surviving token to a variable that PASS 0 just removed in the same import", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const withBoth = {
+      Tokens: {
+        colors: {
+          primary: { $type: "color", $value: "#ffffff" },
+          link: { $type: "color", $value: "{Tokens.colors.primary}" },
+        },
+      },
+    };
+    await importFromDtcg(JSON.stringify(withBoth), figmaMock);
+
+    // "primary" is gone from this import (removed by PASS 0), but "link" still
+    // carries a dangling alias to it — a stale pathToVariableIdMap entry pointing
+    // at the now-deleted variable's id would incorrectly resolve this alias.
+    const primaryRemoved = {
+      Tokens: {
+        colors: {
+          link: { $type: "color", $value: "{Tokens.colors.primary}" },
+        },
+      },
+    };
+    const result = await importFromDtcg(JSON.stringify(primaryRemoved), figmaMock);
+
+    expect(result.removed).toEqual(["Tokens.colors.primary"]);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables).toHaveLength(1);
+    const linkVar = variables[0];
+    expect(linkVar.name).toBe("colors/link");
+
+    const modeId = figmaMock.variables.getLocalVariableCollections()[0].modes[0].modeId;
+    // Should fall through to the color-parsing fallback (unresolved alias), not an
+    // alias pointing at "primary"'s now-deleted id.
+    expect(linkVar.valuesByMode[modeId]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
   it("sets a collection's hiddenFromPublishing from the collection's own $extensions.figma", async () => {
     const { figmaMock } = createMockFigma();
 
