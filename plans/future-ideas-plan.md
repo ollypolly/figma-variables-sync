@@ -32,7 +32,7 @@ The GitHub contents API can take ~10 seconds to reflect a merged PR. After mergi
 
 ## Self-Service Fix for Git-Side Naming Collisions
 
-When `computeDiff` finds a path that's quarantined on the git side but clean on Figma's side (invalid DTCG already committed to the repo — a token name doubling as a group name), today's `ContactEngineerNotice` says an engineer has to edit the file directly. But Figma is the real source of truth here, and export already guarantees Figma's current state can't have this collision — so the "correct" content for that path is knowable: whatever Figma currently has for it.
+When `computeDiff` finds a path that's quarantined on the git side but clean on Figma's side (invalid DTCG already committed to the repo — a token name doubling as a group name), today's `WarningNotice` says an engineer has to edit the file directly. But Figma is the real source of truth here, and export already guarantees Figma's current state can't have this collision — so the "correct" content for that path is knowable: whatever Figma currently has for it.
 
 The blocker used to be mechanism: submitting a proposal replaced the *entire* git file with a full Figma export, which would fix the collision as a side effect but also clobber anything else in git that Figma doesn't have yet (another designer's pending change, dev-added metadata).
 

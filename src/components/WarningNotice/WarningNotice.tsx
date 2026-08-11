@@ -14,7 +14,7 @@ export interface NoticeDetails {
   fixInstructions?: string;
 }
 
-interface ContactEngineerNoticeProps {
+interface WarningNoticeProps {
   message: string;
   resolution?: 'designer' | 'engineer';
   details?: NoticeDetails;
@@ -89,13 +89,13 @@ function formatDetailsForClipboard(
   return lines.join('\n');
 }
 
-export function ContactEngineerNotice({
+export function WarningNotice({
   message,
   resolution,
   details,
   action,
   onDismiss,
-}: ContactEngineerNoticeProps) {
+}: WarningNoticeProps) {
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'failed'>(
     'idle',
   );

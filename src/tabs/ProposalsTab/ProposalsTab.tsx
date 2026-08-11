@@ -2,7 +2,7 @@ import { Button, Container, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 import { useState } from "preact/hooks";
 
-import { ContactEngineerNotice } from "@components/ContactEngineerNotice";
+import { WarningNotice } from "@components/WarningNotice";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
 import { StatusBanner } from "@components/StatusBanner";
@@ -44,7 +44,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
 
               <div class="flex flex-col gap-4">
                 {collisionNotice && (
-                  <ContactEngineerNotice
+                  <WarningNotice
                     message={collisionNotice.message}
                     resolution={collisionNotice.resolution}
                     details={{
