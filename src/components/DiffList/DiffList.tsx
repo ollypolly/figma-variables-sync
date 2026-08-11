@@ -59,6 +59,29 @@ function collectGroupDotPaths(nodes: DiffTreeNode[]): string[] {
   return dotPaths;
 }
 
+function computeInitialOpenGroups(
+  items: DiffItem[],
+  tree: DiffTreeNode[],
+  allGroupDotPaths: string[]
+): string[] {
+  if (items.length > 0 && items.length <= AUTO_EXPAND_THRESHOLD) return allGroupDotPaths;
+  if (tree.length === 1 && tree[0].type === "group") return [tree[0].dotPath];
+  return [];
+}
+
+function useHasFinishedFirstLoad(loading: boolean): boolean {
+  const [hasFinished, setHasFinished] = useState(false);
+  const wasLoading = useRef(false);
+  useEffect(() => {
+    if (loading) {
+      wasLoading.current = true;
+    } else if (wasLoading.current) {
+      setHasFinished(true);
+    }
+  }, [loading]);
+  return hasFinished;
+}
+
 export function DiffList({
   items,
   mode,
@@ -73,37 +96,13 @@ export function DiffList({
   const allGroupDotPaths = collectGroupDotPaths(tree);
   const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
 
-  // `items` is still [] on this component's very first render (checking hasn't resolved yet on
-  // tab mount), so the auto-expand-by-count decision can't be made from useState's one-shot
-  // initializer — it would always see an empty list. Apply it once real data lands instead, and
-  // only once per mount, so it doesn't fight a designer's own manual expand/collapse afterward.
-  //
-  // `checking` is actually still `false` on this very first render too — a child's effects run
-  // before its parent's, so this fires before useProposals's mount effect has even called
-  // check.execute() yet. Guarding on "not checking" alone would fire immediately with the still-
-  // empty items and never get a second chance — has to watch for a true→false transition instead,
-  // to tell "hasn't started checking" apart from "finished checking".
-  const hasSeenChecking = useRef(false);
-  const appliedInitialDefault = useRef(false);
+  const hasFinishedFirstLoad = useHasFinishedFirstLoad(checking);
+  const appliedInitialOpenGroups = useRef(false);
   useEffect(() => {
-    if (checking) {
-      hasSeenChecking.current = true;
-      return;
-    }
-    if (!hasSeenChecking.current || appliedInitialDefault.current) return;
-    appliedInitialDefault.current = true;
-    // A small diff is quick to scan fully expanded — nothing to choose between. Once it's large
-    // enough that expanding everything would just be a wall of rows, default to collapsed (or,
-    // if there's a single top-level group, open just that one — nothing to choose between there
-    // either).
-    const defaultOpen =
-      items.length > 0 && items.length <= AUTO_EXPAND_THRESHOLD
-        ? allGroupDotPaths
-        : tree.length === 1 && tree[0].type === "group"
-          ? [tree[0].dotPath]
-          : [];
-    setOpenGroups(new Set(defaultOpen));
-  }, [checking, items]);
+    if (!hasFinishedFirstLoad || appliedInitialOpenGroups.current) return;
+    appliedInitialOpenGroups.current = true;
+    setOpenGroups(new Set(computeInitialOpenGroups(items, tree, allGroupDotPaths)));
+  }, [hasFinishedFirstLoad, items]);
 
   function toggleGroup(dotPath: string) {
     setOpenGroups((prev) => {

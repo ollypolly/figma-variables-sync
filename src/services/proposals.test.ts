@@ -92,10 +92,10 @@ describe("checkForProposalChanges", () => {
   });
 
   it("diffs against the active proposal's branch instead of main, and its fixInstructions cite that branch", async () => {
-    const prBranchTokens = JSON.stringify({
+    const quarantinedPrBranchTokens = JSON.stringify({
       Tokens: {
         brand: {
-          primary: { $value: "#fff", weird: {} }, // quarantined
+          primary: { $value: "#fff", weird: {} },
         },
       },
     });
@@ -105,7 +105,7 @@ describe("checkForProposalChanges", () => {
 
     const getFile = vi.fn().mockImplementation((cfg: { branch: string }) =>
       cfg.branch === "figma/proposal-1"
-        ? Promise.resolve({ content: prBranchTokens, sha: "pr-sha" })
+        ? Promise.resolve({ content: quarantinedPrBranchTokens, sha: "pr-sha" })
         : Promise.resolve({ content: mainTokens, sha: "main-sha" })
     );
     const github = createMockGitHub({ getFile });

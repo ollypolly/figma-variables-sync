@@ -31,8 +31,6 @@ export function useAsync<T, A extends unknown[] = []>(
     [fn]
   );
 
-  // Escape hatch for updating `data` from known-good local information (e.g. after a write
-  // whose result we already know), instead of re-fetching into a possibly-stale read.
   const setData = useCallback((updater: T | ((prev: T | null) => T)) => {
     setState((prev) => ({
       ...prev,

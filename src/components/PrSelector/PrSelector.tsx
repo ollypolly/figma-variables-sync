@@ -11,19 +11,23 @@ interface PrSelectorProps {
   disabled?: boolean;
 }
 
+function withCurrentSelectionAlwaysListed(
+  activeProposal: ActiveProposal | null,
+  openProposals: Proposal[]
+): Array<ActiveProposal | Proposal> {
+  if (activeProposal && !openProposals.some((p) => p.number === activeProposal.number)) {
+    return [activeProposal, ...openProposals];
+  }
+  return openProposals;
+}
+
 export function PrSelector({ activeProposal, openProposals, onSelect, disabled }: PrSelectorProps) {
-  // The dropdown's `value` must always match an option, or it throws. On every tab remount
-  // openProposals starts empty until check() resolves, so a persisted activeProposal needs to
-  // be represented here too — not just once the fetch catches up.
-  const selectableProposals =
-    activeProposal && !openProposals.some((p) => p.number === activeProposal.number)
-      ? [activeProposal, ...openProposals]
-      : openProposals;
+  const dropdownProposals = withCurrentSelectionAlwaysListed(activeProposal, openProposals);
 
   const options: DropdownOption[] = [
     { value: "main", text: "Main" },
-    ...(selectableProposals.length > 0 ? (["-"] as const) : []),
-    ...selectableProposals.map((p) => ({ value: String(p.number), text: `#${p.number} ${p.title}` })),
+    ...(dropdownProposals.length > 0 ? (["-"] as const) : []),
+    ...dropdownProposals.map((p) => ({ value: String(p.number), text: `#${p.number} ${p.title}` })),
   ];
 
   const handleValueChange = (value: string) => {

@@ -34,8 +34,6 @@ export interface FigmaDiffResult {
   collisionNotice: CollisionNotice | null;
 }
 
-// The diff base — main, or an active PR's branch if one is selected — determines both what
-// gitContent means below and where a collision fix would need to be made.
 export function resolveDiffSettings(
   settings: Omit<PluginSettings, "pat">,
   activeProposal: ActiveProposal | null
@@ -43,10 +41,6 @@ export function resolveDiffSettings(
   return activeProposal ? { ...settings, branch: activeProposal.head_ref } : settings;
 }
 
-// Re-diffs Figma's current export against an already-fetched git baseline, with no GitHub calls
-// of its own — cheap enough to poll every few seconds so a designer sees their own edits reflected
-// almost instantly, independent of how often the (rate-limited, GitHub-API-backed) git-side state
-// is refreshed.
 export async function checkFigmaChanges(
   gitContent: string,
   diffSettings: Omit<PluginSettings, "pat">
@@ -111,15 +105,12 @@ export async function submitProposal(
   const stagedDotPaths = new Set(diffs.map((d) => d.dotPath));
 
   if (activeProposal) {
-    // fileData must come from the PR's own branch, not settings.branch (main) — reusing main's
-    // sha here would either 409 once the branch has diverged, or succeed by coincidence and only
-    // break on the PR's *next* push.
-    const fileData = await github.getFile({ ...settings, branch: activeProposal.head_ref });
-    if (!fileData) {
+    const freshBranchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
+    if (!freshBranchFile) {
       throw new Error("This PR's branch is no longer available — it may have been merged or closed.");
     }
-    const mergedContent = applyStagedDiffs(fileData.content, figmaContent, stagedDotPaths);
-    await github.updateFile(settings, description, mergedContent, fileData.sha, activeProposal.head_ref);
+    const mergedContent = applyStagedDiffs(freshBranchFile.content, figmaContent, stagedDotPaths);
+    await github.updateFile(settings, description, mergedContent, freshBranchFile.sha, activeProposal.head_ref);
     return {
       number: activeProposal.number,
       html_url: activeProposal.html_url,
