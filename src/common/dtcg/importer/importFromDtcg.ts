@@ -6,13 +6,17 @@ import { resolveDtcgValue } from "./resolveDtcgValue";
 import { getVariablePath } from "../utils/getVariablePath";
 
 
+export interface ImportFromDtcgResult {
+  quarantined: string[];
+}
+
 // Import W3C DTCG JSON back into native Figma variables.
 export async function importFromDtcg(
   jsonStr: string,
   figmaInstance: typeof figma
-): Promise<void> {
-  const { modes: rootModes, tokens } = parseDtcg(jsonStr);
-  if (tokens.length === 0) return;
+): Promise<ImportFromDtcgResult> {
+  const { modes: rootModes, tokens, quarantined } = parseDtcg(jsonStr);
+  if (tokens.length === 0) return { quarantined };
 
   // Group tokens by collection (first segment of token path)
   const collectionTokensMap = new Map<string, ParsedToken[]>();
@@ -150,4 +154,6 @@ export async function importFromDtcg(
       }
     }
   }
+
+  return { quarantined };
 }

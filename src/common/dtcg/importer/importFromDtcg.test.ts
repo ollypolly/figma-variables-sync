@@ -192,4 +192,35 @@ describe("importFromDtcg", () => {
 
     expect(notifiedMsg).toContain("Figma plan limit: Only the default mode was imported");
   });
+
+  it("quarantines a colliding subtree instead of silently losing it, and still imports the clean tokens", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          Primary: {
+            $type: "color",
+            $value: "#ffffff",
+            Hover: {
+              $type: "color",
+              $value: "#eeeeee",
+            },
+          },
+          secondary: {
+            $type: "color",
+            $value: "#000000",
+          },
+        },
+      },
+    };
+
+    const result = await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(result.quarantined).toEqual(["Tokens.colors.Primary"]);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.length).toBe(1);
+    expect(variables[0].name).toBe("colors/secondary");
+  });
 });
