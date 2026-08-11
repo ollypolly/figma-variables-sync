@@ -96,7 +96,7 @@ export function exportToDtcg(
 
   if (collisions.size > 0) {
     throw new NamingCollisionError(
-      `Cannot export: the following Figma variable names collide with a sibling's path and would produce invalid DTCG (a token can't also be a group) — rename them, e.g. "Primary" → "Primary/Default".`,
+      `These Figma variable names conflict with each other — a variable can't share a name with another variable's parent group (e.g. "Primary" can't also be the parent of "Primary/Hover"). Rename the variable(s) below in Figma, e.g. "Primary" → "Primary/Default", then check again.`,
       Array.from(collisions)
     );
   }

@@ -32,7 +32,7 @@ export function useProposals(active: boolean) {
   // from a previous check must not linger once the collision is resolved,
   // and re-checking repeatedly must not stack duplicate notices.
   const [collisionNotice, setCollisionNotice] = useState<
-    { message: string; paths: string[] } | null
+    { message: string; paths: string[]; resolution: "designer" | "engineer" } | null
   >(null);
 
   const check = useAsync<CheckResult>(
@@ -46,7 +46,11 @@ export function useProposals(active: boolean) {
         figmaContent = await requestExport();
       } catch (e) {
         if (e instanceof NamingCollisionError) {
-          setCollisionNotice({ message: e.message, paths: e.collidingPaths });
+          setCollisionNotice({
+            message: e.message,
+            paths: e.collidingPaths,
+            resolution: "designer",
+          });
           return { diffs: [], figmaContent: "", proposals: [] };
         }
         throw e;
@@ -56,8 +60,9 @@ export function useProposals(active: boolean) {
       setCollisionNotice(
         quarantined.length > 0
           ? {
-              message: `${quarantined.length} token group(s) in the repository couldn't be compared because a name collides with a sibling's path.`,
+              message: `The repository's token file has ${quarantined.length} token group(s) that are invalid — a token name is also used as a group name (e.g. "Primary" and "Primary/Hover"), which isn't allowed. This isn't fixable from Figma; an engineer needs to edit the token file directly to remove the conflict.`,
               paths: quarantined,
+              resolution: "engineer",
             }
           : null
       );

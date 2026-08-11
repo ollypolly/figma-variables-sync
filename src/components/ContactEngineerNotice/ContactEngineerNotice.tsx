@@ -13,10 +13,19 @@ export interface NoticeDetails {
 
 interface ContactEngineerNoticeProps {
   message: string;
+  // Who can actually resolve this — surfaced as a bold lead-in so it's obvious
+  // at a glance whether to fix it yourself or hand it off, without reading the
+  // whole message first.
+  resolution?: "designer" | "engineer";
   details?: NoticeDetails;
   action?: { label: string; onClick: () => void };
   onDismiss?: () => void;
 }
+
+const RESOLUTION_LABEL: Record<"designer" | "engineer", string> = {
+  designer: "You can fix this:",
+  engineer: "Needs an engineer:",
+};
 
 // Button/Link from @create-figma-plugin/ui hardcode colors meant for the default
 // app background, not a colored Banner — nesting them here would be unreadable
@@ -96,6 +105,7 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 export function ContactEngineerNotice({
   message,
+  resolution,
   details,
   action,
   onDismiss,
@@ -111,7 +121,10 @@ export function ContactEngineerNotice({
   return (
     <Banner icon={<IconWarning16 />} variant="warning">
       <div class="flex flex-col gap-2">
-        <span>{message}</span>
+        <span>
+          {resolution && <strong>{RESOLUTION_LABEL[resolution]} </strong>}
+          {message}
+        </span>
         {details?.paths && details.paths.length > 0 && (
           <div class="flex flex-col">
             {details.paths.map((path) => (
