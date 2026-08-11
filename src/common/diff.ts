@@ -30,9 +30,12 @@ function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
     case "description":
       return t.description ?? "";
     case "scopes":
-      return (t.figmaScopes ?? []).join(", ");
-    case "codeSyntax":
-      return JSON.stringify(t.figmaCodeSyntax ?? {});
+      return [...(t.figmaScopes ?? [])].sort().join(", ");
+    case "codeSyntax": {
+      const codeSyntax = t.figmaCodeSyntax ?? {};
+      const sortedKeys = Object.keys(codeSyntax).sort();
+      return JSON.stringify(codeSyntax, sortedKeys);
+    }
     case "hiddenFromPublishing":
       return String(t.figmaHiddenFromPublishing ?? false);
   }

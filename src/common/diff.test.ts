@@ -251,6 +251,32 @@ describe("computeDiff", () => {
       ]);
     });
 
+    it("should not report a scopes change when the same scopes differ only in order", () => {
+      const scopesOrderA = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { scopes: ["FRAME_FILL", "SHAPE_FILL"] } },
+            },
+          },
+        },
+      });
+      const scopesOrderB = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { scopes: ["SHAPE_FILL", "FRAME_FILL"] } },
+            },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(scopesOrderB, scopesOrderA, "proposals");
+      expect(diffs).toEqual([]);
+    });
+
     it("should detect a codeSyntax-only change", () => {
       const withCodeSyntaxA = JSON.stringify({
         Tokens: {
@@ -278,6 +304,32 @@ describe("computeDiff", () => {
       expect(diffs[0].changedFields).toEqual([
         { field: "codeSyntax", figmaVal: '{"WEB":"var(--new)"}', gitVal: '{"WEB":"var(--old)"}' },
       ]);
+    });
+
+    it("should not report a codeSyntax change when the same platforms differ only in key order", () => {
+      const codeSyntaxOrderA = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { codeSyntax: { WEB: "var(--x)", ANDROID: "x" } } },
+            },
+          },
+        },
+      });
+      const codeSyntaxOrderB = JSON.stringify({
+        Tokens: {
+          brand: {
+            primary: {
+              "$type": "color", "$value": "#ffffff",
+              "$extensions": { figma: { codeSyntax: { ANDROID: "x", WEB: "var(--x)" } } },
+            },
+          },
+        },
+      });
+
+      const { diffs } = computeDiff(codeSyntaxOrderB, codeSyntaxOrderA, "proposals");
+      expect(diffs).toEqual([]);
     });
 
     it("should detect a hiddenFromPublishing-only change", () => {
