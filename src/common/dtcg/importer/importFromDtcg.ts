@@ -1,14 +1,11 @@
-import { ParsedToken } from "../types";
+import { ParsedToken, TokenParseResult } from "../types";
 import { sanitizeName } from "../utils/sanitizeName";
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
 import { parseDtcg } from "../parser/parseDtcg";
 import { resolveDtcgValue } from "./resolveDtcgValue";
 import { getVariablePath } from "../utils/getVariablePath";
 
-
-export interface ImportFromDtcgResult {
-  quarantined: string[];
-}
+export type ImportFromDtcgResult = Pick<TokenParseResult, "quarantined">;
 
 // Import W3C DTCG JSON back into native Figma variables.
 export async function importFromDtcg(

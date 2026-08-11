@@ -7,3 +7,9 @@ export interface ParsedToken {
   value: any;     // raw default value or alias reference
   modes?: Record<string, any>; // sanitized mode override values
 }
+
+// Shared shape for parsing results that quarantine invalid subtrees (see findTokens.ts) instead of dropping them.
+export interface TokenParseResult {
+  tokens: ParsedToken[];
+  quarantined: string[];
+}

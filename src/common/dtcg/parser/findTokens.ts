@@ -1,16 +1,11 @@
-import { ParsedToken } from "../types";
-
-export interface FindTokensResult {
-  tokens: ParsedToken[];
-  quarantined: string[];
-}
+import { ParsedToken, TokenParseResult } from "../types";
 
 function hasChildTokenKeys(obj: any): boolean {
   return Object.keys(obj).some((key) => !key.startsWith("$"));
 }
 
 // Recursively traverse a W3C DTCG JSON object to extract flat list of tokens.
-export function findTokens(obj: any, path: string[] = []): FindTokensResult {
+export function findTokens(obj: any, path: string[] = []): TokenParseResult {
   if (!obj || typeof obj !== "object") return { tokens: [], quarantined: [] };
 
   if ("$value" in obj) {

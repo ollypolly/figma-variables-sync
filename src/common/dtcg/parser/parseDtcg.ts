@@ -1,10 +1,10 @@
-import { ParsedToken } from "../types";
+import { TokenParseResult } from "../types";
 import { findTokens } from "./findTokens";
 
 // Parse DTCG JSON into root-level modes, flat tokens, and any quarantined paths.
 export function parseDtcg(
   jsonStr: string
-): { modes: Record<string, any>; tokens: ParsedToken[]; quarantined: string[] } {
+): TokenParseResult & { modes: Record<string, any> } {
   try {
     const data = JSON.parse(jsonStr);
     const rootModes = data.$modes || {};
