@@ -9,7 +9,7 @@ import {
 } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 import type { ComponentChildren } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 import type { DiffItem } from "@common/diff";
 import { buildDiffTree, type DiffTreeNode } from "@common/diffTree";
@@ -47,6 +47,7 @@ const STICKY_Z_INDEX_BASE = 100;
 const INDENT_STEP = 16;
 const BASE_INDENT = 8;
 const ROW_GAP = 2;
+const AUTO_EXPAND_THRESHOLD = 10;
 
 function collectGroupDotPaths(nodes: DiffTreeNode[]): string[] {
   const dotPaths: string[] = [];
@@ -70,11 +71,28 @@ export function DiffList({
 }: DiffListProps) {
   const tree = buildDiffTree(items);
   const allGroupDotPaths = collectGroupDotPaths(tree);
-  // Auto-expand when there's a single top-level group — nothing to choose between yet.
-  const defaultOpen = tree.length === 1 && tree[0].type === "group" ? tree[0].dotPath : null;
-  const [openGroups, setOpenGroups] = useState<Set<string>>(
-    new Set(defaultOpen ? [defaultOpen] : [])
-  );
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
+
+  // `items` is still [] on this component's very first render (checking hasn't resolved yet on
+  // tab mount), so the auto-expand-by-count decision can't be made from useState's one-shot
+  // initializer — it would always see an empty list. Apply it once real data lands instead, and
+  // only once per mount, so it doesn't fight a designer's own manual expand/collapse afterward.
+  const appliedInitialDefault = useRef(false);
+  useEffect(() => {
+    if (checking || appliedInitialDefault.current) return;
+    appliedInitialDefault.current = true;
+    // A small diff is quick to scan fully expanded — nothing to choose between. Once it's large
+    // enough that expanding everything would just be a wall of rows, default to collapsed (or,
+    // if there's a single top-level group, open just that one — nothing to choose between there
+    // either).
+    const defaultOpen =
+      items.length > 0 && items.length <= AUTO_EXPAND_THRESHOLD
+        ? allGroupDotPaths
+        : tree.length === 1 && tree[0].type === "group"
+          ? [tree[0].dotPath]
+          : [];
+    setOpenGroups(new Set(defaultOpen));
+  }, [checking, items]);
 
   function toggleGroup(dotPath: string) {
     setOpenGroups((prev) => {
