@@ -113,3 +113,17 @@ describe("SAVE_ACTIVE_PROPOSAL handler", () => {
     });
   });
 });
+
+describe("SAVE_DRAFT_DESCRIPTION handler", () => {
+  it("persists the draft description to clientStorage", () => {
+    const setAsync = vi.fn().mockResolvedValue(undefined);
+    (globalThis as any).figma.clientStorage.setAsync = setAsync;
+
+    registerToFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["SAVE_DRAFT_DESCRIPTION", "Update brand colors"]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-draft-description", "Update brand colors");
+    });
+  });
+});

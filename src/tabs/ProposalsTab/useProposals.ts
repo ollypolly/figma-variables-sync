@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef } from "preact/hooks";
 
 import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
+import { useDraftDescription } from "@hooks/useDraftDescription";
 import { useGitHub } from "@hooks/useGitHub";
 import { requestExport } from "@services/figmaMessages";
 import {
@@ -39,7 +40,7 @@ export function useProposals(active: boolean) {
     useAppContext();
   const github = useGitHub(settings);
 
-  const [description, setDescription] = useState("");
+  const { description, setDescription } = useDraftDescription();
 
   const check = useAsync<ProposalCheckResult>(
     useCallback(async () => {

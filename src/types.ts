@@ -31,6 +31,16 @@ export interface SaveActiveProposalHandler extends EventHandler {
   handler: (activeProposal: ActiveProposal | null) => void;
 }
 
+export interface LoadDraftDescriptionHandler extends EventHandler {
+  name: "LOAD_DRAFT_DESCRIPTION";
+  handler: () => void;
+}
+
+export interface SaveDraftDescriptionHandler extends EventHandler {
+  name: "SAVE_DRAFT_DESCRIPTION";
+  handler: (description: string) => void;
+}
+
 export interface ResizeWindowHandler extends EventHandler {
   name: "RESIZE_WINDOW";
   handler: (windowSize: { width: number; height: number }) => void;
@@ -65,6 +75,11 @@ export interface SettingsSavedHandler extends EventHandler {
 export interface ActiveProposalLoadedHandler extends EventHandler {
   name: "ACTIVE_PROPOSAL_LOADED";
   handler: (activeProposal: ActiveProposal | null) => void;
+}
+
+export interface DraftDescriptionLoadedHandler extends EventHandler {
+  name: "DRAFT_DESCRIPTION_LOADED";
+  handler: (description: string) => void;
 }
 
 // Shared types

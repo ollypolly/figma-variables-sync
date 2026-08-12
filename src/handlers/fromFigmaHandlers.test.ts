@@ -90,3 +90,33 @@ describe("LOAD_ACTIVE_PROPOSAL handler", () => {
     });
   });
 });
+
+describe("LOAD_DRAFT_DESCRIPTION handler", () => {
+  it("loads a persisted draft description from clientStorage", () => {
+    (globalThis as any).figma.clientStorage.getAsync = vi.fn().mockResolvedValue("Update brand colors");
+
+    const postMessage = vi.fn();
+    (globalThis as any).figma.ui.postMessage = postMessage;
+
+    registerFromFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["LOAD_DRAFT_DESCRIPTION"]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(postMessage).toHaveBeenCalledWith(["DRAFT_DESCRIPTION_LOADED", "Update brand colors"]);
+    });
+  });
+
+  it("emits an empty string when nothing has been persisted yet", () => {
+    (globalThis as any).figma.clientStorage.getAsync = vi.fn().mockResolvedValue(undefined);
+
+    const postMessage = vi.fn();
+    (globalThis as any).figma.ui.postMessage = postMessage;
+
+    registerFromFigmaHandlers();
+    (globalThis as any).figma.ui.onmessage(["LOAD_DRAFT_DESCRIPTION"]);
+
+    return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
+      expect(postMessage).toHaveBeenCalledWith(["DRAFT_DESCRIPTION_LOADED", ""]);
+    });
+  });
+});

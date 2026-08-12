@@ -5,8 +5,10 @@ import {
   DEFAULT_SETTINGS,
   trimSettings,
   type ActiveProposalLoadedHandler,
+  type DraftDescriptionLoadedHandler,
   type ExportResultHandler,
   type LoadActiveProposalHandler,
+  type LoadDraftDescriptionHandler,
   type LoadSettingsHandler,
   type PluginSettings,
   type RequestExportHandler,
@@ -15,6 +17,7 @@ import {
 
 const SETTINGS_KEY = "figma-variables-sync-settings";
 const ACTIVE_PROPOSAL_KEY = "figma-variables-sync-active-proposal";
+const DRAFT_DESCRIPTION_KEY = "figma-variables-sync-draft-description";
 
 export function registerFromFigmaHandlers() {
   on<RequestExportHandler>("REQUEST_EXPORT", function () {
@@ -39,5 +42,10 @@ export function registerFromFigmaHandlers() {
   on<LoadActiveProposalHandler>("LOAD_ACTIVE_PROPOSAL", async function () {
     const stored = await figma.clientStorage.getAsync(ACTIVE_PROPOSAL_KEY);
     emit<ActiveProposalLoadedHandler>("ACTIVE_PROPOSAL_LOADED", stored ?? null);
+  });
+
+  on<LoadDraftDescriptionHandler>("LOAD_DRAFT_DESCRIPTION", async function () {
+    const stored = await figma.clientStorage.getAsync(DRAFT_DESCRIPTION_KEY);
+    emit<DraftDescriptionLoadedHandler>("DRAFT_DESCRIPTION_LOADED", stored ?? "");
   });
 }
