@@ -20,11 +20,13 @@ export function UpdatesTab({ active }: { active: boolean }) {
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
-      <Container space="medium">
-        <VerticalSpace space="medium" />
-        <StatusBanner status={status} />
-        <VerticalSpace space="medium" />
-      </Container>
+      {status && (
+        <Container space="medium">
+          <VerticalSpace space="medium" />
+          <StatusBanner status={status} />
+          <VerticalSpace space="medium" />
+        </Container>
+      )}
 
       <Container space="extraSmall">
         <DiffList
