@@ -155,7 +155,7 @@ describe("submitProposal", () => {
       branchName,
       []
     );
-    expect(pr).toEqual({ number: 1, html_url: "https://github.com/pull/1", head_ref: branchName });
+    expect(pr).toEqual({ number: 1, html_url: "https://github.com/pull/1", head_ref: branchName, gitContent: writtenContent });
   });
 });
 
@@ -184,14 +184,15 @@ describe("submitProposal with an active proposal", () => {
     expect(github.createBranch).not.toHaveBeenCalled();
     expect(github.createPullRequest).not.toHaveBeenCalled();
     expect(getFile).toHaveBeenCalledWith(expect.objectContaining({ branch: "figma/proposal-1" }));
-    expect(github.updateFile).toHaveBeenCalledWith(
-      settings,
-      "More brand updates",
-      expect.any(String),
-      "pr-sha",
-      "figma/proposal-1"
-    );
-    expect(pr).toEqual({ number: 5, html_url: "https://github.com/pull/5", head_ref: "figma/proposal-1" });
+    const [, , writtenContent, sha, branchName] = github.updateFile.mock.calls[0];
+    expect(sha).toBe("pr-sha");
+    expect(branchName).toBe("figma/proposal-1");
+    expect(pr).toEqual({
+      number: 5,
+      html_url: "https://github.com/pull/5",
+      head_ref: "figma/proposal-1",
+      gitContent: writtenContent,
+    });
   });
 
   it("throws instead of silently overwriting the PR when its branch no longer exists", async () => {

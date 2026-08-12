@@ -104,7 +104,7 @@ export async function submitProposal(
   diffs: DiffItem[],
   description: string,
   activeProposal: ActiveProposal | null
-): Promise<{ number: number; html_url: string; head_ref: string }> {
+): Promise<{ number: number; html_url: string; head_ref: string; gitContent: string }> {
   const stagedDotPaths = new Set(diffs.map((d) => d.dotPath));
 
   if (activeProposal) {
@@ -118,6 +118,7 @@ export async function submitProposal(
       number: activeProposal.number,
       html_url: activeProposal.html_url,
       head_ref: activeProposal.head_ref,
+      gitContent: mergedContent,
     };
   }
 
@@ -137,5 +138,5 @@ export async function submitProposal(
     branchName,
     parsePrLabels(settings.prLabels)
   );
-  return { ...pr, head_ref: branchName };
+  return { ...pr, head_ref: branchName, gitContent: mergedContent };
 }

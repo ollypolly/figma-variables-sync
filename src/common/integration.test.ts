@@ -172,7 +172,12 @@ describe("Plugin Flow Integration Tests", () => {
       const pr = await submitProposal(config, github, figmaJson, diffs, "Update variables", null);
 
       // Verify PR creation output
-      expect(pr).toEqual({ number: 99, html_url: "https://github.com/pull/99", head_ref: expect.any(String) });
+      expect(pr).toEqual({
+        number: 99,
+        html_url: "https://github.com/pull/99",
+        head_ref: expect.any(String),
+        gitContent: expect.any(String),
+      });
 
       // Verify the PUT content is the merged tree (here equivalent to the full export,
       // since git had nothing this fixture's Figma state doesn't also produce).

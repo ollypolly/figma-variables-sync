@@ -31,8 +31,8 @@ function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void
   return () => clearInterval(interval);
 }
 
-function clearPushedDiffs(current: ProposalCheckResult): ProposalCheckResult {
-  return { ...current, diffs: [] };
+function applyPushedResult(current: ProposalCheckResult, gitContent: string): ProposalCheckResult {
+  return { ...current, diffs: [], gitContent };
 }
 
 export function useProposals(active: boolean) {
@@ -51,7 +51,13 @@ export function useProposals(active: boolean) {
 
   const exportPreview = useAsync<string>(useCallback(() => requestExport(), []));
 
-  const submit = useAsync<{ number: number; html_url: string; head_ref: string; wasUpdate: boolean }>(
+  const submit = useAsync<{
+    number: number;
+    html_url: string;
+    head_ref: string;
+    gitContent: string;
+    wasUpdate: boolean;
+  }>(
     useCallback(async () => {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
@@ -71,7 +77,7 @@ export function useProposals(active: boolean) {
         head_ref: pr.head_ref,
         title: activeProposal?.title ?? description,
       });
-      check.setData(clearPushedDiffs(check.data));
+      check.setData(applyPushedResult(check.data, pr.gitContent));
       setDescription("");
       return { ...pr, wasUpdate };
     }, [check.data, description, settings, github, activeProposal, setActiveProposal, check.setData])
