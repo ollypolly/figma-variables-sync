@@ -90,7 +90,7 @@ Four related problems, solved together — this also absorbs the old "background
 
 **Risk:** Medium — needs the new compare-API call and the PR-status check-in wired into `check()`, careful copy so staleness reads as informative not alarming, the new git→Figma partial write-back above, and removing the Updates tab touches `ui.tsx`'s tab list and whatever of `useUpdates`/`UpdatesTab` isn't reused elsewhere.
 
-### Slice 4 — Staging (VS Code-style +/− on the diff tree)
+### Slice 4 — Staging and revert (VS Code-style +/− and discard, on the diff tree)
 
 **Designer-facing:** Whether the "Pull Request:" dropdown (Slice 1) is on a specific PR or on "Main," each row and group in the diff tree gets a hover-revealed `+` (stage) / `−` (unstage) rather than a checkbox, styled like VS Code's Source Control panel. There are two sections: unstaged (still just sitting in Figma) and staged (going into the next push). Submitting only pushes the staged set; the rest stay pending for later.
 
@@ -107,7 +107,11 @@ Four related problems, solved together — this also absorbs the old "background
 - Stage state (`Set<string>` of dot-paths) is session-scoped local component state, similar to `openGroups` in `DiffList` — not persisted, since it should reset whenever Figma's actual variable state is re-checked.
 - Group-level stage/unstage stages/unstages every descendant leaf; a group needs a tri-state indicator (none / some / all staged) — same shape as VS Code's partial-stage dot.
 
-**Risk:** Highest of all slices — new core function (`applyStagedDiffs`) needs thorough test coverage (added/modified/deleted, nested paths, mode overrides) before it touches anything submitted to GitHub. This is the slice most worth having a second look at (tests-first, maybe a dry-run/preview before wiring to actual submit).
+**Revert, at the same three granularities as staging:** a designer should be able to discard a pending local change back to whatever git currently has, not just choose whether to push it — today there's no tooling for this at all, it means re-typing the old value into Figma's Variables panel by hand.
+- **Designer-facing:** each row gets a "revert" action alongside its +/− (a discard-changes icon, VS Code-style) that writes that one path's git value back into Figma. A group gets the same action, reverting every descendant leaf in that subtree. A top-level "Revert all" (placed like the existing "Expand all"/"Collapse all") reverts every currently-pending diff in one action — worth a confirmation step specifically, since it's a single click that can discard an arbitrary amount of unsaved local work, unlike a single-row revert.
+- **How:** this is the git→Figma write-back direction — the mirror of `applyStagedDiffs`, and the exact mechanism Slice 3's 3c/3d auto-apply already needs (see Slice 3's "not as free as it sounds" note). Whichever slice lands first builds the write-back; the other reuses it. Deletions need the same care noted there — reverting a path that was added locally (doesn't exist on git at all) means deleting the Figma variable, not just changing its value.
+
+**Risk:** Highest of all slices — new core function (`applyStagedDiffs`) needs thorough test coverage (added/modified/deleted, nested paths, mode overrides) before it touches anything submitted to GitHub. This is the slice most worth having a second look at (tests-first, maybe a dry-run/preview before wiring to actual submit). Revert adds a second highest-risk area of its own: it's a destructive local write, and "Revert all" specifically can discard more than a designer intended with one click.
 
 ## Suggested order to build
 
