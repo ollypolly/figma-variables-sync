@@ -31,6 +31,32 @@ const TYPE_COLOR: Record<DiffItem["type"], string> = {
   deleted: "var(--figma-color-text-danger)",
 };
 
+// Color alone isn't a WCAG 1.4.1-compliant signal for added/modified/deleted — pairing it with a
+// distinct glyph keeps the distinction legible without relying on color perception.
+const TYPE_GLYPH: Record<DiffItem["type"], string> = {
+  added: "+",
+  modified: "~",
+  deleted: "−",
+};
+
+const HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+
+function ColorSwatch({ value }: { value: string }) {
+  return (
+    <div
+      style={{
+        display: "inline-block",
+        width: "12px",
+        height: "12px",
+        borderRadius: "2px",
+        border: "1px solid var(--figma-color-border)",
+        backgroundColor: value,
+        verticalAlign: "text-bottom",
+      }}
+    />
+  );
+}
+
 const FIELD_LABEL: Record<NonNullable<DiffItem["changedFields"]>[number]["field"], string> = {
   type: "Type",
   description: "Description",
@@ -200,7 +226,16 @@ function renderModifiedDetailLines(
   const lines: { key: string; color: string; content: ComponentChildren }[] = [];
 
   if (oldVal !== newVal) {
-    lines.push({ key: "value", color: TYPE_COLOR.modified, content: `${oldVal} → ${newVal}` });
+    lines.push({
+      key: "value",
+      color: TYPE_COLOR.modified,
+      content: (
+        <Fragment>
+          {TYPE_GLYPH.modified} {HEX_COLOR_PATTERN.test(oldVal) && <ColorSwatch value={oldVal} />} {oldVal} →{" "}
+          {HEX_COLOR_PATTERN.test(newVal) && <ColorSwatch value={newVal} />} {newVal}
+        </Fragment>
+      ),
+    });
   }
 
   for (const cf of item.changedFields ?? []) {
@@ -313,18 +348,28 @@ function DiffTreeRow({
       }}
     >
       <GuideLines guideDepths={guideDepths} />
-      <Text>{node.name}</Text>
+      <Text>
+        {item.type === "modified" ? (
+          node.name
+        ) : (
+          <span style={{ color: TYPE_COLOR[item.type] }}>{node.name}</span>
+        )}
+      </Text>
       <VerticalSpace space="extraSmall" />
       {item.type === "modified" &&
         renderModifiedDetailLines(item, oldVal, newVal, mode)}
       {item.type === "added" && (
         <Text>
-          <span style={{ color: TYPE_COLOR[item.type] }}>{newVal}</span>
+          <span style={{ color: TYPE_COLOR.added }}>
+            {TYPE_GLYPH.added} {HEX_COLOR_PATTERN.test(newVal) && <ColorSwatch value={newVal} />} {newVal}
+          </span>
         </Text>
       )}
       {item.type === "deleted" && (
         <Text>
-          <span style={{ color: TYPE_COLOR[item.type] }}>{oldVal}</span>
+          <span style={{ color: TYPE_COLOR.deleted }}>
+            {TYPE_GLYPH.deleted} {HEX_COLOR_PATTERN.test(oldVal) && <ColorSwatch value={oldVal} />} {oldVal}
+          </span>
         </Text>
       )}
     </div>
