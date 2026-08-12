@@ -1,3 +1,4 @@
+import { applySafeDiffsToFigmaJson } from "@common/applySafeDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
 import { NamingCollisionError } from "@common/dtcg";
 import { requestExport, requestImport } from "@services/figmaMessages";
@@ -75,4 +76,38 @@ export async function resetFigmaToGit(
     throw new Error(result.message);
   }
   return checkFigmaChanges(gitContent, diffSettings);
+}
+
+// A path is safe to silently sync from git to Figma exactly when it changed between the old and
+// new git target AND the designer has no local (Figma-side) edit sitting on it — reusing
+// computeDiff git-content-vs-git-content, rather than figma-vs-git, to get add/modify/delete
+// labeling between the two targets for free.
+export function computeSafeSubset(
+  oldGitContent: string,
+  newGitContent: string,
+  oldDiffs: DiffItem[]
+): Set<string> {
+  const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
+  const drifted = new Set(oldDiffs.map((d) => d.dotPath));
+  const safe = new Set<string>();
+  for (const d of delta) {
+    if (d.type === "deleted") continue;
+    if (drifted.has(d.dotPath)) continue;
+    safe.add(d.dotPath);
+  }
+  return safe;
+}
+
+export async function applySafeSubset(
+  figmaContent: string,
+  newGitContent: string,
+  safeDotPaths: Set<string>,
+  diffSettings: Omit<PluginSettings, "pat">
+): Promise<FigmaDiffResult> {
+  const merged = applySafeDiffsToFigmaJson(figmaContent, newGitContent, safeDotPaths);
+  const result = await requestImport(merged);
+  if (!result.success) {
+    throw new Error(result.message);
+  }
+  return checkFigmaChanges(newGitContent, diffSettings);
 }

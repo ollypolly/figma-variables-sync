@@ -15,7 +15,7 @@ function base64ToUtf8(base64: string): string {
   return new TextDecoder().decode(bytes);
 }
 
-export type GitHubConfig = Omit<PluginSettings, "prLabels">;
+export type GitHubConfig = Omit<PluginSettings, "prLabels" | "skipSwitchConfirmation">;
 
 export const PROPOSAL_BRANCH_PREFIX = "figma/proposal-";
 

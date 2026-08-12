@@ -1,1 +1,0 @@
-export { UpdatesTab } from "./UpdatesTab";

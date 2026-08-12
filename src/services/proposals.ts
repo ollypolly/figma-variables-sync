@@ -1,7 +1,14 @@
 import { applyStagedDiffs } from "@common/applyStagedDiffs";
 import { type DiffItem } from "@common/diff";
 import { GitHubService, PROPOSAL_BRANCH_PREFIX } from "@services/github";
-import { checkFigmaChanges, resolveDiffSettings, type CollisionNotice } from "@services/gitSync";
+import {
+  applySafeSubset,
+  checkFigmaChanges,
+  computeSafeSubset,
+  resolveDiffSettings,
+  type CollisionNotice,
+  type FigmaDiffResult,
+} from "@services/gitSync";
 import { parsePrLabels, type ActiveProposal, type PluginSettings } from "../types";
 
 export interface Proposal {
@@ -33,6 +40,20 @@ export async function checkForProposalChanges(
   const { diffs, figmaContent, collisionNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
   const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
   return { diffs, figmaContent, gitContent, proposals, collisionNotice, primaryModeName };
+}
+
+// Called once a designer's active PR is found to be merged/closed — falls back to main,
+// applying whatever of the pending diffs is safe to sync automatically (see computeSafeSubset).
+export async function resolveDeadProposal(
+  settings: Omit<PluginSettings, "pat">,
+  github: GitHubService,
+  staleResult: ProposalCheckResult
+): Promise<{ refreshed: FigmaDiffResult; gitContent: string; count: number }> {
+  const mainFile = await github.getFile(settings);
+  const newGitContent = mainFile?.content ?? "{}";
+  const safeDotPaths = computeSafeSubset(staleResult.gitContent, newGitContent, staleResult.diffs);
+  const refreshed = await applySafeSubset(staleResult.figmaContent, newGitContent, safeDotPaths, settings);
+  return { refreshed, gitContent: newGitContent, count: safeDotPaths.size };
 }
 
 export async function submitProposal(

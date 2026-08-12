@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn() }));
+vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
 
-import { requestExport } from "@services/figmaMessages";
-import { checkForProposalChanges, submitProposal } from "./proposals";
+import { requestExport, requestImport } from "@services/figmaMessages";
+import { checkForProposalChanges, resolveDeadProposal, submitProposal } from "./proposals";
 import { computeDiff } from "@common/diff";
 import { NamingCollisionError } from "@common/dtcg";
+import { color } from "@common/testUtils/tokens";
 import type { PluginSettings } from "../types";
 
 function createMockGitHub(overrides: Record<string, any> = {}) {
@@ -26,6 +27,7 @@ const settings: PluginSettings = {
   filePath: "tokens.json",
   branch: "main",
   prLabels: "",
+  skipSwitchConfirmation: false,
 };
 
 describe("checkForProposalChanges", () => {
@@ -203,5 +205,46 @@ describe("submitProposal with an active proposal", () => {
     ).rejects.toThrow(/no longer available/);
 
     expect(github.updateFile).not.toHaveBeenCalled();
+  });
+});
+
+describe("resolveDeadProposal", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    vi.mocked(requestImport).mockReset();
+  });
+
+  it("applies the safe subset from main, excluding a path the designer already drifted locally", async () => {
+    const oldGitContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#fff"), secondary: color("#f00") } },
+    });
+    const mainContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
+    });
+    const figmaContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#fff"), secondary: color("#0f0") } },
+    });
+    const staleDiffs = [
+      { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "modified" as const, figmaVal: "#0f0", gitVal: "#f00" },
+    ];
+    const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }) });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue(mainContent);
+
+    const result = await resolveDeadProposal(settings, github, {
+      diffs: staleDiffs,
+      figmaContent,
+      gitContent: oldGitContent,
+      proposals: [],
+      collisionNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(github.getFile).toHaveBeenCalledWith(settings);
+    expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
+      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") } },
+    });
+    expect(result.count).toBe(1);
+    expect(result.gitContent).toBe(mainContent);
   });
 });

@@ -34,6 +34,13 @@ export function useSettings() {
     };
   }, []);
 
+  const updateBooleanField = useCallback((key: "skipSwitchConfirmation") => {
+    return (value: boolean) => {
+      setSettings((s) => ({ ...s, [key]: value }));
+      setSaveStatus(null);
+    };
+  }, []);
+
   const handleSave = useCallback(() => {
     setSaving(true);
     setSaveStatus(null);
@@ -70,6 +77,7 @@ export function useSettings() {
     testing: testConnection.loading,
     status,
     updateField,
+    updateBooleanField,
     handleSave,
     handleTestConnection: testConnection.execute,
   };

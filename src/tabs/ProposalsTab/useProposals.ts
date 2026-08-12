@@ -1,12 +1,24 @@
-import { useCallback, useEffect, useRef } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useDraftDescription } from "@hooks/useDraftDescription";
 import { useGitHub } from "@hooks/useGitHub";
 import { requestExport } from "@services/figmaMessages";
-import { checkFigmaChanges, resetFigmaToGit, resolveDiffSettings } from "@services/gitSync";
-import { checkForProposalChanges, submitProposal, type ProposalCheckResult } from "@services/proposals";
+import {
+  applySafeSubset,
+  checkFigmaChanges,
+  computeSafeSubset,
+  resetFigmaToGit,
+  resolveDiffSettings,
+} from "@services/gitSync";
+import {
+  checkForProposalChanges,
+  resolveDeadProposal,
+  submitProposal,
+  type ProposalCheckResult,
+} from "@services/proposals";
+import type { ActiveProposal } from "../../types";
 
 const FAST_POLL_INTERVAL_MS = 3_000;
 const SLOW_POLL_INTERVAL_MS = 30_000;
@@ -30,15 +42,25 @@ function applyPushedResult(current: ProposalCheckResult, gitContent: string): Pr
   return { ...current, diffs: [], gitContent };
 }
 
+interface PendingSwitch {
+  target: ActiveProposal | null;
+  targetLabel: string;
+  count: number;
+  commit: () => Promise<void>;
+}
+
 function deriveStatus({
+  background,
   resetToGit,
   submit,
   check,
 }: {
+  background: { success: boolean; text: string } | null;
   resetToGit: { error: string | null; data: unknown };
   submit: { error: string | null; data: { number: number; html_url: string; wasUpdate: boolean } | null };
   check: { error: string | null };
 }): { success: boolean; text: string; link?: string } | null {
+  if (background) return background;
   if (resetToGit.error) return { success: false, text: resetToGit.error };
   if (resetToGit.data) return { success: true, text: "Figma reset to match git." };
   if (submit.error) return { success: false, text: submit.error };
@@ -62,12 +84,38 @@ export function useProposals(active: boolean) {
 
   const { description, setDescription } = useDraftDescription();
 
-  const check = useAsync<ProposalCheckResult>(
-    useCallback(async () => {
-      if (!github) throw new Error("Not configured.");
-      return checkForProposalChanges(settings, github, activeProposal);
-    }, [settings, github, activeProposal])
-  );
+  const [background, setBackground] = useState<{ success: boolean; text: string } | null>(null);
+  const [pendingSwitch, setPendingSwitch] = useState<PendingSwitch | null>(null);
+  const [switchLoading, setSwitchLoading] = useState(false);
+
+  const lastGoodCheckData = useRef<ProposalCheckResult | null>(null);
+
+  const checkForActiveProposal = useCallback(async (): Promise<ProposalCheckResult> => {
+    if (!github) throw new Error("Not configured.");
+
+    if (activeProposal) {
+      const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
+      const match = proposals.find((p) => p.number === activeProposal.number);
+      if (!match || match.state !== "open") {
+        const staleResult = lastGoodCheckData.current ?? (await checkForProposalChanges(settings, github, activeProposal));
+        const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
+        setActiveProposal(null);
+        setBackground({
+          success: true,
+          text: `PR #${activeProposal.number} was ${match?.state === "merged" ? "merged" : "closed"} — you're back on Main, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
+        });
+        return { ...refreshed, gitContent, proposals };
+      }
+    }
+
+    return checkForProposalChanges(settings, github, activeProposal);
+  }, [settings, github, activeProposal, setActiveProposal]);
+
+  const check = useAsync<ProposalCheckResult>(checkForActiveProposal);
+
+  useEffect(() => {
+    lastGoodCheckData.current = check.data;
+  }, [check.data]);
 
   const exportPreview = useAsync<string>(useCallback(() => requestExport(), []));
 
@@ -82,6 +130,7 @@ export function useProposals(active: boolean) {
       if (!check.data?.figmaContent || !description.trim() || !github) {
         throw new Error("Please enter a description.");
       }
+      setBackground(null);
       const wasUpdate = Boolean(activeProposal);
       const pr = await submitProposal(
         settings,
@@ -106,11 +155,58 @@ export function useProposals(active: boolean) {
   const resetToGit = useAsync(
     useCallback(async () => {
       if (!check.data?.gitContent) throw new Error("Nothing to reset to yet.");
+      setBackground(null);
       const diffSettings = resolveDiffSettings(settings, activeProposal);
       const refreshed = await resetFigmaToGit(check.data.gitContent, diffSettings);
       check.setData({ ...check.data, ...refreshed });
       return refreshed;
     }, [check.data, settings, activeProposal, check.setData])
+  );
+
+  const requestSwitch = useCallback(
+    async (target: ActiveProposal | null) => {
+      if (!github || !check.data) return;
+      setBackground(null);
+      const targetSettings = resolveDiffSettings(settings, target);
+      const figmaContentAtRequest = check.data.figmaContent;
+      const oldGitContent = check.data.gitContent;
+      const oldDiffs = check.data.diffs;
+
+      setSwitchLoading(true);
+      try {
+        const file = await github.getFile(targetSettings);
+        const newGitContent = file?.content ?? "{}";
+        const safeDotPaths = computeSafeSubset(oldGitContent, newGitContent, oldDiffs);
+
+        const commit = async () => {
+          const refreshed = await applySafeSubset(figmaContentAtRequest, newGitContent, safeDotPaths, targetSettings);
+          setActiveProposal(target);
+          check.setData((prev) => ({
+            diffs: refreshed.diffs,
+            figmaContent: refreshed.figmaContent,
+            collisionNotice: refreshed.collisionNotice,
+            primaryModeName: refreshed.primaryModeName,
+            gitContent: newGitContent,
+            proposals: prev?.proposals ?? [],
+          }));
+          setPendingSwitch(null);
+        };
+
+        if (settings.skipSwitchConfirmation) {
+          await commit();
+        } else {
+          setPendingSwitch({
+            target,
+            targetLabel: target ? `PR #${target.number}` : "Main",
+            count: safeDotPaths.size,
+            commit,
+          });
+        }
+      } finally {
+        setSwitchLoading(false);
+      }
+    },
+    [github, check.data, settings, setActiveProposal]
   );
 
   useEffect(() => {
@@ -140,12 +236,12 @@ export function useProposals(active: boolean) {
     if (!pollingEnabled || !github) return;
 
     return pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
-      const result = await checkForProposalChanges(settings, github, activeProposal);
+      const result = await checkForActiveProposal();
       check.setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(result) ? prev : result));
     });
-  }, [pollingEnabled, github, settings, activeProposal, check.setData]);
+  }, [pollingEnabled, github, checkForActiveProposal, check.setData]);
 
-  const status = deriveStatus({ resetToGit, submit, check });
+  const status = deriveStatus({ background, resetToGit, submit, check });
 
   const openProposals = (check.data?.proposals ?? []).filter((p) => p.state === "open");
 
@@ -157,7 +253,10 @@ export function useProposals(active: boolean) {
     primaryModeName: check.data?.primaryModeName ?? "Default",
     openProposals,
     activeProposal,
-    setActiveProposal,
+    requestSwitch,
+    pendingSwitch,
+    switchLoading,
+    cancelSwitch: () => setPendingSwitch(null),
     description,
     setDescription,
     submitting: submit.loading,

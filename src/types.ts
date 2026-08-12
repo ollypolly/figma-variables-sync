@@ -97,6 +97,7 @@ export interface PluginSettings {
   filePath: string;
   branch: string;
   prLabels: string; // comma-separated; see parsePrLabels()
+  skipSwitchConfirmation: boolean;
 }
 
 export const DEFAULT_SETTINGS: PluginSettings = {
@@ -106,6 +107,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   filePath: "tokens/design-tokens.json",
   branch: "main",
   prLabels: "",
+  skipSwitchConfirmation: false,
 };
 
 export function trimSettings(settings: PluginSettings): PluginSettings {
