@@ -23,7 +23,11 @@ export function ProposalForm({
       <TextboxMultiline
         value={description}
         onValueInput={onDescriptionChange}
-        placeholder="What's changed?"
+        placeholder={
+          activeProposal
+            ? 'What did you change in this push? e.g. "Fixed the contrast ratio flagged in review"'
+            : 'What\'s changing and why? e.g. "Darkened the primary brand color for better contrast on light backgrounds"'
+        }
         rows={3}
       />
       <Button
