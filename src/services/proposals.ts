@@ -26,12 +26,14 @@ export interface ProposalCheckResult {
   gitContent: string;
   proposals: Proposal[];
   collisionNotice: CollisionNotice | null;
+  primaryModeName: string;
 }
 
 export interface FigmaDiffResult {
   diffs: DiffItem[];
   figmaContent: string;
   collisionNotice: CollisionNotice | null;
+  primaryModeName: string;
 }
 
 export function resolveDiffSettings(
@@ -53,6 +55,7 @@ export async function checkFigmaChanges(
       return {
         diffs: [],
         figmaContent: "",
+        primaryModeName: "Default",
         collisionNotice: {
           message: e.message,
           paths: e.collidingPaths,
@@ -63,7 +66,7 @@ export async function checkFigmaChanges(
     throw e;
   }
 
-  const { diffs, quarantined } = computeDiff(figmaContent, gitContent, "proposals");
+  const { diffs, quarantined, primaryModeName } = computeDiff(figmaContent, gitContent, "proposals");
   const collisionNotice: CollisionNotice | null =
     quarantined.length > 0
       ? {
@@ -77,7 +80,7 @@ export async function checkFigmaChanges(
         }
       : null;
 
-  return { diffs, figmaContent, collisionNotice };
+  return { diffs, figmaContent, collisionNotice, primaryModeName };
 }
 
 export async function checkForProposalChanges(
@@ -89,9 +92,9 @@ export async function checkForProposalChanges(
   const fileData = await github.getFile(diffSettings);
   const gitContent = fileData?.content ?? "{}";
 
-  const { diffs, figmaContent, collisionNotice } = await checkFigmaChanges(gitContent, diffSettings);
+  const { diffs, figmaContent, collisionNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
   const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
-  return { diffs, figmaContent, gitContent, proposals, collisionNotice };
+  return { diffs, figmaContent, gitContent, proposals, collisionNotice, primaryModeName };
 }
 
 export async function submitProposal(

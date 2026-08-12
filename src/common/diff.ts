@@ -43,6 +43,16 @@ function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
 
 export interface ComputeDiffResult extends Pick<TokenParseResult, "quarantined"> {
   diffs: DiffItem[];
+  primaryModeName: string;
+}
+
+// The root $modes object names every mode; only non-primary ones carry a $fallback pointing at
+// the primary — so the primary is whichever mode has none.
+function getPrimaryModeName(modes: Record<string, any>): string | null {
+  for (const [name, def] of Object.entries(modes)) {
+    if (!def?.$fallback) return name;
+  }
+  return null;
 }
 
 function formatTokenVal(t: ParsedToken): string {
@@ -151,5 +161,6 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
     }
   }
 
-  return { diffs, quarantined };
+  const primaryModeName = getPrimaryModeName(figmaData.modes) ?? getPrimaryModeName(gitData.modes) ?? "Default";
+  return { diffs, quarantined, primaryModeName };
 }

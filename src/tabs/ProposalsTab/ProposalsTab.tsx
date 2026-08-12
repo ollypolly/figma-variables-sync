@@ -17,6 +17,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
+    primaryModeName,
     openProposals,
     activeProposal,
     setActiveProposal,
@@ -96,6 +97,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
             <DiffList
               items={diffItems}
               mode="proposals"
+              primaryModeName={primaryModeName}
               checking={checking}
               onRefresh={checkForChanges}
               refreshDisabled={submitting}

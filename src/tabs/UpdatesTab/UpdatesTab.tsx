@@ -12,6 +12,7 @@ export function UpdatesTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
+    primaryModeName,
     importing,
     status,
     checkForUpdates,
@@ -32,6 +33,7 @@ export function UpdatesTab({ active }: { active: boolean }) {
         <DiffList
           items={diffItems}
           mode="updates"
+          primaryModeName={primaryModeName}
           checking={checking}
           onRefresh={checkForUpdates}
           refreshDisabled={importing}

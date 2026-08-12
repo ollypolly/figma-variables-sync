@@ -130,6 +130,7 @@ export function useProposals(active: boolean) {
     isConfigured,
     checking: check.loading,
     diffItems: check.data?.diffs ?? [],
+    primaryModeName: check.data?.primaryModeName ?? "Default",
     openProposals,
     activeProposal,
     setActiveProposal,

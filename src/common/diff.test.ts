@@ -406,4 +406,34 @@ describe("computeDiff", () => {
       expect(updatesResult.quarantined).toEqual(["Tokens.brand.secondary"]);
     });
   });
+
+  describe("primaryModeName", () => {
+    it("resolves the mode without a $fallback as primary", () => {
+      const figmaJson = JSON.stringify({
+        "$modes": { Light: {}, Dark: { "$fallback": "Light" } },
+        Tokens: { brand: { primary: color("#ffffff", { "$modes": { Dark: "#000000" } }) } },
+      });
+
+      const result = computeDiff(figmaJson, "{}", "proposals");
+
+      expect(result.primaryModeName).toBe("Light");
+    });
+
+    it("falls back to the git side's modes when the figma side has none", () => {
+      const gitJson = JSON.stringify({
+        "$modes": { Base: {}, Alt: { "$fallback": "Base" } },
+        Tokens: {},
+      });
+
+      const result = computeDiff("{}", gitJson, "proposals");
+
+      expect(result.primaryModeName).toBe("Base");
+    });
+
+    it('defaults to "Default" when neither side has any mode info', () => {
+      const result = computeDiff("{}", "{}", "proposals");
+
+      expect(result.primaryModeName).toBe("Default");
+    });
+  });
 });
