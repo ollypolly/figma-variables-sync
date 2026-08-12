@@ -30,6 +30,31 @@ function applyPushedResult(current: ProposalCheckResult, gitContent: string): Pr
   return { ...current, diffs: [], gitContent };
 }
 
+function deriveStatus({
+  resetToGit,
+  submit,
+  check,
+}: {
+  resetToGit: { error: string | null; data: unknown };
+  submit: { error: string | null; data: { number: number; html_url: string; wasUpdate: boolean } | null };
+  check: { error: string | null };
+}): { success: boolean; text: string; link?: string } | null {
+  if (resetToGit.error) return { success: false, text: resetToGit.error };
+  if (resetToGit.data) return { success: true, text: "Figma reset to match git." };
+  if (submit.error) return { success: false, text: submit.error };
+  if (submit.data) {
+    return {
+      success: true,
+      text: submit.data.wasUpdate
+        ? `Pushed to PR #${submit.data.number}.`
+        : `PR #${submit.data.number} created.`,
+      link: submit.data.html_url,
+    };
+  }
+  if (check.error) return { success: false, text: check.error };
+  return null;
+}
+
 export function useProposals(active: boolean) {
   const { settings, settingsLoading, isConfigured, activeProposal, activeProposalLoading, setActiveProposal } =
     useAppContext();
@@ -120,23 +145,7 @@ export function useProposals(active: boolean) {
     });
   }, [pollingEnabled, github, settings, activeProposal, check.setData]);
 
-  const status = resetToGit.error
-    ? { success: false, text: resetToGit.error }
-    : resetToGit.data
-      ? { success: true, text: "Figma reset to match git." }
-      : submit.error
-        ? { success: false, text: submit.error }
-        : submit.data
-          ? {
-              success: true,
-              text: submit.data.wasUpdate
-                ? `Pushed to PR #${submit.data.number}.`
-                : `PR #${submit.data.number} created.`,
-              link: submit.data.html_url,
-            }
-          : check.error
-            ? { success: false, text: check.error }
-            : null;
+  const status = deriveStatus({ resetToGit, submit, check });
 
   const openProposals = (check.data?.proposals ?? []).filter((p) => p.state === "open");
 
