@@ -4,6 +4,11 @@ import { figmaTypeToDtcg, isDimensionVariable } from "../utils/figmaTypeToDtcg";
 import { setPath } from "../utils/setPath";
 import { getVariableDotPath } from "./getVariableDotPath";
 import { getVariablePath } from "../utils/getVariablePath";
+import { DEFAULT_VARIABLE_SCOPES } from "../types";
+
+function isDefaultScopes(scopes: readonly string[]): boolean {
+  return scopes.length === DEFAULT_VARIABLE_SCOPES.length && scopes.every((s, i) => s === DEFAULT_VARIABLE_SCOPES[i]);
+}
 
 // Carries colliding paths separately from the message so the UI can render a structured list.
 export class NamingCollisionError extends Error {
@@ -133,7 +138,7 @@ export function exportToDtcg(
     }
 
     const figmaExtensions: any = {};
-    if (variable.scopes.length > 0) {
+    if (!isDefaultScopes(variable.scopes)) {
       figmaExtensions.scopes = variable.scopes;
     }
     if (Object.keys(variable.codeSyntax).length > 0) {

@@ -31,5 +31,12 @@ export function useAsync<T, A extends unknown[] = []>(
     [fn]
   );
 
-  return { ...state, execute };
+  const setData = useCallback((updater: T | ((prev: T | null) => T)) => {
+    setState((prev) => ({
+      ...prev,
+      data: typeof updater === "function" ? (updater as (prev: T | null) => T)(prev.data) : updater,
+    }));
+  }, []);
+
+  return { ...state, execute, setData };
 }

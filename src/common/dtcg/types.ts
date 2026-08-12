@@ -17,3 +17,7 @@ export interface TokenParseResult {
   tokens: ParsedToken[];
   quarantined: string[];
 }
+
+// Figma's own default for a freshly-created variable — distinct from an explicit empty array,
+// which means "hidden from every picker," a real state a token can deliberately be set to.
+export const DEFAULT_VARIABLE_SCOPES: string[] = ["ALL_SCOPES"];

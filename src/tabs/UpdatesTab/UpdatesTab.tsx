@@ -12,6 +12,7 @@ export function UpdatesTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
+    primaryModeName,
     importing,
     status,
     checkForUpdates,
@@ -20,14 +21,19 @@ export function UpdatesTab({ active }: { active: boolean }) {
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
-      <Container space="medium">
-        <VerticalSpace space="medium" />
+      {status && (
+        <Container space="medium">
+          <VerticalSpace space="medium" />
+          <StatusBanner status={status} />
+          <VerticalSpace space="medium" />
+        </Container>
+      )}
 
-        <StatusBanner status={status} />
-
+      <Container space="extraSmall">
         <DiffList
           items={diffItems}
           mode="updates"
+          primaryModeName={primaryModeName}
           checking={checking}
           onRefresh={checkForUpdates}
           refreshDisabled={importing}
@@ -38,18 +44,17 @@ export function UpdatesTab({ active }: { active: boolean }) {
             </Fragment>
           )}
         />
-
-        {!checking && diffItems.length > 0 && (
-          <Fragment>
-            <VerticalSpace space="medium" />
-            <Button onClick={acceptUpdates} loading={importing} fullWidth>
-              Accept Updates
-            </Button>
-          </Fragment>
-        )}
-
-        <VerticalSpace space="medium" />
       </Container>
+
+      {!checking && diffItems.length > 0 && (
+        <Container space="medium">
+          <VerticalSpace space="medium" />
+          <Button onClick={acceptUpdates} loading={importing} fullWidth>
+            Accept Updates
+          </Button>
+          <VerticalSpace space="medium" />
+        </Container>
+      )}
     </TabGuard>
   );
 }

@@ -5,6 +5,7 @@ import { useState } from "preact/hooks";
 import { WarningNotice } from "@components/WarningNotice";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
+import { PrSelector } from "@components/PrSelector";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
@@ -16,6 +17,10 @@ export function ProposalsTab({ active }: { active: boolean }) {
     isConfigured,
     checking,
     diffItems,
+    primaryModeName,
+    openProposals,
+    activeProposal,
+    setActiveProposal,
     description,
     setDescription,
     submitting,
@@ -23,6 +28,8 @@ export function ProposalsTab({ active }: { active: boolean }) {
     collisionNotice,
     checkForChanges,
     submitProposal,
+    resetting,
+    resetToGit,
     exportPreviewJson,
     exportPreviewLoading,
     exportPreviewError,
@@ -34,9 +41,30 @@ export function ProposalsTab({ active }: { active: boolean }) {
   const showForm = !checking && diffItems.length > 0;
   const showTopArea = Boolean(collisionNotice || status || showForm);
 
+  const handleReset = () => {
+    const target = activeProposal ? `PR #${activeProposal.number}` : "main";
+    const count = diffItems.length;
+    if (window.confirm(`Discard all ${count} pending change${count === 1 ? "" : "s"} and reset Figma to match ${target}?`)) {
+      resetToGit();
+    }
+  };
+
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <div class="flex flex-col h-full">
+        <Container space="medium">
+          <VerticalSpace space="small" />
+          <PrSelector
+            activeProposal={activeProposal}
+            openProposals={openProposals}
+            onSelect={setActiveProposal}
+            disabled={submitting}
+          />
+          <VerticalSpace space="small" />
+        </Container>
+
+        <div style={{ height: "1px", backgroundColor: "var(--figma-color-border)" }} />
+
         {showTopArea && (
           <Fragment>
             <Container space="medium">
@@ -62,6 +90,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
                     onDescriptionChange={setDescription}
                     onSubmit={submitProposal}
                     submitting={submitting}
+                    activeProposal={activeProposal}
                   />
                 )}
               </div>
@@ -78,6 +107,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
             <DiffList
               items={diffItems}
               mode="proposals"
+              primaryModeName={primaryModeName}
               checking={checking}
               onRefresh={checkForChanges}
               refreshDisabled={submitting}
@@ -88,15 +118,22 @@ export function ProposalsTab({ active }: { active: boolean }) {
                 </Fragment>
               )}
               headerAction={
-                <Button
-                  secondary
-                  onClick={() => {
-                    setPreviewOpen(true);
-                    loadExportPreview();
-                  }}
-                >
-                  View export
-                </Button>
+                <Fragment>
+                  {diffItems.length > 0 && (
+                    <Button secondary onClick={handleReset} loading={resetting} disabled={submitting}>
+                      Reset
+                    </Button>
+                  )}
+                  <Button
+                    secondary
+                    onClick={() => {
+                      setPreviewOpen(true);
+                      loadExportPreview();
+                    }}
+                  >
+                    View export
+                  </Button>
+                </Fragment>
               }
             />
           </Container>

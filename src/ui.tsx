@@ -6,7 +6,6 @@ import { useState } from "preact/hooks";
 import { AppProvider } from "@hooks/useAppContext";
 import { ProposalsTab } from "@tabs/ProposalsTab";
 import { SettingsTab } from "@tabs/SettingsTab";
-import { UpdatesTab } from "@tabs/UpdatesTab";
 
 import { ResizeWindowHandler } from "./types";
 import "!./output.css";
@@ -29,7 +28,6 @@ function Plugin() {
 
   const tabOptions = [
     { value: "Changes", children: <ProposalsTab active={tabValue === "Changes"} /> },
-    { value: "Updates", children: <UpdatesTab active={tabValue === "Updates"} /> },
     { value: "Settings", children: <SettingsTab /> },
   ];
 

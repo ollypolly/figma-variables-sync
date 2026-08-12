@@ -43,11 +43,12 @@ describe("checkForProposalChanges", () => {
       listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "open", html_url: "u", head_ref: "figma/proposal-1" }]),
     });
 
-    const result = await checkForProposalChanges(settings, github);
+    const result = await checkForProposalChanges(settings, github, null);
 
     expect(result.diffs).toHaveLength(1);
     expect(result.diffs[0].dotPath).toBe("Tokens.brand.primary");
     expect(result.figmaContent).toBe(figmaTokens);
+    expect(result.gitContent).toBe(gitTokens);
     expect(result.proposals).toHaveLength(1);
     expect(result.collisionNotice).toBeNull();
   });
@@ -56,7 +57,7 @@ describe("checkForProposalChanges", () => {
     vi.mocked(requestExport).mockRejectedValue(new NamingCollisionError("Colliding names.", ["Tokens.Primary"]));
     const github = createMockGitHub();
 
-    const result = await checkForProposalChanges(settings, github);
+    const result = await checkForProposalChanges(settings, github, null);
 
     expect(result.diffs).toEqual([]);
     expect(result.collisionNotice).toEqual({
@@ -81,12 +82,45 @@ describe("checkForProposalChanges", () => {
     vi.mocked(requestExport).mockResolvedValue(figmaTokens);
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: gitTokens, sha: "s" }) });
 
-    const result = await checkForProposalChanges(settings, github);
+    const result = await checkForProposalChanges(settings, github, null);
 
     expect(result.diffs).toHaveLength(1);
     expect(result.diffs[0].dotPath).toBe("Tokens.brand.secondary");
     expect(result.collisionNotice?.resolution).toBe("engineer");
     expect(result.collisionNotice?.paths).toEqual(["Tokens.brand.primary"]);
+    expect(result.collisionNotice?.fixInstructions).toContain("branch: main");
+  });
+
+  it("diffs against the active proposal's branch instead of main, and its fixInstructions cite that branch", async () => {
+    const quarantinedPrBranchTokens = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { $value: "#fff", weird: {} },
+        },
+      },
+    });
+    const mainTokens = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#eee" } } } });
+    const figmaTokens = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+    vi.mocked(requestExport).mockResolvedValue(figmaTokens);
+
+    const getFile = vi.fn().mockImplementation((cfg: { branch: string }) =>
+      cfg.branch === "figma/proposal-1"
+        ? Promise.resolve({ content: quarantinedPrBranchTokens, sha: "pr-sha" })
+        : Promise.resolve({ content: mainTokens, sha: "main-sha" })
+    );
+    const github = createMockGitHub({ getFile });
+
+    const activeProposal = {
+      number: 5,
+      title: "x",
+      html_url: "https://github.com/pull/5",
+      head_ref: "figma/proposal-1",
+    };
+    const result = await checkForProposalChanges(settings, github, activeProposal);
+
+    expect(getFile).toHaveBeenCalledWith(expect.objectContaining({ branch: "figma/proposal-1" }));
+    expect(result.collisionNotice?.resolution).toBe("engineer");
+    expect(result.collisionNotice?.fixInstructions).toContain("branch: figma/proposal-1");
   });
 });
 
@@ -104,7 +138,7 @@ describe("submitProposal", () => {
     const { diffs } = computeDiff(figmaTokens, gitTokens, "proposals");
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: gitTokens, sha: "base-sha" }) });
 
-    const pr = await submitProposal(settings, github, figmaTokens, diffs, "Update brand primary");
+    const pr = await submitProposal(settings, github, figmaTokens, diffs, "Update brand primary", null);
 
     expect(github.createBranch).toHaveBeenCalledWith(settings, expect.stringContaining("figma/proposal-"));
     expect(github.updateFile).toHaveBeenCalledTimes(1);
@@ -121,6 +155,53 @@ describe("submitProposal", () => {
       branchName,
       []
     );
-    expect(pr).toEqual({ number: 1, html_url: "https://github.com/pull/1" });
+    expect(pr).toEqual({ number: 1, html_url: "https://github.com/pull/1", head_ref: branchName, gitContent: writtenContent });
+  });
+});
+
+describe("submitProposal with an active proposal", () => {
+  const activeProposal = {
+    number: 5,
+    title: "Existing PR",
+    html_url: "https://github.com/pull/5",
+    head_ref: "figma/proposal-1",
+  };
+
+  it("pushes onto the PR's existing branch instead of creating a new one, using that branch's own sha", async () => {
+    const prBranchTokens = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+    const figmaTokens = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+    const { diffs } = computeDiff(figmaTokens, prBranchTokens, "proposals");
+
+    const getFile = vi.fn().mockImplementation((cfg: { branch: string }) =>
+      cfg.branch === "figma/proposal-1"
+        ? Promise.resolve({ content: prBranchTokens, sha: "pr-sha" })
+        : Promise.resolve({ content: "{}", sha: "main-sha" })
+    );
+    const github = createMockGitHub({ getFile });
+
+    const pr = await submitProposal(settings, github, figmaTokens, diffs, "More brand updates", activeProposal);
+
+    expect(github.createBranch).not.toHaveBeenCalled();
+    expect(github.createPullRequest).not.toHaveBeenCalled();
+    expect(getFile).toHaveBeenCalledWith(expect.objectContaining({ branch: "figma/proposal-1" }));
+    const [, , writtenContent, sha, branchName] = github.updateFile.mock.calls[0];
+    expect(sha).toBe("pr-sha");
+    expect(branchName).toBe("figma/proposal-1");
+    expect(pr).toEqual({
+      number: 5,
+      html_url: "https://github.com/pull/5",
+      head_ref: "figma/proposal-1",
+      gitContent: writtenContent,
+    });
+  });
+
+  it("throws instead of silently overwriting the PR when its branch no longer exists", async () => {
+    const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue(null) });
+
+    await expect(
+      submitProposal(settings, github, "{}", [], "description", activeProposal)
+    ).rejects.toThrow(/no longer available/);
+
+    expect(github.updateFile).not.toHaveBeenCalled();
   });
 });

@@ -9,6 +9,7 @@ import { requestExport, requestImport } from "@services/figmaMessages";
 interface CheckResult {
   diffs: DiffItem[];
   gitContent: string;
+  primaryModeName: string;
 }
 
 export function useUpdates(active: boolean) {
@@ -27,8 +28,8 @@ export function useUpdates(active: boolean) {
       const gitContent = fileData.content;
       const figmaContent = await requestExport();
       // Quarantined paths aren't surfaced here — this tab is being retired.
-      const { diffs } = computeDiff(figmaContent, gitContent, "updates");
-      return { diffs, gitContent };
+      const { diffs, primaryModeName } = computeDiff(figmaContent, gitContent, "updates");
+      return { diffs, gitContent, primaryModeName };
     }, [settings, github])
   );
 
@@ -61,6 +62,7 @@ export function useUpdates(active: boolean) {
     isConfigured,
     checking: check.loading,
     diffItems: check.data?.diffs ?? [],
+    primaryModeName: check.data?.primaryModeName ?? "Default",
     importing: importAction.loading,
     status,
     checkForUpdates: check.execute,

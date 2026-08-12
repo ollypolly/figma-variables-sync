@@ -195,6 +195,44 @@ describe("importFromDtcg", () => {
     expect(widthVar.scopes).toEqual(["WIDTH_HEIGHT"]);
   });
 
+  it("applies an explicit empty scopes array instead of leaving the variable untouched", async () => {
+    const { figmaMock } = createMockFigma();
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const existing = figmaMock.variables.createVariable("colors/hidden", col.id, "COLOR");
+    existing.scopes = ["ALL_SCOPES"];
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          hidden: color("#ffffff", { "$extensions": { figma: { scopes: [] } } }),
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(existing.scopes).toEqual([]);
+  });
+
+  it("resets scopes to ALL_SCOPES when git no longer specifies any, rather than leaving the old value", async () => {
+    const { figmaMock } = createMockFigma();
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const existing = figmaMock.variables.createVariable("colors/primary", col.id, "COLOR");
+    existing.scopes = ["FRAME_FILL"];
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: color("#ffffff"),
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(existing.scopes).toEqual(["ALL_SCOPES"]);
+  });
+
   it("sets a variable's codeSyntax from $extensions.figma.codeSyntax", async () => {
     const { figmaMock } = createMockFigma();
 

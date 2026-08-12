@@ -47,6 +47,12 @@ Re-checked against the codebase after Bugs 1-5 landed (`data-integrity-fixes`) �
 - **Color parsing silently falls back to black on malformed input.** `parseColor.ts` intentionally returns `{r:0,g:0,b:0,a:1}` for anything it can't parse (covered by an existing test), but this is a silent-corruption risk with no signal back to the user — worth revisiting whether it should quarantine/warn instead, consistent with how Bug 1 handles other invalid input.
 - **Unresolved alias references fail silently.** `resolveDtcgValue.ts` only `console.warn`s when an alias path doesn't resolve, then falls through — for a color token this hits the color-parsing fallback above (writes solid black), for other types it writes the raw unresolved `{path}` string into the variable. No quarantine, no user-facing notice, unlike Bug 1's collision handling.
 
+## In-Plugin Onboarding for the PR/Branch/Sync Model
+
+As the "Pull Request:" dropdown, auto-apply (Slice 3), and staging/revert (Slice 4) accumulate, there's a real amount of mental model a designer needs to build — what a PR actually is, when Figma's variables update automatically vs. need a manual action, what "Reset" discards. Right now that's all just discoverable through use, or explained by whoever set the plugin up for them. Some kind of lightweight in-plugin explainer (a first-run walkthrough, an expandable "How this works" panel, contextual hints the first time each concept comes up) would make this a lot easier to pick up cold.
+
+Not scoped or sequenced yet — genuinely depends on how Slice 3's sync model actually lands, since the concepts worth explaining aren't fully settled (see `staged-proposals-plan.md`'s open note on invisible-vs-explicit sync). Revisit once Slice 3/4 are further along and there's a concrete mental model to actually write the onboarding around, rather than explaining a design that's still moving.
+
 ## Superseded (see linked plans)
 
 The following used to live here as open sections but have moved to dedicated, actively-developed plans:

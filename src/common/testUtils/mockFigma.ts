@@ -57,7 +57,7 @@ export function createMockFigma() {
           valuesByMode: {} as Record<string, any>,
           description: "",
           hiddenFromPublishing: false,
-          scopes: [] as string[],
+          scopes: ["ALL_SCOPES"] as string[],
           codeSyntax: {} as Record<string, string>,
           setValueForMode(modeId: string, value: any) {
             this.valuesByMode[modeId] = value;
