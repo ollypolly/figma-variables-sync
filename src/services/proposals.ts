@@ -1,8 +1,7 @@
 import { applyStagedDiffs } from "@common/applyStagedDiffs";
-import { computeDiff, type DiffItem } from "@common/diff";
-import { NamingCollisionError } from "@common/dtcg";
-import { requestExport } from "@services/figmaMessages";
+import { type DiffItem } from "@common/diff";
 import { GitHubService, PROPOSAL_BRANCH_PREFIX } from "@services/github";
+import { checkFigmaChanges, resolveDiffSettings, type CollisionNotice } from "@services/gitSync";
 import { parsePrLabels, type ActiveProposal, type PluginSettings } from "../types";
 
 export interface Proposal {
@@ -13,13 +12,6 @@ export interface Proposal {
   head_ref: string;
 }
 
-export interface CollisionNotice {
-  message: string;
-  paths: string[];
-  resolution: "designer" | "engineer";
-  fixInstructions?: string;
-}
-
 export interface ProposalCheckResult {
   diffs: DiffItem[];
   figmaContent: string;
@@ -27,60 +19,6 @@ export interface ProposalCheckResult {
   proposals: Proposal[];
   collisionNotice: CollisionNotice | null;
   primaryModeName: string;
-}
-
-export interface FigmaDiffResult {
-  diffs: DiffItem[];
-  figmaContent: string;
-  collisionNotice: CollisionNotice | null;
-  primaryModeName: string;
-}
-
-export function resolveDiffSettings(
-  settings: Omit<PluginSettings, "pat">,
-  activeProposal: ActiveProposal | null
-): Omit<PluginSettings, "pat"> {
-  return activeProposal ? { ...settings, branch: activeProposal.head_ref } : settings;
-}
-
-export async function checkFigmaChanges(
-  gitContent: string,
-  diffSettings: Omit<PluginSettings, "pat">
-): Promise<FigmaDiffResult> {
-  let figmaContent: string;
-  try {
-    figmaContent = await requestExport();
-  } catch (e) {
-    if (e instanceof NamingCollisionError) {
-      return {
-        diffs: [],
-        figmaContent: "",
-        primaryModeName: "Default",
-        collisionNotice: {
-          message: e.message,
-          paths: e.collidingPaths,
-          resolution: "designer",
-        },
-      };
-    }
-    throw e;
-  }
-
-  const { diffs, quarantined, primaryModeName } = computeDiff(figmaContent, gitContent, "proposals");
-  const collisionNotice: CollisionNotice | null =
-    quarantined.length > 0
-      ? {
-          message: `The repository's token file has ${quarantined.length} token group(s) that are invalid — a token name is also used as a group name (e.g. "Primary" and "Primary/Hover"), which isn't allowed. This isn't fixable from Figma; an engineer needs to edit the token file directly to remove the conflict.`,
-          paths: quarantined,
-          resolution: "engineer",
-          fixInstructions:
-            `Each path below has both a "$value" and at least one non-"$"-prefixed child key at the same level in ${diffSettings.filePath} (branch: ${diffSettings.branch}) — invalid per the W3C DTCG spec, since a token can't also be a group.\n` +
-            `To fix: either (a) move the child key(s) out to be a sibling of the token instead of nested under it, or (b) nest the token's own value under a new child key (e.g. rename the "$value" holder from "Primary" to "Primary/Default") so the parent becomes a pure group.\n` +
-            `After editing, re-import the file in the plugin to confirm it parses cleanly with no quarantined paths.`,
-        }
-      : null;
-
-  return { diffs, figmaContent, collisionNotice, primaryModeName };
 }
 
 export async function checkForProposalChanges(
