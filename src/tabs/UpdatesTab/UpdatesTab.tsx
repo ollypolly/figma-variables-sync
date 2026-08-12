@@ -22,9 +22,11 @@ export function UpdatesTab({ active }: { active: boolean }) {
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
       <Container space="medium">
         <VerticalSpace space="medium" />
-
         <StatusBanner status={status} />
+        <VerticalSpace space="medium" />
+      </Container>
 
+      <Container space="extraSmall">
         <DiffList
           items={diffItems}
           mode="updates"
@@ -38,18 +40,17 @@ export function UpdatesTab({ active }: { active: boolean }) {
             </Fragment>
           )}
         />
-
-        {!checking && diffItems.length > 0 && (
-          <Fragment>
-            <VerticalSpace space="medium" />
-            <Button onClick={acceptUpdates} loading={importing} fullWidth>
-              Accept Updates
-            </Button>
-          </Fragment>
-        )}
-
-        <VerticalSpace space="medium" />
       </Container>
+
+      {!checking && diffItems.length > 0 && (
+        <Container space="medium">
+          <VerticalSpace space="medium" />
+          <Button onClick={acceptUpdates} loading={importing} fullWidth>
+            Accept Updates
+          </Button>
+          <VerticalSpace space="medium" />
+        </Container>
+      )}
     </TabGuard>
   );
 }
