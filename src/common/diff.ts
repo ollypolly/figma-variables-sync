@@ -1,4 +1,4 @@
-import { parseDtcg, ParsedToken, TokenParseResult } from "./dtcg";
+import { DEFAULT_VARIABLE_SCOPES, parseDtcg, ParsedToken, TokenParseResult } from "./dtcg";
 
 export interface ChangedField {
   field: "type" | "description" | "scopes" | "codeSyntax" | "hiddenFromPublishing";
@@ -30,7 +30,7 @@ function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
     case "description":
       return t.description ?? "";
     case "scopes":
-      return [...(t.figmaScopes ?? [])].sort().join(", ");
+      return [...(t.figmaScopes ?? DEFAULT_VARIABLE_SCOPES)].sort().join(", ");
     case "codeSyntax": {
       const codeSyntax = t.figmaCodeSyntax ?? {};
       const sortedKeys = Object.keys(codeSyntax).sort();

@@ -143,6 +143,30 @@ describe("exportToDtcg", () => {
     ]);
   });
 
+  it("omits scopes when they're the ALL_SCOPES default, but writes an explicit empty array otherwise", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const defaultScoped = figmaMock.variables.createVariable("colors/default", col.id, "COLOR");
+    defaultScoped.setValueForMode(mode, { r: 1, g: 1, b: 1 });
+
+    const hiddenFromAllPickers = figmaMock.variables.createVariable("colors/hidden", col.id, "COLOR");
+    hiddenFromAllPickers.scopes = [];
+    hiddenFromAllPickers.setValueForMode(mode, { r: 0, g: 0, b: 0 });
+
+    const jsonStr = exportToDtcg(
+      figmaMock.variables.getLocalVariableCollections(),
+      figmaMock.variables.getLocalVariables(),
+      figmaMock
+    );
+    const result = JSON.parse(jsonStr);
+
+    expect(result.Tokens.colors.default.$extensions).toBeUndefined();
+    expect(result.Tokens.colors.hidden.$extensions.figma.scopes).toEqual([]);
+  });
+
   it("exports a variable's codeSyntax under $extensions.figma.codeSyntax", () => {
     const { figmaMock } = createMockFigma();
 

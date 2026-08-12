@@ -1,4 +1,4 @@
-import { ParsedToken, TokenParseResult } from "../types";
+import { DEFAULT_VARIABLE_SCOPES, ParsedToken, TokenParseResult } from "../types";
 import { sanitizeName } from "../utils/sanitizeName";
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
 import { parseDtcg } from "../parser/parseDtcg";
@@ -151,18 +151,17 @@ export async function importFromDtcg(
         variable = undefined;
       }
 
+      let defaultScopes: string[] = DEFAULT_VARIABLE_SCOPES;
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
         if (!t.figmaScopes && targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
-          variable.scopes = ["WIDTH_HEIGHT"];
+          defaultScopes = ["WIDTH_HEIGHT"];
         }
       }
 
       variable.description = t.description ?? "";
       variable.hiddenFromPublishing = t.figmaHiddenFromPublishing ?? false;
-      if (t.figmaScopes) {
-        variable.scopes = t.figmaScopes as VariableScope[];
-      }
+      variable.scopes = (t.figmaScopes ?? defaultScopes) as VariableScope[];
 
       for (const platform of CODE_SYNTAX_PLATFORMS) {
         const value = t.figmaCodeSyntax?.[platform];
