@@ -60,7 +60,7 @@ export function PrSelector({ activeProposal, openProposals, onSelect, disabled }
           View PR
         </Link>
       )}
-      <Button secondary onClick={() => onSelect(null)} disabled={disabled}>
+      <Button secondary onClick={() => onSelect(null)} disabled={disabled || !activeProposal}>
         New Request
       </Button>
     </div>
