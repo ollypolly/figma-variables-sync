@@ -5,13 +5,8 @@ import { useAsync } from "@hooks/useAsync";
 import { useDraftDescription } from "@hooks/useDraftDescription";
 import { useGitHub } from "@hooks/useGitHub";
 import { requestExport } from "@services/figmaMessages";
-import {
-  checkFigmaChanges,
-  checkForProposalChanges,
-  resolveDiffSettings,
-  submitProposal,
-  type ProposalCheckResult,
-} from "@services/proposals";
+import { checkFigmaChanges, resetFigmaToGit, resolveDiffSettings } from "@services/gitSync";
+import { checkForProposalChanges, submitProposal, type ProposalCheckResult } from "@services/proposals";
 
 const FAST_POLL_INTERVAL_MS = 3_000;
 const SLOW_POLL_INTERVAL_MS = 30_000;
@@ -83,6 +78,16 @@ export function useProposals(active: boolean) {
     }, [check.data, description, settings, github, activeProposal, setActiveProposal, check.setData])
   );
 
+  const resetToGit = useAsync(
+    useCallback(async () => {
+      if (!check.data?.gitContent) throw new Error("Nothing to reset to yet.");
+      const diffSettings = resolveDiffSettings(settings, activeProposal);
+      const refreshed = await resetFigmaToGit(check.data.gitContent, diffSettings);
+      check.setData({ ...check.data, ...refreshed });
+      return refreshed;
+    }, [check.data, settings, activeProposal, check.setData])
+  );
+
   useEffect(() => {
     if (!settingsLoading && !activeProposalLoading && isConfigured && active) {
       check.execute();
@@ -115,19 +120,23 @@ export function useProposals(active: boolean) {
     });
   }, [pollingEnabled, github, settings, activeProposal, check.setData]);
 
-  const status = submit.error
-    ? { success: false, text: submit.error }
-    : submit.data
-      ? {
-          success: true,
-          text: submit.data.wasUpdate
-            ? `Pushed to PR #${submit.data.number}.`
-            : `PR #${submit.data.number} created.`,
-          link: submit.data.html_url,
-        }
-      : check.error
-        ? { success: false, text: check.error }
-        : null;
+  const status = resetToGit.error
+    ? { success: false, text: resetToGit.error }
+    : resetToGit.data
+      ? { success: true, text: "Figma reset to match git." }
+      : submit.error
+        ? { success: false, text: submit.error }
+        : submit.data
+          ? {
+              success: true,
+              text: submit.data.wasUpdate
+                ? `Pushed to PR #${submit.data.number}.`
+                : `PR #${submit.data.number} created.`,
+              link: submit.data.html_url,
+            }
+          : check.error
+            ? { success: false, text: check.error }
+            : null;
 
   const openProposals = (check.data?.proposals ?? []).filter((p) => p.state === "open");
 
@@ -147,6 +156,8 @@ export function useProposals(active: boolean) {
     collisionNotice: check.data?.collisionNotice ?? null,
     checkForChanges: check.execute,
     submitProposal: submit.execute,
+    resetting: resetToGit.loading,
+    resetToGit: resetToGit.execute,
     exportPreviewJson: exportPreview.data,
     exportPreviewLoading: exportPreview.loading,
     exportPreviewError: exportPreview.error,

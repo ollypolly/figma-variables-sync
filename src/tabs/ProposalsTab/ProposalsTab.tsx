@@ -28,6 +28,8 @@ export function ProposalsTab({ active }: { active: boolean }) {
     collisionNotice,
     checkForChanges,
     submitProposal,
+    resetting,
+    resetToGit,
     exportPreviewJson,
     exportPreviewLoading,
     exportPreviewError,
@@ -38,6 +40,14 @@ export function ProposalsTab({ active }: { active: boolean }) {
 
   const showForm = !checking && diffItems.length > 0;
   const showTopArea = Boolean(collisionNotice || status || showForm);
+
+  const handleReset = () => {
+    const target = activeProposal ? `PR #${activeProposal.number}` : "main";
+    const count = diffItems.length;
+    if (window.confirm(`Discard all ${count} pending change${count === 1 ? "" : "s"} and reset Figma to match ${target}?`)) {
+      resetToGit();
+    }
+  };
 
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
@@ -108,15 +118,22 @@ export function ProposalsTab({ active }: { active: boolean }) {
                 </Fragment>
               )}
               headerAction={
-                <Button
-                  secondary
-                  onClick={() => {
-                    setPreviewOpen(true);
-                    loadExportPreview();
-                  }}
-                >
-                  View export
-                </Button>
+                <Fragment>
+                  {diffItems.length > 0 && (
+                    <Button secondary onClick={handleReset} loading={resetting} disabled={submitting}>
+                      Reset
+                    </Button>
+                  )}
+                  <Button
+                    secondary
+                    onClick={() => {
+                      setPreviewOpen(true);
+                      loadExportPreview();
+                    }}
+                  >
+                    View export
+                  </Button>
+                </Fragment>
               }
             />
           </Container>
