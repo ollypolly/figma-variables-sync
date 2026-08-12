@@ -4,6 +4,8 @@ Supersedes and consolidates the multi-proposal branch management, duplicate-prop
 
 ✅ **Unblocked** — the data-integrity plan this was gated on (naming collisions, metadata round-trip, orphan cleanup, and Bug 4's merge-based proposals via `applyStagedDiffs`) has shipped (PR #11). This plan's Slice 4 can reuse `applyStagedDiffs` directly rather than building the same merge mechanism twice.
 
+🚧 **Slices 1+2 implemented** — open in PR #12, not yet merged. Built as one PR since Slice 1's own "How" already called for Slice 2's mechanism directly. Also added, beyond what either slice originally scoped: a two-speed poll (fast, Figma-only re-diff every few seconds; slower GitHub-backed refresh every 30s) so the diff list stays live while the tab's open, and an optimistic local clear of the diff list right after a successful submit instead of an immediate re-fetch — GitHub's Contents API can serve a stale read for a while right after a write to the same ref, so re-fetching immediately would show wrong data with high confidence. Next: Slice 3.
+
 ## Why this is the priority
 
 Today, once a designer clicks "Create Pull Request," they're functionally locked out of the plugin until that PR merges:
@@ -38,10 +40,10 @@ Ordered smallest-safe-shippable first. Each slice is independently useful; later
 
 A read-only "already proposed" indicator on its own isn't enough to be worth shipping alone — a designer would still see it, then hit "Create Pull Request" and get a duplicate anyway, since nothing about *submitting* changed. The smallest slice that's actually useful bundles the indicator with the ability to act on it: select the PR and diff against it directly.
 
-**Designer-facing:** A "Pull Request:" dropdown at the top of the Changes tab, with "Main" plus every open PR as options (never merged/closed — draft PRs are still selectable, only closed/merged ones are excluded), and a "New Request" button next to it. Selecting a PR from the dropdown re-diffs against that branch, with its title/link shown underneath — so only genuinely new changes (made since that branch was last pushed) show as pending, and nothing gets silently duplicated into a second PR. Hitting "New Request" resets the dropdown to "Main," going back to browsing whatever's currently different from main, ready to start a fresh PR.
+**Designer-facing:** A "Pull Request:" dropdown at the top of the Changes tab, with "Main" plus every open PR as options (never merged/closed — draft PRs are still selectable, only closed/merged ones are excluded), and a "New Request" button next to it. Selecting a PR from the dropdown re-diffs against that branch, with a small icon-and-label link ("View PR") next to "New Request" opening it on GitHub — so only genuinely new changes (made since that branch was last pushed) show as pending, and nothing gets silently duplicated into a second PR. Hitting "New Request" resets the dropdown to "Main," going back to browsing whatever's currently different from main, ready to start a fresh PR.
 
 **How:**
-- New state: `activeProposal: { number, headRef, title, html_url } | null` — `null` means the dropdown is on "Main." See "Persistence" below — this should survive closing/reopening the plugin, not reset every session.
+- New state: `activeProposal: { number, head_ref, title, html_url } | null` — `null` means the dropdown is on "Main." See "Persistence" below — this should survive closing/reopening the plugin, not reset every session.
 - `check()`'s diff base becomes `activeProposal ? activeProposal.headRef : settings.branch`.
 - The dropdown is populated from the existing `listPullRequests` call, filtered to `state === "open"`.
 - "Create Pull Request" button relabels to "Update PR #4" when a PR is active, and calls `updateFile` against the existing branch (Slice 2) instead of `createBranch` + `createPullRequest`. "New Request" just sets `activeProposal` back to `null` — it doesn't touch GitHub at all, the PR stays open regardless.
@@ -61,7 +63,7 @@ A read-only "already proposed" indicator on its own isn't enough to be worth shi
 
 Four related problems, solved together — this also absorbs the old "background sync check + auto-apply" goal, generalized beyond just PRs:
 
-**3a. Is the selected PR still valid?** If it's merged or closed on GitHub while it's selected in the dropdown, the plugin shouldn't silently keep pushing to a dead branch. Needs a periodic/on-`check()` status check against that PR number — if it's no longer open, reset the dropdown to "Main," tell the designer ("PR #4 was merged — you're back on main"), and fall back to diffing against `main`.
+**3a. Is the selected PR still valid?** If it's merged or closed on GitHub while it's selected in the dropdown, the plugin shouldn't silently keep pushing to a dead branch. Needs a periodic/on-`check()` status check against that PR number — if it's no longer open, reset the dropdown to "Main," tell the designer ("PR #4 was merged — you're back on main"), and fall back to diffing against `main`. Slice 1's slow (30s) GitHub-backed poll already exists and already re-fetches `listPullRequests` each tick — this can likely ride on that loop rather than needing a new interval of its own.
 
 **3b. Is `main` ahead of the PR branch?** If `main` has commits the active PR branch doesn't (another proposal merged, or a dev pushed token changes directly), show a banner: "This PR is behind main — a teammate may have changed tokens you don't have. [View on GitHub]" No auto-resolution attempted (auto-rebase was considered and dropped — see below).
 
@@ -119,4 +121,4 @@ Combined with Slice 3's PR-status check-in: on load, if a persisted `activePropo
 
 ## Terminology (resolved)
 
-"Pull Request:" dropdown + "New Request" button — no separate "working on" label or banner needed; the dropdown's selected value is the state. The PR's title/link is shown underneath the dropdown when a PR is selected, wherever else this state needs surfacing (e.g. staleness banners in Slice 3).
+"Pull Request:" dropdown + "New Request" button — no separate "working on" label or banner needed; the dropdown's selected value is the state. A small icon-and-label link next to the dropdown opens the PR on GitHub when one is selected; wherever else this state needs surfacing (e.g. staleness banners in Slice 3), follow the same pattern rather than a full title/description block.
