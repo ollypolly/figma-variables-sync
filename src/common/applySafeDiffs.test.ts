@@ -23,7 +23,7 @@ describe("applySafeDiffsToFigmaJson", () => {
     });
   });
 
-  it("skips a safe path that's absent from git, never deleting the Figma value", () => {
+  it("deletes a safe path that's absent from the new git target", () => {
     const figmaJson = JSON.stringify({
       Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
     });
@@ -32,7 +32,7 @@ describe("applySafeDiffsToFigmaJson", () => {
     const result = applySafeDiffsToFigmaJson(figmaJson, gitJson, new Set(["Tokens.brand.primary"]));
 
     expect(JSON.parse(result)).toEqual({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
+      Tokens: { brand: { secondary: color("#f00") } },
     });
   });
 

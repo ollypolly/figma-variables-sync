@@ -105,7 +105,6 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
   const safe = new Set<string>();
   for (const d of delta) {
-    if (d.type === "deleted") continue;
     if (drifted.has(d.dotPath)) continue;
     safe.add(d.dotPath);
   }

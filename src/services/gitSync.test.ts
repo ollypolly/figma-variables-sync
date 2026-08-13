@@ -161,10 +161,19 @@ describe("computeSafeSubset", () => {
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
 
-  it("excludes a path deleted going from the old to the new git target, regardless of drift", async () => {
+  it("includes a path deleted going from the old to the new git target, when there's no local Figma drift", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: {} } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
+  });
+
+  it("excludes a path deleted going from the old to the new git target if the designer has a local edit there", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: {} } });
+    const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#0f0") } } });
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
