@@ -118,8 +118,8 @@ async function applyIdleDrift(
   };
 }
 
-// The 3a decision: is the active proposal still open? If not, resolve it and report what
-// happened. lastGoodResult (the previous successful check, if any) stands in for a fresh
+// Is the active proposal still open? If not, resolve it and report what happened.
+// lastGoodResult (the previous successful check, if any) stands in for a fresh
 // checkForProposalChanges call so the fallback doesn't merge onto a diff computed against the
 // now-dead branch.
 export async function checkActiveProposalStatus(
@@ -171,7 +171,7 @@ export type UpdateBranchResult =
   | { status: "updated"; count: number; gitContent: string; refreshed: FigmaDiffResult }
   | { status: "conflict"; detail: string };
 
-// Reuses the same safe-subset mechanism 3c/3d already use for a discretionary switch.
+// Reuses the same safe-subset mechanism a discretionary diff-base switch already uses.
 export async function updateProposalBranch(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
