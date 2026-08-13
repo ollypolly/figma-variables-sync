@@ -13,8 +13,8 @@ import {
   resolveDiffSettings,
 } from "@services/gitSync";
 import {
+  checkActiveProposalStatus,
   checkForProposalChanges,
-  resolveDeadProposal,
   submitProposal,
   type ProposalCheckResult,
 } from "@services/proposals";
@@ -36,6 +36,10 @@ function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void
     tick().catch(() => {});
   }, intervalMs);
   return () => clearInterval(interval);
+}
+
+function setDataIfChanged<T>(setData: (updater: (prev: T | null) => T) => void, next: T): void {
+  setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
 }
 
 function applyPushedResult(current: ProposalCheckResult, gitContent: string): ProposalCheckResult {
@@ -93,22 +97,22 @@ export function useProposals(active: boolean) {
   const checkForActiveProposal = useCallback(async (): Promise<ProposalCheckResult> => {
     if (!github) throw new Error("Not configured.");
 
-    if (activeProposal) {
-      const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
-      const match = proposals.find((p) => p.number === activeProposal.number);
-      if (!match || match.state !== "open") {
-        const staleResult = lastGoodCheckData.current ?? (await checkForProposalChanges(settings, github, activeProposal));
-        const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
-        setActiveProposal(null);
-        setBackground({
-          success: true,
-          text: `PR #${activeProposal.number} was ${match?.state === "merged" ? "merged" : "closed"} — you're back on Main, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
-        });
-        return { ...refreshed, gitContent, proposals };
-      }
+    const { result, resolvedDeadProposal } = await checkActiveProposalStatus(
+      settings,
+      github,
+      activeProposal,
+      lastGoodCheckData.current
+    );
+
+    if (resolvedDeadProposal) {
+      setActiveProposal(null);
+      setBackground({
+        success: true,
+        text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on Main, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
+      });
     }
 
-    return checkForProposalChanges(settings, github, activeProposal);
+    return result;
   }, [settings, github, activeProposal, setActiveProposal]);
 
   const check = useAsync<ProposalCheckResult>(checkForActiveProposal);
@@ -226,8 +230,7 @@ export function useProposals(active: boolean) {
       if (!current) return;
 
       const result = await checkFigmaChanges(current.gitContent, diffSettings);
-      const merged = { ...current, ...result };
-      check.setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(merged) ? prev : merged));
+      setDataIfChanged(check.setData, { ...current, ...result });
     });
   }, [pollingEnabled, github, settings, activeProposal, check.setData]);
 
@@ -236,7 +239,7 @@ export function useProposals(active: boolean) {
 
     return pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
       const result = await checkForActiveProposal();
-      check.setData((prev) => (prev && JSON.stringify(prev) === JSON.stringify(result) ? prev : result));
+      setDataIfChanged(check.setData, result);
     });
   }, [pollingEnabled, github, checkForActiveProposal, check.setData]);
 

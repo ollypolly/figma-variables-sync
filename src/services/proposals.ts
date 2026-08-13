@@ -56,6 +56,42 @@ export async function resolveDeadProposal(
   return { refreshed, gitContent: newGitContent, count: safeDotPaths.size };
 }
 
+export interface ResolvedDeadProposal {
+  number: number;
+  reason: "merged" | "closed";
+  count: number;
+}
+
+// The 3a decision: is the active proposal still open? If not, resolve it and report what
+// happened; otherwise this is just an ordinary check. lastGoodResult (the previous successful
+// check, if any) stands in for a fresh checkForProposalChanges call so the fallback doesn't
+// merge onto a diff computed against the now-dead branch.
+export async function checkActiveProposalStatus(
+  settings: Omit<PluginSettings, "pat">,
+  github: GitHubService,
+  activeProposal: ActiveProposal | null,
+  lastGoodResult: ProposalCheckResult | null
+): Promise<{ result: ProposalCheckResult; resolvedDeadProposal: ResolvedDeadProposal | null }> {
+  if (activeProposal) {
+    const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
+    const match = proposals.find((p) => p.number === activeProposal.number);
+    if (!match || match.state !== "open") {
+      const staleResult = lastGoodResult ?? (await checkForProposalChanges(settings, github, activeProposal));
+      const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
+      return {
+        result: { ...refreshed, gitContent, proposals },
+        resolvedDeadProposal: {
+          number: activeProposal.number,
+          reason: match?.state === "merged" ? "merged" : "closed",
+          count,
+        },
+      };
+    }
+  }
+
+  return { result: await checkForProposalChanges(settings, github, activeProposal), resolvedDeadProposal: null };
+}
+
 export async function submitProposal(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,

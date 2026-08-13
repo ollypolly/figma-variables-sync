@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
 
 import { requestExport, requestImport } from "@services/figmaMessages";
-import { checkForProposalChanges, resolveDeadProposal, submitProposal } from "./proposals";
+import { checkActiveProposalStatus, checkForProposalChanges, resolveDeadProposal, submitProposal } from "./proposals";
 import { computeDiff } from "@common/diff";
 import { NamingCollisionError } from "@common/dtcg";
 import { color } from "@common/testUtils/tokens";
@@ -221,8 +221,6 @@ describe("resolveDeadProposal", () => {
     const mainContent = JSON.stringify({
       Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
     });
-    // The stale snapshot embedded in staleResult must be ignored — resolveDeadProposal should
-    // re-export live Figma content instead, since this poll result can be up to 30s old.
     const staleFigmaContent = JSON.stringify({
       Tokens: { brand: { primary: color("#fff"), secondary: color("#0f0") } },
     });
@@ -251,5 +249,108 @@ describe("resolveDeadProposal", () => {
     });
     expect(result.count).toBe(1);
     expect(result.gitContent).toBe(mainContent);
+  });
+});
+
+describe("checkActiveProposalStatus", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    vi.mocked(requestImport).mockReset();
+  });
+
+  const activeProposal = { number: 5, title: "x", html_url: "u", head_ref: "figma/proposal-1" };
+
+  it("does an ordinary check with no resolution when there's no active proposal", async () => {
+    const github = createMockGitHub();
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { result, resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, null, null);
+
+    expect(github.listPullRequests).toHaveBeenCalledTimes(1);
+    expect(resolvedDeadProposal).toBeNull();
+    expect(result.diffs).toEqual([]);
+  });
+
+  it("does an ordinary check with no resolution when the active proposal is still open", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "open", html_url: "u", head_ref: "figma/proposal-1" }]),
+    });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, null);
+
+    expect(resolvedDeadProposal).toBeNull();
+  });
+
+  it("resolves and reports a merged proposal, falling back to main", async () => {
+    const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const mainContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "merged", html_url: "u", head_ref: "figma/proposal-1" }]),
+      getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }),
+    });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(mainContent);
+
+    const { result, resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+      diffs: [],
+      figmaContent: oldGitContent,
+      gitContent: oldGitContent,
+      proposals: [],
+      collisionNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(resolvedDeadProposal).toEqual({ number: 5, reason: "merged", count: 1 });
+    expect(result.gitContent).toBe(mainContent);
+  });
+
+  it("reports a closed (not merged) proposal as 'closed', not 'merged'", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "closed", html_url: "u", head_ref: "figma/proposal-1" }]),
+    });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+      diffs: [],
+      figmaContent: "{}",
+      gitContent: "{}",
+      proposals: [],
+      collisionNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(resolvedDeadProposal?.reason).toBe("closed");
+  });
+
+  it("reports 'closed' when the proposal has vanished from the list entirely", async () => {
+    const github = createMockGitHub({ listPullRequests: vi.fn().mockResolvedValue([]) });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+      diffs: [],
+      figmaContent: "{}",
+      gitContent: "{}",
+      proposals: [],
+      collisionNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(resolvedDeadProposal?.reason).toBe("closed");
+  });
+
+  it("falls back to a fresh checkForProposalChanges call when there's no last-good result to reuse", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "merged", html_url: "u", head_ref: "figma/proposal-1" }]),
+    });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, null);
+
+    expect(github.getFile).toHaveBeenCalledWith({ ...settings, branch: activeProposal.head_ref });
+    expect(resolvedDeadProposal).not.toBeNull();
   });
 });
