@@ -8,6 +8,7 @@ interface PrSelectorProps {
   activeProposal: ActiveProposal | null;
   openProposals: Proposal[];
   onSelect: (proposal: ActiveProposal | null) => void;
+  mainBranchLabel: string;
   disabled?: boolean;
 }
 
@@ -21,11 +22,11 @@ function withCurrentSelectionAlwaysListed(
   return openProposals;
 }
 
-export function PrSelector({ activeProposal, openProposals, onSelect, disabled }: PrSelectorProps) {
+export function PrSelector({ activeProposal, openProposals, onSelect, mainBranchLabel, disabled }: PrSelectorProps) {
   const dropdownProposals = withCurrentSelectionAlwaysListed(activeProposal, openProposals);
 
   const options: DropdownOption[] = [
-    { value: "main", text: "Main" },
+    { value: "main", text: mainBranchLabel },
     ...(dropdownProposals.length > 0 ? (["-"] as const) : []),
     ...dropdownProposals.map((p) => ({ value: String(p.number), text: `#${p.number} ${p.title}` })),
   ];

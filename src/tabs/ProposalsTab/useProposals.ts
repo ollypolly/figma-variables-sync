@@ -138,7 +138,7 @@ export function useProposals(active: boolean) {
         setConflictNotice(null);
       }
       if (syncedCount > 0) {
-        const targetLabel = activeProposal ? `PR #${activeProposal.number}` : "Main";
+        const targetLabel = activeProposal ? `PR #${activeProposal.number}` : settings.branch;
         setBackground({
           success: true,
           text: `${syncedCount} variable${syncedCount === 1 ? "" : "s"} updated to match ${targetLabel}.`,
@@ -240,7 +240,7 @@ export function useProposals(active: boolean) {
         const { safeDotPaths } = await planSwitch();
         setPendingSwitch({
           target,
-          targetLabel: target ? `PR #${target.number}` : "Main",
+          targetLabel: target ? `PR #${target.number}` : settings.branch,
           count: safeDotPaths.size,
           commit,
         });
@@ -364,6 +364,7 @@ export function useProposals(active: boolean) {
     pendingSwitch,
     switchLoading,
     cancelSwitch: () => setPendingSwitch(null),
+    baseBranch: settings.branch,
     staleness,
     showStalenessNotice: staleness !== null && staleness.count > dismissedStalenessCount && !conflictNotice,
     dismissStaleness,

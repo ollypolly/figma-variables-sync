@@ -25,6 +25,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
     pendingSwitch,
     switchLoading,
     cancelSwitch,
+    baseBranch,
     showStalenessNotice,
     staleness,
     dismissStaleness,
@@ -64,7 +65,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
   const showTopArea = Boolean(collisionNotice || status || showForm || showStalenessNotice || conflictNotice);
 
   const handleReset = () => {
-    const target = activeProposal ? `PR #${activeProposal.number}` : "main";
+    const target = activeProposal ? `PR #${activeProposal.number}` : baseBranch;
     const count = diffItems.length;
     if (window.confirm(`Discard all ${count} pending change${count === 1 ? "" : "s"} and reset Figma to match ${target}?`)) {
       resetToGit();
@@ -80,6 +81,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
             activeProposal={activeProposal}
             openProposals={openProposals}
             onSelect={requestSwitch}
+            mainBranchLabel={baseBranch}
             disabled={submitting || switchLoading || mergingBranch}
           />
           <VerticalSpace space="small" />
@@ -116,7 +118,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
                     message={
                       mergingBranch
                         ? `Updating PR #${activeProposal.number}'s branch with main…`
-                        : `Main has ${staleness.count} token change${staleness.count === 1 ? "" : "s"} this PR doesn't have yet.`
+                        : `${baseBranch} has ${staleness.count} token change${staleness.count === 1 ? "" : "s"} this PR doesn't have yet.`
                     }
                     action={{ label: "Update branch", onClick: updateBranch, loading: mergingBranch }}
                     onDismiss={dismissStaleness}
