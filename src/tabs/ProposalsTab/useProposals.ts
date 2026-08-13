@@ -168,7 +168,6 @@ export function useProposals(active: boolean) {
       if (!github || !check.data) return;
       setBackground(null);
       const targetSettings = resolveDiffSettings(settings, target);
-      const figmaContentAtRequest = check.data.figmaContent;
       const oldGitContent = check.data.gitContent;
       const oldDiffs = check.data.diffs;
 
@@ -179,7 +178,8 @@ export function useProposals(active: boolean) {
         const safeDotPaths = computeSafeSubset(oldGitContent, newGitContent, oldDiffs);
 
         const commit = async () => {
-          const refreshed = await applySafeSubset(figmaContentAtRequest, newGitContent, safeDotPaths, targetSettings);
+          const currentFigmaContent = await requestExport();
+          const refreshed = await applySafeSubset(currentFigmaContent, newGitContent, safeDotPaths, targetSettings);
           setActiveProposal(target);
           check.setData((prev) => ({
             diffs: refreshed.diffs,
