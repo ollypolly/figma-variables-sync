@@ -221,19 +221,24 @@ describe("resolveDeadProposal", () => {
     const mainContent = JSON.stringify({
       Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
     });
-    const figmaContent = JSON.stringify({
+    // The stale snapshot embedded in staleResult must be ignored — resolveDeadProposal should
+    // re-export live Figma content instead, since this poll result can be up to 30s old.
+    const staleFigmaContent = JSON.stringify({
       Tokens: { brand: { primary: color("#fff"), secondary: color("#0f0") } },
+    });
+    const liveFigmaContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#fff"), secondary: color("#0f0") }, tertiary: color("#123456") },
     });
     const staleDiffs = [
       { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "modified" as const, figmaVal: "#0f0", gitVal: "#f00" },
     ];
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }) });
     vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValue(mainContent);
+    vi.mocked(requestExport).mockResolvedValueOnce(liveFigmaContent).mockResolvedValueOnce(mainContent);
 
     const result = await resolveDeadProposal(settings, github, {
       diffs: staleDiffs,
-      figmaContent,
+      figmaContent: staleFigmaContent,
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
@@ -242,7 +247,7 @@ describe("resolveDeadProposal", () => {
 
     expect(github.getFile).toHaveBeenCalledWith(settings);
     expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") } },
+      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") }, tertiary: color("#123456") },
     });
     expect(result.count).toBe(1);
     expect(result.gitContent).toBe(mainContent);
