@@ -13,6 +13,7 @@ import {
   $openProposals,
   $pendingSwitch,
   $resetting,
+  $showResetNotice,
   $showStalenessNotice,
   $staleness,
   $status,
@@ -21,6 +22,7 @@ import {
   abandonProposal,
   cancelSwitch,
   checkForChanges,
+  dismissResetNotice,
   dismissStaleness,
   loadExportPreview,
   requestSwitch,
@@ -44,6 +46,7 @@ export function useProposals() {
   const switchLoading = useStore($switchLoading);
   const staleness = useStore($staleness);
   const showStalenessNotice = useStore($showStalenessNotice);
+  const showResetNotice = useStore($showResetNotice);
   const conflictNotice = useStore($conflictNotice);
   const mergingBranch = useStore($mergingBranch);
   const description = useStore($description);
@@ -70,6 +73,9 @@ export function useProposals() {
     staleness,
     showStalenessNotice,
     dismissStaleness,
+    resetNotice: check?.resetNotice ?? null,
+    showResetNotice,
+    dismissResetNotice,
     conflictNotice,
     mergingBranch,
     updateBranch,

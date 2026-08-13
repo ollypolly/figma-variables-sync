@@ -8,6 +8,7 @@ import {
   resolveDiffSettings,
   type CollisionNotice,
   type FigmaDiffResult,
+  type ResetNotice,
 } from "@services/gitSync";
 import { parsePrLabels, type ActiveProposal, type PluginSettings } from "../types";
 
@@ -25,6 +26,7 @@ export interface ProposalCheckResult {
   gitContent: string;
   proposals: Proposal[];
   collisionNotice: CollisionNotice | null;
+  resetNotice: ResetNotice | null;
   primaryModeName: string;
 }
 
@@ -38,9 +40,9 @@ export async function checkForProposalChanges(
   const fileData = await github.getFile(diffSettings);
   const gitContent = fileData?.content ?? "{}";
 
-  const { diffs, figmaContent, collisionNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
+  const { diffs, figmaContent, collisionNotice, resetNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
   const proposals = knownProposals ?? (await github.listPullRequests(settings.owner, settings.repo, settings.branch));
-  return { diffs, figmaContent, gitContent, proposals, collisionNotice, primaryModeName };
+  return { diffs, figmaContent, gitContent, proposals, collisionNotice, resetNotice, primaryModeName };
 }
 
 // Called once a designer's active PR is found to be merged/closed — falls back to main,

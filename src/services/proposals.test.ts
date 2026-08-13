@@ -270,6 +270,7 @@ describe("resolveDeadProposal", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -320,6 +321,7 @@ describe("updateProposalBranch", () => {
         gitContent: oldGitContent,
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       });
       await vi.advanceTimersByTimeAsync(MERGE_POLL_INTERVAL_MS);
@@ -345,6 +347,7 @@ describe("updateProposalBranch", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -365,6 +368,7 @@ describe("updateProposalBranch", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -384,6 +388,7 @@ describe("updateProposalBranch", () => {
         gitContent: "{}",
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       })
     ).rejects.toThrow("Bad credentials");
@@ -401,6 +406,7 @@ describe("updateProposalBranch", () => {
         gitContent: "{}",
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       });
       const assertion = expect(promise).rejects.toThrow(/finalizing this merge/);
@@ -435,6 +441,7 @@ describe("abandonProposal", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -586,6 +593,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -630,6 +638,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -665,6 +674,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -685,6 +695,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -702,6 +713,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -742,6 +754,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 

@@ -63,6 +63,36 @@ describe("checkFigmaChanges", () => {
 
     expect(result.collisionNotice?.fixInstructions).toContain("branch: figma/proposal-1");
   });
+
+  it("surfaces a non-blocking reset notice for a dangling alias, without dropping other real diffs", async () => {
+    const gitTokens = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { $type: "color", $value: "#fff" },
+          warning: { $type: "color", $value: "{Semantic.Colours.Status.Warning}" },
+        },
+      },
+    });
+    const figmaTokens = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { $type: "color", $value: "#000" },
+          warning: { $type: "color", $value: "{Semantic.Colours.Status.Warning}" },
+        },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(figmaTokens);
+
+    const result = await checkFigmaChanges(gitTokens, settings);
+
+    expect(result.collisionNotice).toBeNull();
+    expect(result.resetNotice).toEqual({
+      message: "1 token had a value that couldn't be resolved and was reset to a default color.",
+      paths: ["Tokens.brand.warning"],
+    });
+    expect(result.diffs).toHaveLength(1);
+    expect(result.diffs[0].dotPath).toBe("Tokens.brand.primary");
+  });
 });
 
 describe("resolveDiffSettings", () => {

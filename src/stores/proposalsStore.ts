@@ -74,6 +74,7 @@ export const $switchLoading = atom(false);
 
 export const $staleness = atom<ProposalStaleness | null>(null);
 export const $dismissedStalenessCount = atom(0);
+export const $dismissedResetNoticePaths = atom<string[]>([]);
 export const $conflictNotice = atom<ConflictNotice | null>(null);
 export const $mergingBranch = atom(false);
 
@@ -97,6 +98,14 @@ export const $showStalenessNotice = computed(
   [$staleness, $dismissedStalenessCount, $conflictNotice],
   (staleness, dismissedCount, conflictNotice) =>
     staleness !== null && staleness.count > dismissedCount && !conflictNotice
+);
+
+export const $showResetNotice = computed(
+  [$check, $dismissedResetNoticePaths],
+  (check, dismissedPaths) => {
+    const paths = check?.resetNotice?.paths ?? [];
+    return paths.length > 0 && paths.some((p) => !dismissedPaths.includes(p));
+  }
 );
 
 export const $status = computed(
@@ -312,6 +321,10 @@ export async function abandonProposal(): Promise<void> {
   } finally {
     $mergingBranch.set(false);
   }
+}
+
+export function dismissResetNotice(): void {
+  $dismissedResetNoticePaths.set($check.get()?.resetNotice?.paths ?? []);
 }
 
 export function dismissStaleness(): void {

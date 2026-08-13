@@ -29,6 +29,9 @@ export function ProposalsTab() {
     showStalenessNotice,
     staleness,
     dismissStaleness,
+    resetNotice,
+    showResetNotice,
+    dismissResetNotice,
     conflictNotice,
     mergingBranch,
     updateBranch,
@@ -62,7 +65,9 @@ export function ProposalsTab() {
   };
 
   const showForm = !checking && diffItems.length > 0;
-  const showTopArea = Boolean(collisionNotice || status || showForm || showStalenessNotice || conflictNotice);
+  const showTopArea = Boolean(
+    collisionNotice || status || showForm || showStalenessNotice || showResetNotice || conflictNotice
+  );
 
   const handleReset = () => {
     const target = activeProposal ? `PR #${activeProposal.number}` : baseBranch;
@@ -122,6 +127,14 @@ export function ProposalsTab() {
                     }
                     action={{ label: "Update branch", onClick: updateBranch, loading: mergingBranch }}
                     onDismiss={dismissStaleness}
+                  />
+                )}
+
+                {showResetNotice && resetNotice && (
+                  <WarningNotice
+                    message={resetNotice.message}
+                    details={{ paths: resetNotice.paths }}
+                    onDismiss={dismissResetNotice}
                   />
                 )}
 

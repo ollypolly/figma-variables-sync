@@ -44,6 +44,7 @@ function formatFieldVal(t: ParsedToken, field: ChangedField["field"]): string {
 export interface ComputeDiffResult extends Pick<TokenParseResult, "quarantined"> {
   diffs: DiffItem[];
   primaryModeName: string;
+  unresolvedAliases: string[];
 }
 
 // The root $modes object names every mode; only non-primary ones carry a $fallback pointing at
@@ -89,6 +90,7 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
   // Quarantined on either side reads as a genuine add/delete unless excluded here.
   const quarantined = [...new Set([...figmaData.quarantined, ...gitData.quarantined])];
   const quarantinedSet = new Set(quarantined);
+  const unresolvedAliases = [...new Set([...figmaData.unresolvedAliases, ...gitData.unresolvedAliases])];
 
   const figmaMap = new Map<string, ParsedToken>();
   for (const t of figmaData.tokens) {
@@ -162,5 +164,5 @@ export function computeDiff(figmaJson: string, gitJson: string, mode: "proposals
   }
 
   const primaryModeName = getPrimaryModeName(figmaData.modes) ?? getPrimaryModeName(gitData.modes) ?? "Default";
-  return { diffs, quarantined, primaryModeName };
+  return { diffs, quarantined, primaryModeName, unresolvedAliases };
 }
