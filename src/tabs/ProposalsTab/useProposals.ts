@@ -211,7 +211,7 @@ export function useProposals(active: boolean) {
         if (!current) throw new Error("Nothing to switch from.");
         const file = await github.getFile(targetSettings);
         const newGitContent = file?.content ?? "{}";
-        const safeDotPaths = computeSafeSubset(current.gitContent, newGitContent, current.diffs);
+        const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
         return { newGitContent, safeDotPaths };
       };
 

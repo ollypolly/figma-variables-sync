@@ -254,9 +254,15 @@ describe("resolveDeadProposal", () => {
     const staleDiffs = [
       { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "modified" as const, figmaVal: "#0f0", gitVal: "#f00" },
     ];
+    const mergedFigmaContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") }, tertiary: color("#123456") },
+    });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }) });
     vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValueOnce(liveFigmaContent).mockResolvedValueOnce(mainContent);
+    vi.mocked(requestExport)
+      .mockResolvedValueOnce(liveFigmaContent)
+      .mockResolvedValueOnce(liveFigmaContent)
+      .mockResolvedValueOnce(mergedFigmaContent);
 
     const result = await resolveDeadProposal(settings, github, {
       diffs: staleDiffs,
@@ -572,9 +578,6 @@ describe("checkActiveProposalStatus", () => {
     });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: newGitContent, sha: "main-sha" }) });
     vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    // Three requestExport calls in this order: checkForProposalChanges's own diff, the safe-apply
-    // merge step, and the final post-import re-diff — Figma's live content is unchanged (== oldGitContent)
-    // until the merge writes to it, then the last call reflects the merged result.
     vi.mocked(requestExport).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(newGitContent);
 
     const { result, syncedCount } = await checkActiveProposalStatus(settings, github, null, {

@@ -12,7 +12,6 @@ import {
 } from "./gitSync";
 import { NamingCollisionError } from "@common/dtcg";
 import { color } from "@common/testUtils/tokens";
-import type { DiffItem } from "@common/diff";
 import type { PluginSettings } from "../types";
 
 const settings: PluginSettings = {
@@ -103,35 +102,52 @@ describe("resetFigmaToGit", () => {
 });
 
 describe("computeSafeSubset", () => {
-  it("excludes a path that's unchanged between the old and new git target", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+  });
+
+  it("excludes a path that's unchanged between the old and new git target", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
 
-  it("includes a path that changed on the new target with no local Figma drift", () => {
+  it("includes a path that changed on the new target with no local Figma drift", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
   });
 
-  it("excludes a path that changed on the new target if the designer already has a local edit there", () => {
+  it("excludes a path that changed on the new target if the designer already has a local edit there", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
-    const oldDiffs: DiffItem[] = [
-      { path: ["Tokens", "brand", "primary"], dotPath: "Tokens.brand.primary", type: "modified", figmaVal: "#0f0", gitVal: "#fff" },
-    ];
+    const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#0f0") } } });
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
-    expect(computeSafeSubset(oldGit, newGit, oldDiffs)).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
 
-  it("excludes a path deleted going from the old to the new git target, regardless of drift", () => {
+  it("excludes a path deleted going from the old to the new git target, regardless of drift", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: {} } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+  });
+
+  it("always fetches a fresh Figma export rather than trusting caller-supplied drift info", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff"), secondary: color("#aaa") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000"), secondary: color("#bbb") } } });
+    const figmaContentEditedJustNow = JSON.stringify({
+      Tokens: { brand: { primary: color("#fff"), secondary: color("#ccc") } },
+    });
+    vi.mocked(requestExport).mockResolvedValue(figmaContentEditedJustNow);
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
   });
 });
 

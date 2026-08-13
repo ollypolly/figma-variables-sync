@@ -52,7 +52,7 @@ export async function resolveDeadProposal(
 ): Promise<{ refreshed: FigmaDiffResult; gitContent: string; count: number }> {
   const mainFile = await github.getFile(settings);
   const newGitContent = mainFile?.content ?? "{}";
-  const safeDotPaths = computeSafeSubset(staleResult.gitContent, newGitContent, staleResult.diffs);
+  const safeDotPaths = await computeSafeSubset(staleResult.gitContent, newGitContent);
   const refreshed = await applySafeSubset(newGitContent, safeDotPaths, settings);
   return { refreshed, gitContent: newGitContent, count: safeDotPaths.size };
 }
@@ -67,10 +67,8 @@ export interface ProposalStaleness {
   count: number;
 }
 
-// Is there a token change on main this PR's branch doesn't have yet? Content-diff based, not
-// commit-count based — main moves constantly for reasons unrelated to tokens (app code, other
-// PRs), so counting commits would nag on every unrelated commit instead of only ones that
-// actually touched the tokens file.
+// Content-diff based, not commit-count based — main moves constantly for reasons unrelated to
+// tokens, so counting commits would nag on unrelated activity.
 export async function checkProposalStaleness(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
@@ -96,10 +94,8 @@ export async function checkProposalStaleness(
   return diffs.length > 0 ? { count: diffs.length } : null;
 }
 
-// Whatever's being diffed against (main, or a PR's branch) can move between checks for reasons
-// that have nothing to do with a discretionary switch — a direct push to main, an engineer
-// committing to the PR branch, etc. Same safety rule as everywhere else: auto-apply whatever of
-// the delta doesn't collide with the designer's own pending diffs.
+// Handles the diff target moving for reasons unrelated to a discretionary switch (a push to
+// main, a commit on the PR branch) — same safe-subset rule as everywhere else.
 async function applyIdleDrift(
   settings: Omit<PluginSettings, "pat">,
   result: ProposalCheckResult,
@@ -110,7 +106,7 @@ async function applyIdleDrift(
     return { result, syncedCount: 0 };
   }
 
-  const safeDotPaths = computeSafeSubset(lastGoodResult.gitContent, result.gitContent, lastGoodResult.diffs);
+  const safeDotPaths = await computeSafeSubset(lastGoodResult.gitContent, result.gitContent);
   if (safeDotPaths.size === 0) {
     return { result, syncedCount: 0 };
   }
@@ -123,8 +119,7 @@ async function applyIdleDrift(
 }
 
 // The 3a decision: is the active proposal still open? If not, resolve it and report what
-// happened; otherwise this is just an ordinary check (plus 3b's staleness check and idle-drift
-// sync). lastGoodResult (the previous successful check, if any) stands in for a fresh
+// happened. lastGoodResult (the previous successful check, if any) stands in for a fresh
 // checkForProposalChanges call so the fallback doesn't merge onto a diff computed against the
 // now-dead branch.
 export async function checkActiveProposalStatus(
@@ -176,8 +171,7 @@ export type UpdateBranchResult =
   | { status: "updated"; count: number; gitContent: string; refreshed: FigmaDiffResult }
   | { status: "conflict"; detail: string };
 
-// 3b: merges main into the proposal's branch server-side, then applies the safe subset of
-// whatever main brought in — same mechanism 3c/3d already use for a discretionary switch.
+// Reuses the same safe-subset mechanism 3c/3d already use for a discretionary switch.
 export async function updateProposalBranch(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
@@ -203,7 +197,7 @@ export async function updateProposalBranch(
 
   const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
   const newGitContent = branchFile?.content ?? "{}";
-  const safeDotPaths = computeSafeSubset(current.gitContent, newGitContent, current.diffs);
+  const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
   const refreshed = await applySafeSubset(newGitContent, safeDotPaths, resolveDiffSettings(settings, activeProposal));
   return { status: "updated", count: safeDotPaths.size, gitContent: newGitContent, refreshed };
 }
@@ -215,7 +209,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Waits for GitHub to finish computing mergeable_state after an update-branch call.
 async function waitForMergeResolution(
   github: GitHubService,
   owner: string,
@@ -230,7 +223,6 @@ async function waitForMergeResolution(
   throw new Error("GitHub is still finalizing this merge — it'll sync automatically once it's done.");
 }
 
-// Closes the PR and deletes its branch, then falls back to main via the same path 3a uses.
 export async function abandonProposal(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
