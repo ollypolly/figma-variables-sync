@@ -104,10 +104,12 @@ export async function applySafeSubset(
   safeDotPaths: Set<string>,
   diffSettings: Omit<PluginSettings, "pat">
 ): Promise<FigmaDiffResult> {
-  const merged = applySafeDiffsToFigmaJson(figmaContent, newGitContent, safeDotPaths);
-  const result = await requestImport(merged);
-  if (!result.success) {
-    throw new Error(result.message);
+  if (safeDotPaths.size > 0) {
+    const merged = applySafeDiffsToFigmaJson(figmaContent, newGitContent, safeDotPaths);
+    const result = await requestImport(merged);
+    if (!result.success) {
+      throw new Error(result.message);
+    }
   }
   return checkFigmaChanges(newGitContent, diffSettings);
 }

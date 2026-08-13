@@ -158,7 +158,19 @@ describe("applySafeSubset", () => {
   it("throws instead of re-diffing when the import itself fails", async () => {
     vi.mocked(requestImport).mockResolvedValue({ success: false, message: "Import failed.", quarantined: [] });
 
-    await expect(applySafeSubset("{}", "{}", new Set(), settings)).rejects.toThrow("Import failed.");
+    await expect(
+      applySafeSubset("{}", "{}", new Set(["Tokens.brand.primary"]), settings)
+    ).rejects.toThrow("Import failed.");
     expect(requestExport).not.toHaveBeenCalled();
+  });
+
+  it("skips the import entirely and just re-diffs when there's nothing safe to apply", async () => {
+    const newGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    vi.mocked(requestExport).mockResolvedValue(newGitContent);
+
+    const result = await applySafeSubset("{}", newGitContent, new Set(), settings);
+
+    expect(requestImport).not.toHaveBeenCalled();
+    expect(result.diffs).toEqual([]);
   });
 });
