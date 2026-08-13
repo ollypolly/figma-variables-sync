@@ -8,6 +8,8 @@ If you feel the pull to add one, treat that as a signal first, not a task to ful
 
 Only write one when a genuine WHY survives that attempt — a hidden constraint, a workaround for a specific external bug, an ordering dependency that can't be made self-evident through naming alone. Never write comments that restate WHAT the code does.
 
+This applies equally to test files. A one-line summary on top of a function that just restates its name/signature is WHAT, not WHY — delete it. A comment explaining why a mock is sequenced a certain way (call order, which value comes back when) is almost always better solved by a descriptive variable name (`liveFigmaContent`, `mergedResult`, `staleSnapshot`) than a paragraph of prose walking through the call sequence.
+
 ## Testing against real Figma state
 
 When a change depends on real Figma variable/collection state (descriptions, scopes, codeSyntax, hiddenFromPublishing, naming collisions, etc.), set that state via the Figma MCP `use_figma` tool first, rather than walking through manual UI steps in the Variables panel — it's faster and repeatable. Example: `variable.description = "..."`, `variable.scopes = [...]`, `variable.setVariableCodeSyntax('WEB', '...')`, `variable.hiddenFromPublishing = true`, then run the plugin's export/import and inspect the result. Fall back to manual UI steps only for things the API can't set (or when the user wants to verify by eye in the Figma UI itself).

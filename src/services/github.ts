@@ -169,8 +169,6 @@ export class GitHubService {
       .filter((pr) => pr.head_ref.startsWith(PROPOSAL_BRANCH_PREFIX));
   }
 
-  // The commit where base and head diverged — lets a caller diff what changed on one side
-  // since the fork point, independent of the other side's own changes.
   async getMergeBaseSha(owner: string, repo: string, base: string, head: string): Promise<string> {
     const response = await this.octokit.request("GET /repos/{owner}/{repo}/compare/{basehead}", {
       owner,
@@ -197,7 +195,6 @@ export class GitHubService {
     };
   }
 
-  // Merges the PR's base branch into its head branch server-side (GitHub's own "Update branch")
   async updateBranch(owner: string, repo: string, pullNumber: number): Promise<void> {
     await this.octokit.request("PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch", {
       owner,
