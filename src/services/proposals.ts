@@ -1,5 +1,5 @@
 import { applyStagedDiffs } from "@common/applyStagedDiffs";
-import { type DiffItem } from "@common/diff";
+import { computeDiff, type DiffItem } from "@common/diff";
 import { GitHubService, PROPOSAL_BRANCH_PREFIX } from "@services/github";
 import {
   applySafeSubset,
@@ -63,16 +63,81 @@ export interface ResolvedDeadProposal {
   count: number;
 }
 
+export interface ProposalStaleness {
+  count: number;
+}
+
+// Is there a token change on main this PR's branch doesn't have yet? Content-diff based, not
+// commit-count based — main moves constantly for reasons unrelated to tokens (app code, other
+// PRs), so counting commits would nag on every unrelated commit instead of only ones that
+// actually touched the tokens file.
+export async function checkProposalStaleness(
+  settings: Omit<PluginSettings, "pat">,
+  github: GitHubService,
+  activeProposal: ActiveProposal
+): Promise<ProposalStaleness | null> {
+  const mergeBaseSha = await github.getMergeBaseSha(
+    settings.owner,
+    settings.repo,
+    activeProposal.head_ref,
+    settings.branch
+  );
+  const [mergeBaseFile, mainFile] = await Promise.all([
+    github.getFile({ ...settings, branch: mergeBaseSha }),
+    github.getFile(settings),
+  ]);
+  const mergeBaseContent = mergeBaseFile?.content ?? "{}";
+  const mainContent = mainFile?.content ?? "{}";
+  if (mainContent === mergeBaseContent) return null;
+
+  // Diffed against the fork point, not the branch's own current content — the branch's own
+  // proposed changes always differ from main by definition and must not count as staleness.
+  const { diffs } = computeDiff(mainContent, mergeBaseContent, "proposals");
+  return diffs.length > 0 ? { count: diffs.length } : null;
+}
+
+// Whatever's being diffed against (main, or a PR's branch) can move between checks for reasons
+// that have nothing to do with a discretionary switch — a direct push to main, an engineer
+// committing to the PR branch, etc. Same safety rule as everywhere else: auto-apply whatever of
+// the delta doesn't collide with the designer's own pending diffs.
+async function applyIdleDrift(
+  settings: Omit<PluginSettings, "pat">,
+  result: ProposalCheckResult,
+  lastGoodResult: ProposalCheckResult | null,
+  activeProposal: ActiveProposal | null
+): Promise<{ result: ProposalCheckResult; syncedCount: number }> {
+  if (!lastGoodResult || result.gitContent === lastGoodResult.gitContent) {
+    return { result, syncedCount: 0 };
+  }
+
+  const safeDotPaths = computeSafeSubset(lastGoodResult.gitContent, result.gitContent, lastGoodResult.diffs);
+  if (safeDotPaths.size === 0) {
+    return { result, syncedCount: 0 };
+  }
+
+  const refreshed = await applySafeSubset(result.gitContent, safeDotPaths, resolveDiffSettings(settings, activeProposal));
+  return {
+    result: { ...refreshed, gitContent: result.gitContent, proposals: result.proposals },
+    syncedCount: safeDotPaths.size,
+  };
+}
+
 // The 3a decision: is the active proposal still open? If not, resolve it and report what
-// happened; otherwise this is just an ordinary check. lastGoodResult (the previous successful
-// check, if any) stands in for a fresh checkForProposalChanges call so the fallback doesn't
-// merge onto a diff computed against the now-dead branch.
+// happened; otherwise this is just an ordinary check (plus 3b's staleness check and idle-drift
+// sync). lastGoodResult (the previous successful check, if any) stands in for a fresh
+// checkForProposalChanges call so the fallback doesn't merge onto a diff computed against the
+// now-dead branch.
 export async function checkActiveProposalStatus(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
   activeProposal: ActiveProposal | null,
   lastGoodResult: ProposalCheckResult | null
-): Promise<{ result: ProposalCheckResult; resolvedDeadProposal: ResolvedDeadProposal | null }> {
+): Promise<{
+  result: ProposalCheckResult;
+  resolvedDeadProposal: ResolvedDeadProposal | null;
+  staleness: ProposalStaleness | null;
+  syncedCount: number;
+}> {
   const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
 
   if (activeProposal) {
@@ -87,11 +152,94 @@ export async function checkActiveProposalStatus(
           reason: match?.state === "merged" ? "merged" : "closed",
           count,
         },
+        staleness: null,
+        syncedCount: 0,
       };
     }
+
+    const rawResult = await checkForProposalChanges(settings, github, activeProposal, proposals);
+    const { result, syncedCount } = await applyIdleDrift(settings, rawResult, lastGoodResult, activeProposal);
+    return {
+      result,
+      resolvedDeadProposal: null,
+      staleness: await checkProposalStaleness(settings, github, activeProposal),
+      syncedCount,
+    };
   }
 
-  return { result: await checkForProposalChanges(settings, github, activeProposal, proposals), resolvedDeadProposal: null };
+  const rawResult = await checkForProposalChanges(settings, github, activeProposal, proposals);
+  const { result, syncedCount } = await applyIdleDrift(settings, rawResult, lastGoodResult, null);
+  return { result, resolvedDeadProposal: null, staleness: null, syncedCount };
+}
+
+export type UpdateBranchResult =
+  | { status: "updated"; count: number; gitContent: string; refreshed: FigmaDiffResult }
+  | { status: "conflict"; detail: string };
+
+// 3b: merges main into the proposal's branch server-side, then applies the safe subset of
+// whatever main brought in — same mechanism 3c/3d already use for a discretionary switch.
+export async function updateProposalBranch(
+  settings: Omit<PluginSettings, "pat">,
+  github: GitHubService,
+  activeProposal: ActiveProposal,
+  current: ProposalCheckResult
+): Promise<UpdateBranchResult> {
+  try {
+    await github.updateBranch(settings.owner, settings.repo, activeProposal.number);
+  } catch (e: any) {
+    // GitHub can reject this synchronously (422) for a real conflict instead of returning 202
+    // and only revealing it later via mergeable_state — same conflict, just detected earlier.
+    if (e?.status === 422) {
+      return { status: "conflict", detail: e.message ?? "GitHub rejected the merge as a conflict." };
+    }
+    throw e;
+  }
+
+  const pr = await waitForMergeResolution(github, settings.owner, settings.repo, activeProposal.number);
+
+  if (pr.mergeable_state === "dirty") {
+    return { status: "conflict", detail: "GitHub could not merge main into this branch automatically." };
+  }
+
+  const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
+  const newGitContent = branchFile?.content ?? "{}";
+  const safeDotPaths = computeSafeSubset(current.gitContent, newGitContent, current.diffs);
+  const refreshed = await applySafeSubset(newGitContent, safeDotPaths, resolveDiffSettings(settings, activeProposal));
+  return { status: "updated", count: safeDotPaths.size, gitContent: newGitContent, refreshed };
+}
+
+const MERGE_POLL_INTERVAL_MS = 2_000;
+const MERGE_POLL_MAX_ATTEMPTS = 8;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Waits for GitHub to finish computing mergeable_state after an update-branch call.
+async function waitForMergeResolution(
+  github: GitHubService,
+  owner: string,
+  repo: string,
+  pullNumber: number
+): Promise<{ mergeable: boolean | null; mergeable_state: string }> {
+  for (let attempt = 0; attempt < MERGE_POLL_MAX_ATTEMPTS; attempt++) {
+    const pr = await github.getPullRequest(owner, repo, pullNumber);
+    if (pr.mergeable_state !== "unknown") return pr;
+    await sleep(MERGE_POLL_INTERVAL_MS);
+  }
+  throw new Error("GitHub is still finalizing this merge — it'll sync automatically once it's done.");
+}
+
+// Closes the PR and deletes its branch, then falls back to main via the same path 3a uses.
+export async function abandonProposal(
+  settings: Omit<PluginSettings, "pat">,
+  github: GitHubService,
+  activeProposal: ActiveProposal,
+  current: ProposalCheckResult
+): Promise<{ refreshed: FigmaDiffResult; gitContent: string; count: number }> {
+  await github.closePullRequest(settings.owner, settings.repo, activeProposal.number);
+  await github.deleteBranch(settings.owner, settings.repo, activeProposal.head_ref);
+  return resolveDeadProposal(settings, github, current);
 }
 
 export async function submitProposal(

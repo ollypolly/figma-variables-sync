@@ -25,6 +25,13 @@ export function ProposalsTab({ active }: { active: boolean }) {
     pendingSwitch,
     switchLoading,
     cancelSwitch,
+    showStalenessNotice,
+    staleness,
+    dismissStaleness,
+    conflictNotice,
+    mergingBranch,
+    updateBranch,
+    abandonProposal,
     description,
     setDescription,
     submitting,
@@ -54,7 +61,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
   };
 
   const showForm = !checking && diffItems.length > 0;
-  const showTopArea = Boolean(collisionNotice || status || showForm);
+  const showTopArea = Boolean(collisionNotice || status || showForm || showStalenessNotice || conflictNotice);
 
   const handleReset = () => {
     const target = activeProposal ? `PR #${activeProposal.number}` : "main";
@@ -73,7 +80,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
             activeProposal={activeProposal}
             openProposals={openProposals}
             onSelect={requestSwitch}
-            disabled={submitting || switchLoading}
+            disabled={submitting || switchLoading || mergingBranch}
           />
           <VerticalSpace space="small" />
         </Container>
@@ -86,6 +93,36 @@ export function ProposalsTab({ active }: { active: boolean }) {
               <VerticalSpace space="small" />
 
               <div class="flex flex-col gap-4">
+                {conflictNotice && (
+                  <WarningNotice
+                    message={
+                      mergingBranch
+                        ? `Abandoning PR #${conflictNotice.number}…`
+                        : `PR #${conflictNotice.number} needs to be updated with main, but doing so would cause a merge conflict.`
+                    }
+                    resolution="engineer"
+                    details={{
+                      branch: conflictNotice.head_ref,
+                      url: conflictNotice.html_url,
+                      error: conflictNotice.detail,
+                      fixInstructions: conflictNotice.fixInstructions,
+                    }}
+                    action={{ label: "Abandon this PR", onClick: abandonProposal, loading: mergingBranch }}
+                  />
+                )}
+
+                {showStalenessNotice && staleness && activeProposal && (
+                  <WarningNotice
+                    message={
+                      mergingBranch
+                        ? `Updating PR #${activeProposal.number}'s branch with main…`
+                        : `Main has ${staleness.count} token change${staleness.count === 1 ? "" : "s"} this PR doesn't have yet.`
+                    }
+                    action={{ label: "Update branch", onClick: updateBranch, loading: mergingBranch }}
+                    onDismiss={dismissStaleness}
+                  />
+                )}
+
                 {collisionNotice && (
                   <WarningNotice
                     message={collisionNotice.message}
