@@ -8,6 +8,7 @@ import {
   Muted,
   Text,
   Textbox,
+  Toggle,
   VerticalSpace,
 } from "@create-figma-plugin/ui";
 import { h } from "preact";
@@ -24,6 +25,7 @@ export function SettingsTab() {
     testing,
     status,
     updateField,
+    updateBooleanField,
     handleSave,
     handleTestConnection,
   } = useSettings();
@@ -147,6 +149,21 @@ export function SettingsTab() {
         onValueInput={updateField("prLabels")}
         placeholder="e.g. patch, figma-variables-sync"
       />
+
+      <VerticalSpace space="large" />
+      <Divider />
+      <VerticalSpace space="medium" />
+      <Text>
+        <Bold>Sync Behavior</Bold>
+      </Text>
+
+      <VerticalSpace space="medium" />
+      <Toggle
+        value={settings.skipSwitchConfirmation}
+        onValueChange={updateBooleanField("skipSwitchConfirmation")}
+      >
+        <Text>Skip confirmation when switching PRs or going back to Main</Text>
+      </Toggle>
 
       <VerticalSpace space="large" />
       <Button onClick={handleSave} loading={saving} fullWidth>

@@ -3,8 +3,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
 
 import { requestExport, requestImport } from "@services/figmaMessages";
-import { checkFigmaChanges, resetFigmaToGit, resolveDiffSettings } from "./gitSync";
+import {
+  applySafeSubset,
+  checkFigmaChanges,
+  computeSafeSubset,
+  resetFigmaToGit,
+  resolveDiffSettings,
+} from "./gitSync";
 import { NamingCollisionError } from "@common/dtcg";
+import { color } from "@common/testUtils/tokens";
+import type { DiffItem } from "@common/diff";
 import type { PluginSettings } from "../types";
 
 const settings: PluginSettings = {
@@ -14,6 +22,7 @@ const settings: PluginSettings = {
   filePath: "tokens.json",
   branch: "main",
   prLabels: "",
+  skipSwitchConfirmation: false,
 };
 
 describe("checkFigmaChanges", () => {
@@ -90,5 +99,80 @@ describe("resetFigmaToGit", () => {
 
     await expect(resetFigmaToGit("{}", settings)).rejects.toThrow("Import failed.");
     expect(requestExport).not.toHaveBeenCalled();
+  });
+});
+
+describe("computeSafeSubset", () => {
+  it("excludes a path that's unchanged between the old and new git target", () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+
+    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set());
+  });
+
+  it("includes a path that changed on the new target with no local Figma drift", () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+
+    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set(["Tokens.brand.primary"]));
+  });
+
+  it("excludes a path that changed on the new target if the designer already has a local edit there", () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    const oldDiffs: DiffItem[] = [
+      { path: ["Tokens", "brand", "primary"], dotPath: "Tokens.brand.primary", type: "modified", figmaVal: "#0f0", gitVal: "#fff" },
+    ];
+
+    expect(computeSafeSubset(oldGit, newGit, oldDiffs)).toEqual(new Set());
+  });
+
+  it("excludes a path deleted going from the old to the new git target, regardless of drift", () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: {} } });
+
+    expect(computeSafeSubset(oldGit, newGit, [])).toEqual(new Set());
+  });
+});
+
+describe("applySafeSubset", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    vi.mocked(requestImport).mockReset();
+  });
+
+  it("merges the safe subset onto Figma's current content and re-diffs against the new git target", async () => {
+    const figmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValueOnce(figmaContent).mockResolvedValueOnce(newGitContent);
+
+    const result = await applySafeSubset(newGitContent, new Set(["Tokens.brand.primary"]), settings);
+
+    expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
+      Tokens: { brand: { primary: color("#000") } },
+    });
+    expect(result.diffs).toEqual([]);
+  });
+
+  it("throws instead of re-diffing when the import itself fails", async () => {
+    vi.mocked(requestExport).mockResolvedValue("{}");
+    vi.mocked(requestImport).mockResolvedValue({ success: false, message: "Import failed.", quarantined: [] });
+
+    await expect(
+      applySafeSubset("{}", new Set(["Tokens.brand.primary"]), settings)
+    ).rejects.toThrow("Import failed.");
+    expect(requestExport).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips the import (and the fetch of current Figma content it needs) when there's nothing safe to apply", async () => {
+    const newGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    vi.mocked(requestExport).mockResolvedValue(newGitContent);
+
+    const result = await applySafeSubset(newGitContent, new Set(), settings);
+
+    expect(requestImport).not.toHaveBeenCalled();
+    expect(requestExport).toHaveBeenCalledTimes(1);
+    expect(result.diffs).toEqual([]);
   });
 });

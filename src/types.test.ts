@@ -10,6 +10,7 @@ describe("trimSettings", () => {
       filePath: "  tokens/design-tokens.json",
       branch: "main  ",
       prLabels: " patch ",
+      skipSwitchConfirmation: false,
     };
 
     const trimmed = trimSettings(dirtySettings);
@@ -21,6 +22,7 @@ describe("trimSettings", () => {
       filePath: "tokens/design-tokens.json",
       branch: "main",
       prLabels: "patch",
+      skipSwitchConfirmation: false,
     });
   });
 
@@ -32,6 +34,7 @@ describe("trimSettings", () => {
       filePath: "tokens.json",
       branch: "main",
       prLabels: "patch",
+      skipSwitchConfirmation: false,
     };
 
     const trimmed = trimSettings(cleanSettings);

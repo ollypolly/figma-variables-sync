@@ -3,6 +3,7 @@ import { Fragment, h } from "preact";
 import { useState } from "preact/hooks";
 
 import { WarningNotice } from "@components/WarningNotice";
+import { DiffBaseSwitchDialog } from "@components/DiffBaseSwitchDialog";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
 import { PrSelector } from "@components/PrSelector";
@@ -20,7 +21,10 @@ export function ProposalsTab({ active }: { active: boolean }) {
     primaryModeName,
     openProposals,
     activeProposal,
-    setActiveProposal,
+    requestSwitch,
+    pendingSwitch,
+    switchLoading,
+    cancelSwitch,
     description,
     setDescription,
     submitting,
@@ -37,6 +41,17 @@ export function ProposalsTab({ active }: { active: boolean }) {
   } = useProposals(active);
 
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [confirmingSwitch, setConfirmingSwitch] = useState(false);
+
+  const handleConfirmSwitch = async () => {
+    if (!pendingSwitch) return;
+    setConfirmingSwitch(true);
+    try {
+      await pendingSwitch.commit();
+    } finally {
+      setConfirmingSwitch(false);
+    }
+  };
 
   const showForm = !checking && diffItems.length > 0;
   const showTopArea = Boolean(collisionNotice || status || showForm);
@@ -57,8 +72,8 @@ export function ProposalsTab({ active }: { active: boolean }) {
           <PrSelector
             activeProposal={activeProposal}
             openProposals={openProposals}
-            onSelect={setActiveProposal}
-            disabled={submitting}
+            onSelect={requestSwitch}
+            disabled={submitting || switchLoading}
           />
           <VerticalSpace space="small" />
         </Container>
@@ -145,6 +160,14 @@ export function ProposalsTab({ active }: { active: boolean }) {
         json={exportPreviewJson ?? undefined}
         loading={exportPreviewLoading}
         error={exportPreviewError}
+      />
+      <DiffBaseSwitchDialog
+        open={pendingSwitch !== null}
+        targetLabel={pendingSwitch?.targetLabel ?? ""}
+        count={pendingSwitch?.count ?? 0}
+        loading={confirmingSwitch}
+        onConfirm={handleConfirmSwitch}
+        onCancel={cancelSwitch}
       />
     </TabGuard>
   );

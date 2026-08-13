@@ -1,3 +1,4 @@
+import { applySafeDiffsToFigmaJson } from "@common/applySafeDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
 import { NamingCollisionError } from "@common/dtcg";
 import { requestExport, requestImport } from "@services/figmaMessages";
@@ -75,4 +76,37 @@ export async function resetFigmaToGit(
     throw new Error(result.message);
   }
   return checkFigmaChanges(gitContent, diffSettings);
+}
+
+// Never overrides the designer's local changes.
+export function computeSafeSubset(
+  oldGitContent: string,
+  newGitContent: string,
+  oldDiffs: DiffItem[]
+): Set<string> {
+  const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
+  const drifted = new Set(oldDiffs.map((d) => d.dotPath));
+  const safe = new Set<string>();
+  for (const d of delta) {
+    if (d.type === "deleted") continue;
+    if (drifted.has(d.dotPath)) continue;
+    safe.add(d.dotPath);
+  }
+  return safe;
+}
+
+export async function applySafeSubset(
+  newGitContent: string,
+  safeDotPaths: Set<string>,
+  diffSettings: Omit<PluginSettings, "pat">
+): Promise<FigmaDiffResult> {
+  if (safeDotPaths.size > 0) {
+    const figmaContent = await requestExport();
+    const merged = applySafeDiffsToFigmaJson(figmaContent, newGitContent, safeDotPaths);
+    const result = await requestImport(merged);
+    if (!result.success) {
+      throw new Error(result.message);
+    }
+  }
+  return checkFigmaChanges(newGitContent, diffSettings);
 }

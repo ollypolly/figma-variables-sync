@@ -41,7 +41,7 @@ export function PrSelector({ activeProposal, openProposals, onSelect, disabled }
 
   return (
     <div class="flex gap-2 items-center">
-      <div class="flex-1">
+      <div class="flex-1 min-w-0">
         <Dropdown
           options={options}
           value={activeProposal ? String(activeProposal.number) : "main"}
@@ -54,15 +54,17 @@ export function PrSelector({ activeProposal, openProposals, onSelect, disabled }
           href={activeProposal.html_url}
           target="_blank"
           title={`View PR #${activeProposal.number} on GitHub — ${activeProposal.title}`}
-          style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap" }}
+          style={{ display: "flex", alignItems: "center", gap: "4px", whiteSpace: "nowrap", flexShrink: 0 }}
         >
           <IconLink16 />
           View PR
         </Link>
       )}
-      <Button secondary onClick={() => onSelect(null)} disabled={disabled || !activeProposal}>
-        New Request
-      </Button>
+      <div class="shrink-0">
+        <Button secondary onClick={() => onSelect(null)} disabled={disabled || !activeProposal}>
+          New Request
+        </Button>
+      </div>
     </div>
   );
 }

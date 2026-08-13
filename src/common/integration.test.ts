@@ -30,6 +30,7 @@ describe("Plugin Flow Integration Tests", () => {
     filePath: "tokens.json",
     branch: "main",
     prLabels: "",
+    skipSwitchConfirmation: false,
   };
 
   beforeEach(() => {
@@ -292,7 +293,6 @@ describe("Plugin Flow Integration Tests", () => {
       const fileData = await github.getFile(config);
       expect(fileData).toBeNull();
 
-      // Check how useUpdates behaves
       const checkUpdateLogic = async () => {
         if (!fileData) {
           throw new Error(
