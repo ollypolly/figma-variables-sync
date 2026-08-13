@@ -145,9 +145,9 @@ describe("applySafeSubset", () => {
     const figmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
     vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValue(newGitContent);
+    vi.mocked(requestExport).mockResolvedValueOnce(figmaContent).mockResolvedValueOnce(newGitContent);
 
-    const result = await applySafeSubset(figmaContent, newGitContent, new Set(["Tokens.brand.primary"]), settings);
+    const result = await applySafeSubset(newGitContent, new Set(["Tokens.brand.primary"]), settings);
 
     expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
       Tokens: { brand: { primary: color("#000") } },
@@ -156,21 +156,23 @@ describe("applySafeSubset", () => {
   });
 
   it("throws instead of re-diffing when the import itself fails", async () => {
+    vi.mocked(requestExport).mockResolvedValue("{}");
     vi.mocked(requestImport).mockResolvedValue({ success: false, message: "Import failed.", quarantined: [] });
 
     await expect(
-      applySafeSubset("{}", "{}", new Set(["Tokens.brand.primary"]), settings)
+      applySafeSubset("{}", new Set(["Tokens.brand.primary"]), settings)
     ).rejects.toThrow("Import failed.");
-    expect(requestExport).not.toHaveBeenCalled();
+    expect(requestExport).toHaveBeenCalledTimes(1);
   });
 
-  it("skips the import entirely and just re-diffs when there's nothing safe to apply", async () => {
+  it("skips the import (and the fetch of current Figma content it needs) when there's nothing safe to apply", async () => {
     const newGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
     vi.mocked(requestExport).mockResolvedValue(newGitContent);
 
-    const result = await applySafeSubset("{}", newGitContent, new Set(), settings);
+    const result = await applySafeSubset(newGitContent, new Set(), settings);
 
     expect(requestImport).not.toHaveBeenCalled();
+    expect(requestExport).toHaveBeenCalledTimes(1);
     expect(result.diffs).toEqual([]);
   });
 });

@@ -99,12 +99,12 @@ export function computeSafeSubset(
 }
 
 export async function applySafeSubset(
-  figmaContent: string,
   newGitContent: string,
   safeDotPaths: Set<string>,
   diffSettings: Omit<PluginSettings, "pat">
 ): Promise<FigmaDiffResult> {
   if (safeDotPaths.size > 0) {
+    const figmaContent = await requestExport();
     const merged = applySafeDiffsToFigmaJson(figmaContent, newGitContent, safeDotPaths);
     const result = await requestImport(merged);
     if (!result.success) {

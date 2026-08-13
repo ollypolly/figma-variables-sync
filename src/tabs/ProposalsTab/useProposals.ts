@@ -178,8 +178,7 @@ export function useProposals(active: boolean) {
         const safeDotPaths = computeSafeSubset(oldGitContent, newGitContent, oldDiffs);
 
         const commit = async () => {
-          const currentFigmaContent = await requestExport();
-          const refreshed = await applySafeSubset(currentFigmaContent, newGitContent, safeDotPaths, targetSettings);
+          const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
           setActiveProposal(target);
           check.setData((prev) => ({
             diffs: refreshed.diffs,

@@ -9,7 +9,6 @@ import {
   type CollisionNotice,
   type FigmaDiffResult,
 } from "@services/gitSync";
-import { requestExport } from "@services/figmaMessages";
 import { parsePrLabels, type ActiveProposal, type PluginSettings } from "../types";
 
 export interface Proposal {
@@ -53,8 +52,7 @@ export async function resolveDeadProposal(
   const mainFile = await github.getFile(settings);
   const newGitContent = mainFile?.content ?? "{}";
   const safeDotPaths = computeSafeSubset(staleResult.gitContent, newGitContent, staleResult.diffs);
-  const currentFigmaContent = await requestExport();
-  const refreshed = await applySafeSubset(currentFigmaContent, newGitContent, safeDotPaths, settings);
+  const refreshed = await applySafeSubset(newGitContent, safeDotPaths, settings);
   return { refreshed, gitContent: newGitContent, count: safeDotPaths.size };
 }
 
