@@ -34,7 +34,9 @@
   "dependencies": {
     "@create-figma-plugin/ui": "^4.0.3",
     "@create-figma-plugin/utilities": "^4.0.3",
+    "@nanostores/preact": "^1.1.0",
     "@octokit/core": "^7.0.6",
+    "nanostores": "^1.4.2",
     "preact": ">=10"
   },
   "devDependencies": {

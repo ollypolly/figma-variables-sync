@@ -12,7 +12,7 @@ import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
 import { useProposals } from "./useProposals";
 
-export function ProposalsTab({ active }: { active: boolean }) {
+export function ProposalsTab() {
   const {
     settingsLoading,
     isConfigured,
@@ -46,7 +46,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
     exportPreviewLoading,
     exportPreviewError,
     loadExportPreview,
-  } = useProposals(active);
+  } = useProposals();
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmingSwitch, setConfirmingSwitch] = useState(false);

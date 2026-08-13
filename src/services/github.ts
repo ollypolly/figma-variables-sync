@@ -183,7 +183,7 @@ export class GitHubService {
     owner: string,
     repo: string,
     pullNumber: number
-  ): Promise<{ mergeable: boolean | null; mergeable_state: string }> {
+  ): Promise<{ mergeable: boolean | null; mergeable_state: string; state: "open" | "closed" | "merged" }> {
     const response = await this.octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
       owner,
       repo,
@@ -192,6 +192,7 @@ export class GitHubService {
     return {
       mergeable: response.data.mergeable,
       mergeable_state: response.data.mergeable_state,
+      state: response.data.merged_at ? "merged" : response.data.state,
     };
   }
 

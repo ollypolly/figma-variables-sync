@@ -328,17 +328,26 @@ describe("GitHubService", () => {
   });
 
   describe("getPullRequest", () => {
-    it("should return mergeable and mergeable_state", async () => {
+    it("should return mergeable, mergeable_state, and state", async () => {
       mockRequest.mockResolvedValueOnce({
-        data: { mergeable: true, mergeable_state: "clean", extra: "ignored" },
+        data: { mergeable: true, mergeable_state: "clean", state: "open", extra: "ignored" },
       });
 
       const result = await service.getPullRequest("owner", "repo", 5);
-      expect(result).toEqual({ mergeable: true, mergeable_state: "clean" });
+      expect(result).toEqual({ mergeable: true, mergeable_state: "clean", state: "open" });
       expect(mockRequest).toHaveBeenCalledWith(
         "GET /repos/{owner}/{repo}/pulls/{pull_number}",
         { owner: "owner", repo: "repo", pull_number: 5 }
       );
+    });
+
+    it("should report 'merged' rather than 'closed' when merged_at is set", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: { mergeable: null, mergeable_state: "unknown", state: "closed", merged_at: "2024-01-01T00:00:00Z" },
+      });
+
+      const result = await service.getPullRequest("owner", "repo", 5);
+      expect(result.state).toBe("merged");
     });
   });
 

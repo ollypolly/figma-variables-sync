@@ -1,9 +1,12 @@
 import { render, Tabs, useWindowResize } from "@create-figma-plugin/ui";
+import { useStore } from "@nanostores/preact";
 import { emit } from "@create-figma-plugin/utilities";
 import { h } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useState } from "preact/hooks";
 
-import { AppProvider } from "@hooks/useAppContext";
+import { $activeProposalLoading } from "@stores/activeProposalStore";
+import { initProposalsSync } from "@stores/proposalsStore";
+import { $isConfigured } from "@stores/settingsStore";
 import { ProposalsTab } from "@tabs/ProposalsTab";
 import { SettingsTab } from "@tabs/SettingsTab";
 
@@ -12,6 +15,13 @@ import "!./output.css";
 
 function Plugin() {
   const [tabValue, setTabValue] = useState<string>("Changes");
+  const isConfigured = useStore($isConfigured);
+  const activeProposalLoading = useStore($activeProposalLoading);
+
+  useEffect(() => {
+    if (!isConfigured || activeProposalLoading) return;
+    return initProposalsSync();
+  }, [isConfigured, activeProposalLoading]);
 
   useWindowResize(
     function (windowSize) {
@@ -27,7 +37,7 @@ function Plugin() {
   );
 
   const tabOptions = [
-    { value: "Changes", children: <ProposalsTab active={tabValue === "Changes"} /> },
+    { value: "Changes", children: <ProposalsTab /> },
     { value: "Settings", children: <SettingsTab /> },
   ];
 
@@ -42,12 +52,4 @@ function Plugin() {
   );
 }
 
-function Root() {
-  return (
-    <AppProvider>
-      <Plugin />
-    </AppProvider>
-  );
-}
-
-export default render(Root);
+export default render(Plugin);

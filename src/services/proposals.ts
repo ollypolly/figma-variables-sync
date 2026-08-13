@@ -133,10 +133,24 @@ export async function checkActiveProposalStatus(
   staleness: ProposalStaleness | null;
   syncedCount: number;
 }> {
-  const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
+  const listedProposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
 
   if (activeProposal) {
-    const match = proposals.find((p) => p.number === activeProposal.number);
+    let proposals = listedProposals;
+    let match = proposals.find((p) => p.number === activeProposal.number);
+
+    // GitHub's PR-list endpoint can briefly lag behind a PR we just created or switched to
+    // ourselves — confirm against the single-PR endpoint before ever declaring it dead, so that
+    // lag doesn't get misread as "merged or closed" and knock the designer back to their base
+    // branch on their own just-created PR.
+    if (!match || match.state !== "open") {
+      const confirmed = await github.getPullRequest(settings.owner, settings.repo, activeProposal.number);
+      if (confirmed.state === "open") {
+        match = { ...activeProposal, state: "open" };
+        proposals = [match, ...proposals.filter((p) => p.number !== activeProposal.number)];
+      }
+    }
+
     if (!match || match.state !== "open") {
       const staleResult = lastGoodResult ?? (await checkForProposalChanges(settings, github, activeProposal, proposals));
       const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
@@ -162,7 +176,7 @@ export async function checkActiveProposalStatus(
     };
   }
 
-  const rawResult = await checkForProposalChanges(settings, github, activeProposal, proposals);
+  const rawResult = await checkForProposalChanges(settings, github, activeProposal, listedProposals);
   const { result, syncedCount } = await applyIdleDrift(settings, rawResult, lastGoodResult, null);
   return { result, resolvedDeadProposal: null, staleness: null, syncedCount };
 }

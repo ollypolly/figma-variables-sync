@@ -708,6 +708,46 @@ describe("checkActiveProposalStatus", () => {
     expect(resolvedDeadProposal?.reason).toBe("closed");
   });
 
+  it("confirms via the single-PR endpoint before declaring dead, when the list hasn't caught up yet", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([]),
+      getPullRequest: vi.fn().mockResolvedValue({ mergeable: true, mergeable_state: "clean", state: "open" }),
+    });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal, staleness, result } = await checkActiveProposalStatus(
+      settings,
+      github,
+      activeProposal,
+      null
+    );
+
+    expect(github.getPullRequest).toHaveBeenCalledWith(settings.owner, settings.repo, activeProposal.number);
+    expect(resolvedDeadProposal).toBeNull();
+    expect(staleness).toBeNull();
+    expect(result.proposals).toContainEqual(expect.objectContaining({ number: activeProposal.number, state: "open" }));
+  });
+
+  it("still reports the proposal as dead when the single-PR endpoint also confirms it's gone", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([]),
+      getPullRequest: vi.fn().mockResolvedValue({ mergeable: null, mergeable_state: "unknown", state: "closed" }),
+    });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+      diffs: [],
+      figmaContent: "{}",
+      gitContent: "{}",
+      proposals: [],
+      collisionNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(resolvedDeadProposal?.reason).toBe("closed");
+  });
+
   it("falls back to a fresh checkForProposalChanges call when there's no last-good result to reuse", async () => {
     const github = createMockGitHub({
       listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "merged", html_url: "u", head_ref: "figma/proposal-1" }]),

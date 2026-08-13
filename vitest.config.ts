@@ -8,6 +8,7 @@ export default defineConfig({
       "@components": resolve(__dirname, "src/components"),
       "@hooks": resolve(__dirname, "src/hooks"),
       "@services": resolve(__dirname, "src/services"),
+      "@stores": resolve(__dirname, "src/stores"),
       "@tabs": resolve(__dirname, "src/tabs"),
       "@utils": resolve(__dirname, "src/utils"),
     },
