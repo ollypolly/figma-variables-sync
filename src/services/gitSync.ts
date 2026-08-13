@@ -78,10 +78,7 @@ export async function resetFigmaToGit(
   return checkFigmaChanges(gitContent, diffSettings);
 }
 
-// A path is safe to silently sync from git to Figma exactly when it changed between the old and
-// new git target AND the designer has no local (Figma-side) edit sitting on it — reusing
-// computeDiff git-content-vs-git-content, rather than figma-vs-git, to get add/modify/delete
-// labeling between the two targets for free.
+// Never overrides the designer's local changes.
 export function computeSafeSubset(
   oldGitContent: string,
   newGitContent: string,
