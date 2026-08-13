@@ -31,14 +31,15 @@ export interface ProposalCheckResult {
 export async function checkForProposalChanges(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
-  activeProposal: ActiveProposal | null
+  activeProposal: ActiveProposal | null,
+  knownProposals?: Proposal[]
 ): Promise<ProposalCheckResult> {
   const diffSettings = resolveDiffSettings(settings, activeProposal);
   const fileData = await github.getFile(diffSettings);
   const gitContent = fileData?.content ?? "{}";
 
   const { diffs, figmaContent, collisionNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
-  const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
+  const proposals = knownProposals ?? (await github.listPullRequests(settings.owner, settings.repo, settings.branch));
   return { diffs, figmaContent, gitContent, proposals, collisionNotice, primaryModeName };
 }
 
@@ -72,11 +73,12 @@ export async function checkActiveProposalStatus(
   activeProposal: ActiveProposal | null,
   lastGoodResult: ProposalCheckResult | null
 ): Promise<{ result: ProposalCheckResult; resolvedDeadProposal: ResolvedDeadProposal | null }> {
+  const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
+
   if (activeProposal) {
-    const proposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
     const match = proposals.find((p) => p.number === activeProposal.number);
     if (!match || match.state !== "open") {
-      const staleResult = lastGoodResult ?? (await checkForProposalChanges(settings, github, activeProposal));
+      const staleResult = lastGoodResult ?? (await checkForProposalChanges(settings, github, activeProposal, proposals));
       const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
       return {
         result: { ...refreshed, gitContent, proposals },
@@ -89,7 +91,7 @@ export async function checkActiveProposalStatus(
     }
   }
 
-  return { result: await checkForProposalChanges(settings, github, activeProposal), resolvedDeadProposal: null };
+  return { result: await checkForProposalChanges(settings, github, activeProposal, proposals), resolvedDeadProposal: null };
 }
 
 export async function submitProposal(

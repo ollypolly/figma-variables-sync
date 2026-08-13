@@ -12,12 +12,7 @@ import {
   resetFigmaToGit,
   resolveDiffSettings,
 } from "@services/gitSync";
-import {
-  checkActiveProposalStatus,
-  checkForProposalChanges,
-  submitProposal,
-  type ProposalCheckResult,
-} from "@services/proposals";
+import { checkActiveProposalStatus, submitProposal, type ProposalCheckResult } from "@services/proposals";
 import type { ActiveProposal } from "../../types";
 
 const FAST_POLL_INTERVAL_MS = 3_000;

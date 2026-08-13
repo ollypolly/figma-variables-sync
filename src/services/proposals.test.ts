@@ -55,6 +55,17 @@ describe("checkForProposalChanges", () => {
     expect(result.collisionNotice).toBeNull();
   });
 
+  it("reuses an already-fetched proposals list instead of fetching its own when knownProposals is passed", async () => {
+    vi.mocked(requestExport).mockResolvedValue("{}");
+    const github = createMockGitHub();
+    const knownProposals = [{ number: 5, title: "x", state: "open", html_url: "u", head_ref: "figma/proposal-1" }];
+
+    const result = await checkForProposalChanges(settings, github, null, knownProposals);
+
+    expect(github.listPullRequests).not.toHaveBeenCalled();
+    expect(result.proposals).toBe(knownProposals);
+  });
+
   it("surfaces a designer-resolution collision notice without throwing when export finds a naming collision", async () => {
     vi.mocked(requestExport).mockRejectedValue(new NamingCollisionError("Colliding names.", ["Tokens.Primary"]));
     const github = createMockGitHub();
@@ -280,6 +291,7 @@ describe("checkActiveProposalStatus", () => {
     const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, null);
 
     expect(resolvedDeadProposal).toBeNull();
+    expect(github.listPullRequests).toHaveBeenCalledTimes(1);
   });
 
   it("resolves and reports a merged proposal, falling back to main", async () => {
