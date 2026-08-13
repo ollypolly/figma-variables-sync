@@ -1,6 +1,7 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { exportToDtcg, NamingCollisionError } from "@common/dtcg";
 
+import { ACTIVE_PROPOSAL_KEY, DRAFT_DESCRIPTION_KEY, SETTINGS_KEY } from "./storageKeys";
 import {
   DEFAULT_SETTINGS,
   trimSettings,
@@ -14,10 +15,6 @@ import {
   type RequestExportHandler,
   type SettingsLoadedHandler,
 } from "../types";
-
-const SETTINGS_KEY = "figma-variables-sync-settings";
-const ACTIVE_PROPOSAL_KEY = "figma-variables-sync-active-proposal";
-const DRAFT_DESCRIPTION_KEY = "figma-variables-sync-draft-description";
 
 export function registerFromFigmaHandlers() {
   on<RequestExportHandler>("REQUEST_EXPORT", function () {

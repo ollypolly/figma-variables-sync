@@ -121,6 +121,8 @@ export function useProposals(active: boolean) {
     lastGoodCheckData.current = check.data;
   }, [check.data]);
 
+  const latestCheckData = useLatestRef(check.data);
+
   const exportPreview = useAsync<string>(useCallback(() => requestExport(), []));
 
   const submit = useAsync<{
@@ -169,47 +171,45 @@ export function useProposals(active: boolean) {
 
   const requestSwitch = useCallback(
     async (target: ActiveProposal | null) => {
-      if (!github || !check.data) return;
+      if (!github || !latestCheckData.current) return;
       setBackground(null);
       const targetSettings = resolveDiffSettings(settings, target);
-      const oldGitContent = check.data.gitContent;
-      const oldDiffs = check.data.diffs;
+
+      const planSwitch = async () => {
+        const current = latestCheckData.current;
+        if (!current) throw new Error("Nothing to switch from.");
+        const file = await github.getFile(targetSettings);
+        const newGitContent = file?.content ?? "{}";
+        const safeDotPaths = computeSafeSubset(current.gitContent, newGitContent, current.diffs);
+        return { newGitContent, safeDotPaths };
+      };
+
+      const commit = async () => {
+        const { newGitContent, safeDotPaths } = await planSwitch();
+        const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
+        setActiveProposal(target);
+        check.setData((prev) => ({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] }));
+        setPendingSwitch(null);
+      };
 
       setSwitchLoading(true);
       try {
-        const file = await github.getFile(targetSettings);
-        const newGitContent = file?.content ?? "{}";
-        const safeDotPaths = computeSafeSubset(oldGitContent, newGitContent, oldDiffs);
-
-        const commit = async () => {
-          const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
-          setActiveProposal(target);
-          check.setData((prev) => ({
-            diffs: refreshed.diffs,
-            figmaContent: refreshed.figmaContent,
-            collisionNotice: refreshed.collisionNotice,
-            primaryModeName: refreshed.primaryModeName,
-            gitContent: newGitContent,
-            proposals: prev?.proposals ?? [],
-          }));
-          setPendingSwitch(null);
-        };
-
         if (settings.skipSwitchConfirmation) {
           await commit();
-        } else {
-          setPendingSwitch({
-            target,
-            targetLabel: target ? `PR #${target.number}` : "Main",
-            count: safeDotPaths.size,
-            commit,
-          });
+          return;
         }
+        const { safeDotPaths } = await planSwitch();
+        setPendingSwitch({
+          target,
+          targetLabel: target ? `PR #${target.number}` : "Main",
+          count: safeDotPaths.size,
+          commit,
+        });
       } finally {
         setSwitchLoading(false);
       }
     },
-    [github, check.data, settings, setActiveProposal]
+    [github, settings, setActiveProposal, check.setData]
   );
 
   useEffect(() => {
@@ -219,7 +219,6 @@ export function useProposals(active: boolean) {
   }, [settingsLoading, activeProposalLoading, isConfigured, active, activeProposal?.head_ref ?? null]);
 
   const pollingEnabled = !settingsLoading && !activeProposalLoading && isConfigured && active && !submit.loading;
-  const latestCheckData = useLatestRef(check.data);
 
   useEffect(() => {
     if (!pollingEnabled || !github) return;
