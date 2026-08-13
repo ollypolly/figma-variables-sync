@@ -192,7 +192,7 @@ export async function updateProposalBranch(
   const pr = await waitForMergeResolution(github, settings.owner, settings.repo, activeProposal.number);
 
   if (pr.mergeable_state === "dirty") {
-    return { status: "conflict", detail: "GitHub could not merge main into this branch automatically." };
+    return { status: "conflict", detail: `GitHub could not merge ${settings.branch} into this branch automatically.` };
   }
 
   const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });

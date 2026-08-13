@@ -130,7 +130,7 @@ export function useProposals(active: boolean) {
       resetStaleness();
       setBackground({
         success: true,
-        text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on Main, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
+        text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on ${settings.branch}, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
       });
     } else {
       setStaleness(nextStaleness);
@@ -279,7 +279,7 @@ export function useProposals(active: boolean) {
         check.setData((prev) => ({ ...result.refreshed, gitContent: result.gitContent, proposals: prev?.proposals ?? [] }));
         setBackground({
           success: true,
-          text: `PR #${activeProposal.number}'s branch updated to match main — ${result.count} variable${result.count === 1 ? "" : "s"} were updated to match.`,
+          text: `PR #${activeProposal.number}'s branch updated to match ${settings.branch} — ${result.count} variable${result.count === 1 ? "" : "s"} were updated to match.`,
         });
       }
     } catch (e) {
@@ -304,7 +304,7 @@ export function useProposals(active: boolean) {
       check.setData((prev) => ({ ...refreshed, gitContent, proposals: prev?.proposals ?? [] }));
       setBackground({
         success: true,
-        text: `PR #${abandonedNumber} abandoned — you're back on Main, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
+        text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
       });
     } catch (e) {
       setBackground({ success: false, text: e instanceof Error ? e.message : "Failed to abandon PR." });

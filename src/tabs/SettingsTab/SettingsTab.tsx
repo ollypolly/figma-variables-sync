@@ -162,7 +162,7 @@ export function SettingsTab() {
         value={settings.skipSwitchConfirmation}
         onValueChange={updateBooleanField("skipSwitchConfirmation")}
       >
-        <Text>Skip confirmation when switching PRs or going back to Main</Text>
+        <Text>Skip confirmation when switching PRs or going back to {settings.branch}</Text>
       </Toggle>
 
       <VerticalSpace space="large" />

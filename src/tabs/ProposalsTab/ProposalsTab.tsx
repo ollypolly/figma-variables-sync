@@ -100,7 +100,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
                     message={
                       mergingBranch
                         ? `Abandoning PR #${conflictNotice.number}…`
-                        : `PR #${conflictNotice.number} needs to be updated with main, but doing so would cause a merge conflict.`
+                        : `PR #${conflictNotice.number} needs to be updated with ${baseBranch}, but doing so would cause a merge conflict.`
                     }
                     resolution="engineer"
                     details={{
@@ -117,7 +117,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
                   <WarningNotice
                     message={
                       mergingBranch
-                        ? `Updating PR #${activeProposal.number}'s branch with main…`
+                        ? `Updating PR #${activeProposal.number}'s branch with ${baseBranch}…`
                         : `${baseBranch} has ${staleness.count} token change${staleness.count === 1 ? "" : "s"} this PR doesn't have yet.`
                     }
                     action={{ label: "Update branch", onClick: updateBranch, loading: mergingBranch }}
