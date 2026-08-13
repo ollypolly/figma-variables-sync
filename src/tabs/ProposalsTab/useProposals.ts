@@ -134,6 +134,9 @@ export function useProposals(active: boolean) {
       });
     } else {
       setStaleness(nextStaleness);
+      if (nextStaleness === null) {
+        setConflictNotice(null);
+      }
       if (syncedCount > 0) {
         const targetLabel = activeProposal ? `PR #${activeProposal.number}` : "Main";
         setBackground({
