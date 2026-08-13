@@ -185,11 +185,15 @@ export function useProposals(active: boolean) {
       };
 
       const commit = async () => {
-        const { newGitContent, safeDotPaths } = await planSwitch();
-        const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
-        setActiveProposal(target);
-        check.setData((prev) => ({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] }));
-        setPendingSwitch(null);
+        try {
+          const { newGitContent, safeDotPaths } = await planSwitch();
+          const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
+          setActiveProposal(target);
+          check.setData((prev) => ({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] }));
+          setPendingSwitch(null);
+        } catch (e) {
+          setBackground({ success: false, text: e instanceof Error ? e.message : "Failed to switch." });
+        }
       };
 
       setSwitchLoading(true);
@@ -205,6 +209,8 @@ export function useProposals(active: boolean) {
           count: safeDotPaths.size,
           commit,
         });
+      } catch (e) {
+        setBackground({ success: false, text: e instanceof Error ? e.message : "Failed to switch." });
       } finally {
         setSwitchLoading(false);
       }
