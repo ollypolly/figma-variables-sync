@@ -12,7 +12,14 @@ import {
   resetFigmaToGit,
   resolveDiffSettings,
 } from "@services/gitSync";
-import { checkActiveProposalStatus, submitProposal, type ProposalCheckResult } from "@services/proposals";
+import {
+  abandonProposal as requestAbandonProposal,
+  checkActiveProposalStatus,
+  submitProposal,
+  updateProposalBranch,
+  type ProposalCheckResult,
+  type ProposalStaleness,
+} from "@services/proposals";
 import type { ActiveProposal } from "../../types";
 
 const FAST_POLL_INTERVAL_MS = 3_000;
@@ -46,6 +53,14 @@ interface PendingSwitch {
   targetLabel: string;
   count: number;
   commit: () => Promise<void>;
+}
+
+interface ConflictNotice {
+  number: number;
+  head_ref: string;
+  html_url: string;
+  detail: string;
+  fixInstructions: string;
 }
 
 function deriveStatus({
@@ -87,12 +102,23 @@ export function useProposals(active: boolean) {
   const [pendingSwitch, setPendingSwitch] = useState<PendingSwitch | null>(null);
   const [switchLoading, setSwitchLoading] = useState(false);
 
+  const [staleness, setStaleness] = useState<ProposalStaleness | null>(null);
+  const [dismissedStalenessCount, setDismissedStalenessCount] = useState(0);
+  const [conflictNotice, setConflictNotice] = useState<ConflictNotice | null>(null);
+  const [mergingBranch, setMergingBranch] = useState(false);
+
   const lastGoodCheckData = useRef<ProposalCheckResult | null>(null);
+
+  const resetStaleness = useCallback(() => {
+    setStaleness(null);
+    setDismissedStalenessCount(0);
+    setConflictNotice(null);
+  }, []);
 
   const checkForActiveProposal = useCallback(async (): Promise<ProposalCheckResult> => {
     if (!github) throw new Error("Not configured.");
 
-    const { result, resolvedDeadProposal } = await checkActiveProposalStatus(
+    const { result, resolvedDeadProposal, staleness: nextStaleness, syncedCount } = await checkActiveProposalStatus(
       settings,
       github,
       activeProposal,
@@ -101,14 +127,27 @@ export function useProposals(active: boolean) {
 
     if (resolvedDeadProposal) {
       setActiveProposal(null);
+      resetStaleness();
       setBackground({
         success: true,
-        text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on Main, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
+        text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on ${settings.branch}, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
       });
+    } else {
+      setStaleness(nextStaleness);
+      if (nextStaleness === null) {
+        setConflictNotice(null);
+      }
+      if (syncedCount > 0) {
+        const targetLabel = activeProposal ? `PR #${activeProposal.number}` : settings.branch;
+        setBackground({
+          success: true,
+          text: `${syncedCount} variable${syncedCount === 1 ? "" : "s"} updated to match ${targetLabel}.`,
+        });
+      }
     }
 
     return result;
-  }, [settings, github, activeProposal, setActiveProposal]);
+  }, [settings, github, activeProposal, setActiveProposal, resetStaleness]);
 
   const check = useAsync<ProposalCheckResult>(checkForActiveProposal);
 
@@ -175,7 +214,7 @@ export function useProposals(active: boolean) {
         if (!current) throw new Error("Nothing to switch from.");
         const file = await github.getFile(targetSettings);
         const newGitContent = file?.content ?? "{}";
-        const safeDotPaths = computeSafeSubset(current.gitContent, newGitContent, current.diffs);
+        const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
         return { newGitContent, safeDotPaths };
       };
 
@@ -184,6 +223,7 @@ export function useProposals(active: boolean) {
           const { newGitContent, safeDotPaths } = await planSwitch();
           const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
           setActiveProposal(target);
+          resetStaleness();
           check.setData((prev) => ({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] }));
           setPendingSwitch(null);
         } catch (e) {
@@ -200,7 +240,7 @@ export function useProposals(active: boolean) {
         const { safeDotPaths } = await planSwitch();
         setPendingSwitch({
           target,
-          targetLabel: target ? `PR #${target.number}` : "Main",
+          targetLabel: target ? `PR #${target.number}` : settings.branch,
           count: safeDotPaths.size,
           commit,
         });
@@ -210,8 +250,72 @@ export function useProposals(active: boolean) {
         setSwitchLoading(false);
       }
     },
-    [github, settings, setActiveProposal, check.setData]
+    [github, settings, setActiveProposal, check.setData, resetStaleness]
   );
+
+  const updateBranch = useCallback(async () => {
+    if (!github || !activeProposal || !check.data || mergingBranch) return;
+    setMergingBranch(true);
+    setBackground(null);
+    try {
+      const result = await updateProposalBranch(settings, github, activeProposal, check.data);
+      if (result.status === "conflict") {
+        setConflictNotice({
+          number: activeProposal.number,
+          head_ref: activeProposal.head_ref,
+          html_url: activeProposal.html_url,
+          detail: result.detail,
+          fixInstructions:
+            `git fetch origin\n` +
+            `git checkout ${activeProposal.head_ref}\n` +
+            `git merge origin/${settings.branch}\n` +
+            `# Resolve the conflict markers — if it's unclear which value should win, check with the designer.\n` +
+            `git add <resolved files>\n` +
+            `git commit\n` +
+            `git push`,
+        });
+      } else {
+        resetStaleness();
+        check.setData((prev) => ({ ...result.refreshed, gitContent: result.gitContent, proposals: prev?.proposals ?? [] }));
+        setBackground({
+          success: true,
+          text: `PR #${activeProposal.number}'s branch updated to match ${settings.branch} — ${result.count} variable${result.count === 1 ? "" : "s"} were updated to match.`,
+        });
+      }
+    } catch (e) {
+      // Whether the merge actually landed is unknown at this point — don't re-show the
+      // pre-attempt staleness prompt as if nothing happened. The next poll re-checks fresh.
+      setStaleness(null);
+      setBackground({ success: false, text: e instanceof Error ? e.message : "Failed to update branch." });
+    } finally {
+      setMergingBranch(false);
+    }
+  }, [github, activeProposal, check.data, settings, check.setData, resetStaleness, mergingBranch]);
+
+  const abandonProposal = useCallback(async () => {
+    if (!github || !activeProposal || !check.data || mergingBranch) return;
+    setMergingBranch(true);
+    setBackground(null);
+    try {
+      const { refreshed, gitContent, count } = await requestAbandonProposal(settings, github, activeProposal, check.data);
+      const abandonedNumber = activeProposal.number;
+      setActiveProposal(null);
+      resetStaleness();
+      check.setData((prev) => ({ ...refreshed, gitContent, proposals: prev?.proposals ?? [] }));
+      setBackground({
+        success: true,
+        text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
+      });
+    } catch (e) {
+      setBackground({ success: false, text: e instanceof Error ? e.message : "Failed to abandon PR." });
+    } finally {
+      setMergingBranch(false);
+    }
+  }, [github, activeProposal, check.data, settings, setActiveProposal, check.setData, resetStaleness, mergingBranch]);
+
+  const dismissStaleness = useCallback(() => {
+    setDismissedStalenessCount(staleness?.count ?? 0);
+  }, [staleness]);
 
   useEffect(() => {
     if (!settingsLoading && !activeProposalLoading && isConfigured && active) {
@@ -219,7 +323,8 @@ export function useProposals(active: boolean) {
     }
   }, [settingsLoading, activeProposalLoading, isConfigured, active, activeProposal?.head_ref ?? null]);
 
-  const pollingEnabled = !settingsLoading && !activeProposalLoading && isConfigured && active && !submit.loading;
+  const pollingEnabled =
+    !settingsLoading && !activeProposalLoading && isConfigured && active && !submit.loading && !mergingBranch;
 
   useEffect(() => {
     if (!pollingEnabled || !github) return;
@@ -259,6 +364,14 @@ export function useProposals(active: boolean) {
     pendingSwitch,
     switchLoading,
     cancelSwitch: () => setPendingSwitch(null),
+    baseBranch: settings.branch,
+    staleness,
+    showStalenessNotice: staleness !== null && staleness.count > dismissedStalenessCount && !conflictNotice,
+    dismissStaleness,
+    conflictNotice,
+    mergingBranch,
+    updateBranch,
+    abandonProposal,
     description,
     setDescription,
     submitting: submit.loading,

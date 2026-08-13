@@ -78,14 +78,14 @@ export async function resetFigmaToGit(
   return checkFigmaChanges(gitContent, diffSettings);
 }
 
-// Never overrides the designer's local changes.
-export function computeSafeSubset(
-  oldGitContent: string,
-  newGitContent: string,
-  oldDiffs: DiffItem[]
-): Set<string> {
+// Never overrides the designer's local changes — fetches its own fresh export rather than
+// trusting a caller-supplied diffs array, which could be stale.
+export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<Set<string>> {
+  const figmaContent = await requestExport();
+  const { diffs: drift } = computeDiff(figmaContent, oldGitContent, "proposals");
+  const drifted = new Set(drift.map((d) => d.dotPath));
+
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
-  const drifted = new Set(oldDiffs.map((d) => d.dotPath));
   const safe = new Set<string>();
   for (const d of delta) {
     if (d.type === "deleted") continue;

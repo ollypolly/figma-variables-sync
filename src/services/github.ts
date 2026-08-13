@@ -168,4 +168,55 @@ export class GitHubService {
       }))
       .filter((pr) => pr.head_ref.startsWith(PROPOSAL_BRANCH_PREFIX));
   }
+
+  async getMergeBaseSha(owner: string, repo: string, base: string, head: string): Promise<string> {
+    const response = await this.octokit.request("GET /repos/{owner}/{repo}/compare/{basehead}", {
+      owner,
+      repo,
+      basehead: `${base}...${head}`,
+    });
+    return response.data.merge_base_commit.sha;
+  }
+
+  // Merge state for a PR — "unknown" while GitHub is still computing it
+  async getPullRequest(
+    owner: string,
+    repo: string,
+    pullNumber: number
+  ): Promise<{ mergeable: boolean | null; mergeable_state: string }> {
+    const response = await this.octokit.request("GET /repos/{owner}/{repo}/pulls/{pull_number}", {
+      owner,
+      repo,
+      pull_number: pullNumber,
+    });
+    return {
+      mergeable: response.data.mergeable,
+      mergeable_state: response.data.mergeable_state,
+    };
+  }
+
+  async updateBranch(owner: string, repo: string, pullNumber: number): Promise<void> {
+    await this.octokit.request("PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch", {
+      owner,
+      repo,
+      pull_number: pullNumber,
+    });
+  }
+
+  async closePullRequest(owner: string, repo: string, pullNumber: number): Promise<void> {
+    await this.octokit.request("PATCH /repos/{owner}/{repo}/pulls/{pull_number}", {
+      owner,
+      repo,
+      pull_number: pullNumber,
+      state: "closed",
+    });
+  }
+
+  async deleteBranch(owner: string, repo: string, branchName: string): Promise<void> {
+    await this.octokit.request("DELETE /repos/{owner}/{repo}/git/refs/{ref}", {
+      owner,
+      repo,
+      ref: `heads/${branchName}`,
+    });
+  }
 }

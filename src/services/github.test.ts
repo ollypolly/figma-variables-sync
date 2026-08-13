@@ -307,4 +307,74 @@ describe("GitHubService", () => {
       );
     });
   });
+
+  describe("getMergeBaseSha", () => {
+    it("should compare base and head and return the merge-base commit sha", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: { merge_base_commit: { sha: "merge-base-sha" }, extra: "ignored" },
+      });
+
+      const sha = await service.getMergeBaseSha("owner", "repo", "figma/proposal-1", "main");
+      expect(sha).toBe("merge-base-sha");
+      expect(mockRequest).toHaveBeenCalledWith(
+        "GET /repos/{owner}/{repo}/compare/{basehead}",
+        {
+          owner: "owner",
+          repo: "repo",
+          basehead: "figma/proposal-1...main",
+        }
+      );
+    });
+  });
+
+  describe("getPullRequest", () => {
+    it("should return mergeable and mergeable_state", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: { mergeable: true, mergeable_state: "clean", extra: "ignored" },
+      });
+
+      const result = await service.getPullRequest("owner", "repo", 5);
+      expect(result).toEqual({ mergeable: true, mergeable_state: "clean" });
+      expect(mockRequest).toHaveBeenCalledWith(
+        "GET /repos/{owner}/{repo}/pulls/{pull_number}",
+        { owner: "owner", repo: "repo", pull_number: 5 }
+      );
+    });
+  });
+
+  describe("updateBranch", () => {
+    it("should request the update-branch endpoint for the given PR", async () => {
+      mockRequest.mockResolvedValueOnce({ data: {} });
+
+      await service.updateBranch("owner", "repo", 5);
+      expect(mockRequest).toHaveBeenCalledWith(
+        "PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch",
+        { owner: "owner", repo: "repo", pull_number: 5 }
+      );
+    });
+  });
+
+  describe("closePullRequest", () => {
+    it("should patch the PR's state to closed", async () => {
+      mockRequest.mockResolvedValueOnce({ data: {} });
+
+      await service.closePullRequest("owner", "repo", 5);
+      expect(mockRequest).toHaveBeenCalledWith(
+        "PATCH /repos/{owner}/{repo}/pulls/{pull_number}",
+        { owner: "owner", repo: "repo", pull_number: 5, state: "closed" }
+      );
+    });
+  });
+
+  describe("deleteBranch", () => {
+    it("should delete the heads/{branch} ref", async () => {
+      mockRequest.mockResolvedValueOnce({ data: {} });
+
+      await service.deleteBranch("owner", "repo", "figma/proposal-1");
+      expect(mockRequest).toHaveBeenCalledWith(
+        "DELETE /repos/{owner}/{repo}/git/refs/{ref}",
+        { owner: "owner", repo: "repo", ref: "heads/figma/proposal-1" }
+      );
+    });
+  });
 });

@@ -9,6 +9,7 @@ export interface NoticeDetails {
   paths?: string[];
   file?: string;
   branch?: string;
+  url?: string;
   error?: string;
   // Kept out of the visible banner; included only in the copyable text.
   fixInstructions?: string;
@@ -18,7 +19,7 @@ interface WarningNoticeProps {
   message: string;
   resolution?: 'designer' | 'engineer';
   details?: NoticeDetails;
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void; loading?: boolean };
   onDismiss?: () => void;
 }
 
@@ -30,14 +31,17 @@ const RESOLUTION_LABEL: Record<'designer' | 'engineer', string> = {
 // Button/Link hardcode colors meant for the default background, unreadable on this Banner.
 function NoticeButton({
   onClick,
+  disabled,
   children,
 }: {
   onClick: () => void;
+  disabled?: boolean;
   children: ComponentChildren;
 }) {
   return (
     <button
       onClick={onClick}
+      disabled={disabled}
       style={{
         height: '24px',
         padding: '0 8px',
@@ -45,7 +49,8 @@ function NoticeButton({
         border: '1px solid var(--figma-color-text-onwarning)',
         background: 'transparent',
         color: 'var(--figma-color-text-onwarning)',
-        cursor: 'pointer',
+        cursor: disabled ? 'default' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
       }}
     >
       {children}
@@ -68,7 +73,7 @@ function formatDetailsForClipboard(
     );
   }
 
-  if (details?.file || details?.branch) {
+  if (details?.file) {
     const location = [
       details.file,
       details.branch && `(branch: ${details.branch})`,
@@ -76,6 +81,12 @@ function formatDetailsForClipboard(
       .filter(Boolean)
       .join(' ');
     lines.push('', `File: ${location}`);
+  } else if (details?.branch) {
+    lines.push('', `Branch: ${details.branch}`);
+  }
+
+  if (details?.url) {
+    lines.push('', `Link: ${details.url}`);
   }
 
   if (details?.error) {
@@ -133,7 +144,9 @@ export function WarningNotice({
                 : 'Copy details'}
           </NoticeButton>
           {action && (
-            <NoticeButton onClick={action.onClick}>{action.label}</NoticeButton>
+            <NoticeButton onClick={action.onClick} disabled={action.loading}>
+              {action.loading ? 'Working…' : action.label}
+            </NoticeButton>
           )}
           {onDismiss && (
             <NoticeButton onClick={onDismiss}>Dismiss</NoticeButton>

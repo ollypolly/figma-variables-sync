@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
 
+import { requestExport } from "@services/figmaMessages";
 import { applySafeDiffsToFigmaJson } from "./applySafeDiffs";
 import { computeSafeSubset } from "@services/gitSync";
 import { color, dimension } from "@common/testUtils/tokens";
@@ -59,7 +60,7 @@ describe("applySafeDiffsToFigmaJson", () => {
     });
   });
 
-  it("reproduces the intended sync end-to-end when safe paths come from computeSafeSubset's own output", () => {
+  it("reproduces the intended sync end-to-end when safe paths come from computeSafeSubset's own output", async () => {
     const oldGitJson = JSON.stringify({
       Tokens: {
         brand: {
@@ -85,9 +86,8 @@ describe("applySafeDiffsToFigmaJson", () => {
       },
     });
 
-    const safeDotPaths = computeSafeSubset(oldGitJson, newGitJson, [
-      { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "modified", figmaVal: "#0f0", gitVal: "#fff" },
-    ]);
+    vi.mocked(requestExport).mockResolvedValue(figmaJson);
+    const safeDotPaths = await computeSafeSubset(oldGitJson, newGitJson);
     const result = applySafeDiffsToFigmaJson(figmaJson, newGitJson, safeDotPaths);
 
     expect(JSON.parse(result)).toEqual({
