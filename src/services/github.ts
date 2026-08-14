@@ -154,18 +154,15 @@ export class GitHubService {
     };
   }
 
-  // Verify connection by checking repository accessibility
+  // Verify connection by checking repository accessibility. Throws on failure so the caller can
+  // report what actually went wrong (bad PAT, no access, wrong repo name) instead of a single
+  // generic "couldn't connect".
   async verifyConnection(owner: string, repo: string): Promise<boolean> {
-    try {
-      await this.octokit.request("GET /repos/{owner}/{repo}", {
-        owner,
-        repo,
-      });
-      return true;
-    } catch (e) {
-      console.error("Connection verification failed:", e);
-      return false;
-    }
+    await this.octokit.request("GET /repos/{owner}/{repo}", {
+      owner,
+      repo,
+    });
+    return true;
   }
 
   // Fetch pull requests created by this plugin (branches prefixed with PROPOSAL_BRANCH_PREFIX)

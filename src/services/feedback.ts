@@ -1,4 +1,5 @@
 import { GitHubService } from "@services/github";
+import { describeGitHubError } from "@services/githubErrors";
 
 export const FEEDBACK_REPO = { owner: "ollypolly", repo: "figma-variables-sync" } as const;
 
@@ -21,5 +22,15 @@ export async function submitFeedback(
   if (!pat) throw new Error("No GitHub personal access token configured in Settings.");
   const github = new GitHubService(pat);
   const { title, body, labels } = buildIssue(type, description);
-  return github.createIssue(FEEDBACK_REPO.owner, FEEDBACK_REPO.repo, title, body, labels);
+  try {
+    return await github.createIssue(FEEDBACK_REPO.owner, FEEDBACK_REPO.repo, title, body, labels);
+  } catch (e) {
+    throw new Error(
+      describeGitHubError(e, {
+        owner: FEEDBACK_REPO.owner,
+        repo: FEEDBACK_REPO.repo,
+        requiredPermission: "Issues: Read and write",
+      })
+    );
+  }
 }

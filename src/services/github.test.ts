@@ -284,10 +284,9 @@ describe("GitHubService", () => {
       expect(success).toBe(true);
     });
 
-    it("should return false if repository check throws", async () => {
+    it("should rethrow if repository check fails", async () => {
       mockRequest.mockRejectedValueOnce(new Error("Repo not found"));
-      const success = await service.verifyConnection("owner", "repo");
-      expect(success).toBe(false);
+      await expect(service.verifyConnection("owner", "repo")).rejects.toThrow("Repo not found");
     });
   });
 

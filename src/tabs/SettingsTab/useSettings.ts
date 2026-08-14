@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "preact/hooks";
 
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
+import { describeGitHubError } from "@services/githubErrors";
 import { $settings, $settingsLoading, saveSettings, updateSettings } from "@stores/settingsStore";
 import type { PluginSettings, SettingsSavedHandler } from "../../types";
 
@@ -53,9 +54,10 @@ export function useSettings() {
       }
       if (!github) throw new Error("Not configured.");
 
-      const connected = await github.verifyConnection(owner, repo);
-      if (!connected) {
-        throw new Error("Could not access repository. Check permissions.");
+      try {
+        await github.verifyConnection(owner, repo);
+      } catch (e) {
+        throw new Error(describeGitHubError(e, { owner, repo, fallback: "Could not access repository. Check permissions." }));
       }
       return "Connected to GitHub.";
     }, [settings, github])

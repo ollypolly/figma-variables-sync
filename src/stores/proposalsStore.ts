@@ -1,6 +1,7 @@
 import { atom, computed, type WritableAtom } from "nanostores";
 
 import { GitHubService } from "@services/github";
+import { describeGitHubError } from "@services/githubErrors";
 import { requestExport } from "@services/figmaMessages";
 import {
   applySafeSubset,
@@ -194,7 +195,8 @@ export async function checkForChanges(): Promise<ProposalCheckResult | null> {
     return result;
   } catch (e) {
     $checking.set(false);
-    $checkError.set(e instanceof Error ? e.message : "An error occurred.");
+    const { owner, repo } = $settings.get();
+    $checkError.set(describeGitHubError(e, { owner, repo, fallback: "An error occurred." }));
     $check.set(null);
     return null;
   }
@@ -227,7 +229,10 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
       $check.set({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] });
       $pendingSwitch.set(null);
     } catch (e) {
-      $background.set({ success: false, text: e instanceof Error ? e.message : "Failed to switch." });
+      $background.set({
+        success: false,
+        text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to switch." }),
+      });
     }
   };
 
@@ -245,7 +250,10 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
       commit,
     });
   } catch (e) {
-    $background.set({ success: false, text: e instanceof Error ? e.message : "Failed to switch." });
+    $background.set({
+      success: false,
+      text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to switch." }),
+    });
   } finally {
     $switchLoading.set(false);
   }
@@ -291,7 +299,10 @@ export async function updateBranch(): Promise<void> {
     }
   } catch (e) {
     $staleness.set(null);
-    $background.set({ success: false, text: e instanceof Error ? e.message : "Failed to update branch." });
+    $background.set({
+      success: false,
+      text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to update branch." }),
+    });
   } finally {
     $mergingBranch.set(false);
   }
@@ -317,7 +328,10 @@ export async function abandonProposal(): Promise<void> {
       text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
     });
   } catch (e) {
-    $background.set({ success: false, text: e instanceof Error ? e.message : "Failed to abandon PR." });
+    $background.set({
+      success: false,
+      text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to abandon PR." }),
+    });
   } finally {
     $mergingBranch.set(false);
   }
@@ -370,7 +384,7 @@ export async function submitProposal(): Promise<void> {
     $submitting.set(false);
   } catch (e) {
     $submitting.set(false);
-    $submitError.set(e instanceof Error ? e.message : "An error occurred.");
+    $submitError.set(describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "An error occurred." }));
     $submitResult.set(null);
   }
 }
