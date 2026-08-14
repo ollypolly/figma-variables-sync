@@ -26,9 +26,13 @@ export function useFeedback() {
 
   function openModal(): void {
     if (cooldown) return;
-    setType("bug");
-    setDescription("");
-    setResult(null);
+    // Only clear the form after a successful submission — otherwise a dismissed
+    // draft (or a visible error) should still be there when the user reopens.
+    if (result?.success) {
+      setType("bug");
+      setDescription("");
+      setResult(null);
+    }
     setOpen(true);
   }
 

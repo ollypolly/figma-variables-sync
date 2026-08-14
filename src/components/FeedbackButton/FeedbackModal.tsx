@@ -1,4 +1,4 @@
-import { Button, Modal, SegmentedControl, TextboxMultiline } from "@create-figma-plugin/ui";
+import { Button, Modal, Muted, SegmentedControl, Text, TextboxMultiline } from "@create-figma-plugin/ui";
 import { h } from "preact";
 
 import { StatusBanner } from "@components/StatusBanner";
@@ -50,6 +50,11 @@ export function FeedbackModal({
           }
           rows={4}
         />
+        {description.length > 0 && !result && (
+          <Text>
+            <Muted>You can dismiss this and come back — your draft is saved.</Muted>
+          </Text>
+        )}
         <StatusBanner status={result} />
         <Button onClick={submit} loading={submitting} disabled={!canSubmit} fullWidth>
           Send {type === "bug" ? "bug report" : "feature request"}
