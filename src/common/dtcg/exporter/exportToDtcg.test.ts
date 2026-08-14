@@ -79,6 +79,31 @@ describe("exportToDtcg", () => {
     expect((error as NamingCollisionError).collidingPaths).toEqual(["Tokens.colors.Primary"]);
   });
 
+  it("throws rather than exporting a variable aliased to a variable from an external library", () => {
+    const { figmaMock } = createMockFigma();
+
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const mode = col.modes[0].modeId;
+
+    const remoteWarning = figmaMock.variables.createRemoteVariable("Colours/Status/Warning", "Semantic");
+    const filled = figmaMock.variables.createVariable("button/color/text/warning/filled", col.id, "COLOR");
+    filled.setValueForMode(mode, { type: "VARIABLE_ALIAS", id: remoteWarning.id });
+
+    let error: unknown;
+    try {
+      exportToDtcg(
+        figmaMock.variables.getLocalVariableCollections(),
+        figmaMock.variables.getLocalVariables(),
+        figmaMock
+      );
+    } catch (e) {
+      error = e;
+    }
+
+    expect(error).toBeInstanceOf(NamingCollisionError);
+    expect((error as NamingCollisionError).collidingPaths).toEqual(["Tokens.button.color.text.warning.filled"]);
+  });
+
   it("exports a variable's description as $description", () => {
     const { figmaMock } = createMockFigma();
 

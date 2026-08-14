@@ -1,12 +1,27 @@
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
 import { parseColor } from "../color/parseColor";
 
+function defaultValueForType(figmaType: VariableResolvedDataType): VariableValue {
+  switch (figmaType) {
+    case "COLOR":
+      return { r: 0, g: 0, b: 0, a: 1 };
+    case "FLOAT":
+      return 0;
+    case "BOOLEAN":
+      return false;
+    default:
+      return "";
+  }
+}
+
 // Resolve a DTCG token value to standard Figma VariableValue.
 export function resolveDtcgValue(
   val: any,
   type: string,
   pathToVariableIdMap: Map<string, string>
 ): VariableValue {
+  const figmaType = dtcgTypeToFigma(type);
+
   if (typeof val === "string" && val.startsWith("{") && val.endsWith("}")) {
     const refPath = val.slice(1, -1);
     const varId = pathToVariableIdMap.get(refPath);
@@ -14,9 +29,9 @@ export function resolveDtcgValue(
       return { type: "VARIABLE_ALIAS", id: varId };
     }
     console.warn(`Could not resolve alias reference: ${refPath}`);
+    return defaultValueForType(figmaType);
   }
 
-  const figmaType = dtcgTypeToFigma(type);
   if (figmaType === "COLOR" && typeof val === "string") {
     return parseColor(val);
   }

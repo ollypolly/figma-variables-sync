@@ -138,6 +138,51 @@ describe("importFromDtcg", () => {
     expect(variables[0].name).toBe("colors/secondary");
   });
 
+  it("flags a token with a dangling alias reference via unresolvedAliases, while still importing it with the fallback color", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        colors: {
+          primary: color("#ffffff"),
+          warning: color("{Semantic.Colours.Status.Warning}"),
+        },
+      },
+    };
+
+    const result = await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(result.unresolvedAliases).toEqual(["Tokens.colors.warning"]);
+    expect(result.quarantined).toEqual([]);
+
+    const variables = figmaMock.variables.getLocalVariables();
+    expect(variables.map((v: any) => v.name).sort()).toEqual(["colors/primary", "colors/warning"]);
+
+    const warningVar = variables.find((v: any) => v.name === "colors/warning");
+    const modeId = figmaMock.variables.getLocalVariableCollections()[0].modes[0].modeId;
+    expect(warningVar.valuesByMode[modeId]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
+  });
+
+  it("flags a dimension token with a dangling alias reference, falling back to 0 instead of the raw alias string", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        sizes: {
+          width: dimension("{Tokens.sizes.missing}"),
+        },
+      },
+    };
+
+    const result = await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(result.unresolvedAliases).toEqual(["Tokens.sizes.width"]);
+
+    const widthVar = figmaMock.variables.getLocalVariables()[0];
+    const modeId = figmaMock.variables.getLocalVariableCollections()[0].modes[0].modeId;
+    expect(widthVar.valuesByMode[modeId]).toBe(0);
+  });
+
   it("sets a variable's description from $description", async () => {
     const { figmaMock } = createMockFigma();
 
@@ -477,6 +522,7 @@ describe("importFromDtcg", () => {
     const result = await importFromDtcg(JSON.stringify(primaryRemoved), figmaMock);
 
     expect(result.removed).toEqual(["Tokens.colors.primary"]);
+    expect(result.unresolvedAliases).toEqual(["Tokens.colors.link"]);
 
     const variables = figmaMock.variables.getLocalVariables();
     expect(variables).toHaveLength(1);

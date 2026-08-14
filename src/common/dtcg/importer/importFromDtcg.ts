@@ -5,7 +5,10 @@ import { parseDtcg } from "../parser/parseDtcg";
 import { resolveDtcgValue } from "./resolveDtcgValue";
 import { getVariablePath } from "../utils/getVariablePath";
 
-export type ImportFromDtcgResult = Pick<TokenParseResult, "quarantined"> & { removed: string[] };
+export type ImportFromDtcgResult = Pick<TokenParseResult, "quarantined"> & {
+  removed: string[];
+  unresolvedAliases: string[];
+};
 
 const CODE_SYNTAX_PLATFORMS: CodeSyntaxPlatform[] = ["WEB", "ANDROID", "iOS"];
 
@@ -14,8 +17,8 @@ export async function importFromDtcg(
   jsonStr: string,
   figmaInstance: typeof figma
 ): Promise<ImportFromDtcgResult> {
-  const { modes: rootModes, tokens, quarantined, collectionMetadata } = parseDtcg(jsonStr);
-  if (tokens.length === 0) return { quarantined, removed: [] };
+  const { modes: rootModes, tokens, quarantined, collectionMetadata, unresolvedAliases } = parseDtcg(jsonStr);
+  if (tokens.length === 0) return { quarantined, removed: [], unresolvedAliases };
 
   // Group tokens by collection (first segment of token path)
   const collectionTokensMap = new Map<string, ParsedToken[]>();
@@ -211,5 +214,5 @@ export async function importFromDtcg(
     }
   }
 
-  return { quarantined, removed };
+  return { quarantined, removed, unresolvedAliases };
 }

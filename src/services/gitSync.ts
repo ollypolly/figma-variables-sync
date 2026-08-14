@@ -11,10 +11,18 @@ export interface CollisionNotice {
   fixInstructions?: string;
 }
 
+// Informational only — unlike CollisionNotice, nothing is blocked. Each path listed already
+// imported/diffed normally, just with a fallback value in place of an unresolvable reference.
+export interface ResetNotice {
+  message: string;
+  paths: string[];
+}
+
 export interface FigmaDiffResult {
   diffs: DiffItem[];
   figmaContent: string;
   collisionNotice: CollisionNotice | null;
+  resetNotice: ResetNotice | null;
   primaryModeName: string;
 }
 
@@ -44,12 +52,13 @@ export async function checkFigmaChanges(
           paths: e.collidingPaths,
           resolution: "designer",
         },
+        resetNotice: null,
       };
     }
     throw e;
   }
 
-  const { diffs, quarantined, primaryModeName } = computeDiff(figmaContent, gitContent, "proposals");
+  const { diffs, quarantined, unresolvedAliases, primaryModeName } = computeDiff(figmaContent, gitContent, "proposals");
   const collisionNotice: CollisionNotice | null =
     quarantined.length > 0
       ? {
@@ -63,7 +72,15 @@ export async function checkFigmaChanges(
         }
       : null;
 
-  return { diffs, figmaContent, collisionNotice, primaryModeName };
+  const resetNotice: ResetNotice | null =
+    unresolvedAliases.length > 0
+      ? {
+          message: `${unresolvedAliases.length} token${unresolvedAliases.length === 1 ? "" : "s"} had a value that couldn't be resolved and ${unresolvedAliases.length === 1 ? "was" : "were"} reset to a default value.`,
+          paths: unresolvedAliases,
+        }
+      : null;
+
+  return { diffs, figmaContent, collisionNotice, resetNotice, primaryModeName };
 }
 
 // Writes gitContent into Figma's local variables wholesale, then re-diffs to confirm the result.
@@ -88,7 +105,6 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
   const safe = new Set<string>();
   for (const d of delta) {
-    if (d.type === "deleted") continue;
     if (drifted.has(d.dotPath)) continue;
     safe.add(d.dotPath);
   }

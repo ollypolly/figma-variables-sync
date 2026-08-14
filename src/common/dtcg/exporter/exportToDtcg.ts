@@ -48,6 +48,27 @@ export function exportToDtcg(
     variableMap.set(variable.id, dotPath);
   }
 
+  // A local variable aliased to something outside the local set (a variable from an external
+  // library, or one that no longer exists) can't be represented — there's no dot-path for it
+  // that would survive a round trip through git.
+  const externalAliasPaths: string[] = [];
+  for (const variable of variables) {
+    const col = collectionMap.get(variable.variableCollectionId);
+    if (!col) continue;
+    for (const val of Object.values(variable.valuesByMode)) {
+      if (val && typeof val === "object" && "type" in val && val.type === "VARIABLE_ALIAS" && !variableMap.has(val.id)) {
+        externalAliasPaths.push(getVariablePath(col.name, variable.name));
+      }
+    }
+  }
+
+  if (externalAliasPaths.length > 0) {
+    throw new NamingCollisionError(
+      `These variables are aliased to a variable from an external library, which can't be tracked here — bind them to a variable that exists locally in this file instead.`,
+      externalAliasPaths
+    );
+  }
+
   const root: any = {};
 
   const rootModes: Record<string, any> = {};
@@ -69,7 +90,7 @@ export function exportToDtcg(
 
   const valToDtcg = (val: VariableValue, type: VariableResolvedDataType, isDimension: boolean): any => {
     if (val && typeof val === "object" && "type" in val && val.type === "VARIABLE_ALIAS") {
-      const refPath = getVariableDotPath(val.id, variableMap, figmaInstance);
+      const refPath = getVariableDotPath(val.id, variableMap);
       return `{${refPath}}`;
     }
     if (type === "COLOR") {

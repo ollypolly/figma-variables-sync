@@ -1,17 +1,15 @@
-import { emit, on } from "@create-figma-plugin/utilities";
+import { on } from "@create-figma-plugin/utilities";
+import { useStore } from "@nanostores/preact";
 import { useCallback, useEffect, useState } from "preact/hooks";
 
-import { useAppContext } from "@hooks/useAppContext";
 import { useAsync } from "@hooks/useAsync";
 import { useGitHub } from "@hooks/useGitHub";
-import type {
-  PluginSettings,
-  SaveSettingsHandler,
-  SettingsSavedHandler,
-} from "../../types";
+import { $settings, $settingsLoading, saveSettings, updateSettings } from "@stores/settingsStore";
+import type { PluginSettings, SettingsSavedHandler } from "../../types";
 
 export function useSettings() {
-  const { settings, setSettings, settingsLoading: loading } = useAppContext();
+  const settings = useStore($settings);
+  const loading = useStore($settingsLoading);
   const github = useGitHub(settings);
 
   const [saving, setSaving] = useState(false);
@@ -29,14 +27,14 @@ export function useSettings() {
 
   const updateField = useCallback((key: keyof PluginSettings) => {
     return (value: string) => {
-      setSettings((s) => ({ ...s, [key]: value }));
+      updateSettings((s) => ({ ...s, [key]: value }));
       setSaveStatus(null);
     };
   }, []);
 
   const updateBooleanField = useCallback((key: "skipSwitchConfirmation") => {
     return (value: boolean) => {
-      setSettings((s) => ({ ...s, [key]: value }));
+      updateSettings((s) => ({ ...s, [key]: value }));
       setSaveStatus(null);
     };
   }, []);
@@ -44,8 +42,8 @@ export function useSettings() {
   const handleSave = useCallback(() => {
     setSaving(true);
     setSaveStatus(null);
-    emit<SaveSettingsHandler>("SAVE_SETTINGS", settings);
-  }, [settings]);
+    saveSettings();
+  }, []);
 
   const testConnection = useAsync<string>(
     useCallback(async () => {

@@ -270,6 +270,7 @@ describe("resolveDeadProposal", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -320,6 +321,7 @@ describe("updateProposalBranch", () => {
         gitContent: oldGitContent,
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       });
       await vi.advanceTimersByTimeAsync(MERGE_POLL_INTERVAL_MS);
@@ -345,6 +347,7 @@ describe("updateProposalBranch", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -365,6 +368,7 @@ describe("updateProposalBranch", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -384,6 +388,7 @@ describe("updateProposalBranch", () => {
         gitContent: "{}",
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       })
     ).rejects.toThrow("Bad credentials");
@@ -401,6 +406,7 @@ describe("updateProposalBranch", () => {
         gitContent: "{}",
         proposals: [],
         collisionNotice: null,
+      resetNotice: null,
         primaryModeName: "Default",
       });
       const assertion = expect(promise).rejects.toThrow(/finalizing this merge/);
@@ -435,6 +441,7 @@ describe("abandonProposal", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -586,6 +593,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -630,6 +638,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -665,6 +674,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: oldGitContent,
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -685,6 +695,7 @@ describe("checkActiveProposalStatus", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 
@@ -702,6 +713,48 @@ describe("checkActiveProposalStatus", () => {
       gitContent: "{}",
       proposals: [],
       collisionNotice: null,
+      resetNotice: null,
+      primaryModeName: "Default",
+    });
+
+    expect(resolvedDeadProposal?.reason).toBe("closed");
+  });
+
+  it("confirms via the single-PR endpoint before declaring dead, when the list hasn't caught up yet", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([]),
+      getPullRequest: vi.fn().mockResolvedValue({ mergeable: true, mergeable_state: "clean", state: "open" }),
+    });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal, staleness, result } = await checkActiveProposalStatus(
+      settings,
+      github,
+      activeProposal,
+      null
+    );
+
+    expect(github.getPullRequest).toHaveBeenCalledWith(settings.owner, settings.repo, activeProposal.number);
+    expect(resolvedDeadProposal).toBeNull();
+    expect(staleness).toBeNull();
+    expect(result.proposals).toContainEqual(expect.objectContaining({ number: activeProposal.number, state: "open" }));
+  });
+
+  it("still reports the proposal as dead when the single-PR endpoint also confirms it's gone", async () => {
+    const github = createMockGitHub({
+      listPullRequests: vi.fn().mockResolvedValue([]),
+      getPullRequest: vi.fn().mockResolvedValue({ mergeable: null, mergeable_state: "unknown", state: "closed" }),
+    });
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+      diffs: [],
+      figmaContent: "{}",
+      gitContent: "{}",
+      proposals: [],
+      collisionNotice: null,
+      resetNotice: null,
       primaryModeName: "Default",
     });
 

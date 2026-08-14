@@ -12,7 +12,7 @@ import { TabGuard } from "@components/TabGuard";
 import { ProposalForm } from "./ProposalForm";
 import { useProposals } from "./useProposals";
 
-export function ProposalsTab({ active }: { active: boolean }) {
+export function ProposalsTab() {
   const {
     settingsLoading,
     isConfigured,
@@ -29,6 +29,9 @@ export function ProposalsTab({ active }: { active: boolean }) {
     showStalenessNotice,
     staleness,
     dismissStaleness,
+    resetNotice,
+    showResetNotice,
+    dismissResetNotice,
     conflictNotice,
     mergingBranch,
     updateBranch,
@@ -46,7 +49,7 @@ export function ProposalsTab({ active }: { active: boolean }) {
     exportPreviewLoading,
     exportPreviewError,
     loadExportPreview,
-  } = useProposals(active);
+  } = useProposals();
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmingSwitch, setConfirmingSwitch] = useState(false);
@@ -62,7 +65,9 @@ export function ProposalsTab({ active }: { active: boolean }) {
   };
 
   const showForm = !checking && diffItems.length > 0;
-  const showTopArea = Boolean(collisionNotice || status || showForm || showStalenessNotice || conflictNotice);
+  const showTopArea = Boolean(
+    collisionNotice || status || showForm || showStalenessNotice || showResetNotice || conflictNotice
+  );
 
   const handleReset = () => {
     const target = activeProposal ? `PR #${activeProposal.number}` : baseBranch;
@@ -122,6 +127,14 @@ export function ProposalsTab({ active }: { active: boolean }) {
                     }
                     action={{ label: "Update branch", onClick: updateBranch, loading: mergingBranch }}
                     onDismiss={dismissStaleness}
+                  />
+                )}
+
+                {showResetNotice && resetNotice && (
+                  <WarningNotice
+                    message={resetNotice.message}
+                    details={{ paths: resetNotice.paths }}
+                    onDismiss={dismissResetNotice}
                   />
                 )}
 

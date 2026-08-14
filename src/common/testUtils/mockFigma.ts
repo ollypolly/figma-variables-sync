@@ -3,8 +3,11 @@
 export function createMockFigma() {
   const collections: any[] = [];
   const variables: any[] = [];
+  const remoteCollections: any[] = [];
+  const remoteVariables: any[] = [];
   let nextCollectionId = 1;
   let nextVariableId = 1;
+  let nextRemoteId = 1;
 
   const figmaMock: any = {
     variables: {
@@ -15,10 +18,27 @@ export function createMockFigma() {
         return variables;
       },
       getVariableCollectionById(id: string) {
-        return collections.find((c) => c.id === id) || null;
+        return collections.find((c) => c.id === id) || remoteCollections.find((c) => c.id === id) || null;
       },
       getVariableById(id: string) {
-        return variables.find((v) => v.id === id) || null;
+        return variables.find((v) => v.id === id) || remoteVariables.find((v) => v.id === id) || null;
+      },
+      async getVariableByIdAsync(id: string) {
+        return this.getVariableById(id);
+      },
+      // Simulates a variable from an external library — resolvable by ID (Figma still
+      // knows about it), but absent from getLocalVariables(), the way a variable from a
+      // disconnected/unpublished library shows up.
+      createRemoteVariable(name: string, collectionName: string) {
+        const remoteId = nextRemoteId++;
+        let col = remoteCollections.find((c) => c.name === collectionName);
+        if (!col) {
+          col = { id: `remote-col-${remoteId}`, name: collectionName, remote: true };
+          remoteCollections.push(col);
+        }
+        const newVar = { id: `remote-var-${remoteId}`, name, variableCollectionId: col.id, remote: true };
+        remoteVariables.push(newVar);
+        return newVar;
       },
       createVariableCollection(name: string) {
         const id = `col-${nextCollectionId++}`;

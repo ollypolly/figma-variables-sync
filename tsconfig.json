@@ -10,6 +10,7 @@
       "@components/*": ["./src/components/*"],
       "@hooks/*": ["./src/hooks/*"],
       "@services/*": ["./src/services/*"],
+      "@stores/*": ["./src/stores/*"],
       "@tabs/*": ["./src/tabs/*"],
       "@utils/*": ["./src/utils/*"]
     }

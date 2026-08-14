@@ -63,6 +63,36 @@ describe("checkFigmaChanges", () => {
 
     expect(result.collisionNotice?.fixInstructions).toContain("branch: figma/proposal-1");
   });
+
+  it("surfaces a non-blocking reset notice for a dangling alias, without dropping other real diffs", async () => {
+    const gitTokens = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { $type: "color", $value: "#fff" },
+          warning: { $type: "color", $value: "{Semantic.Colours.Status.Warning}" },
+        },
+      },
+    });
+    const figmaTokens = JSON.stringify({
+      Tokens: {
+        brand: {
+          primary: { $type: "color", $value: "#000" },
+          warning: { $type: "color", $value: "{Semantic.Colours.Status.Warning}" },
+        },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(figmaTokens);
+
+    const result = await checkFigmaChanges(gitTokens, settings);
+
+    expect(result.collisionNotice).toBeNull();
+    expect(result.resetNotice).toEqual({
+      message: "1 token had a value that couldn't be resolved and was reset to a default value.",
+      paths: ["Tokens.brand.warning"],
+    });
+    expect(result.diffs).toHaveLength(1);
+    expect(result.diffs[0].dotPath).toBe("Tokens.brand.primary");
+  });
 });
 
 describe("resolveDiffSettings", () => {
@@ -131,10 +161,19 @@ describe("computeSafeSubset", () => {
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
 
-  it("excludes a path deleted going from the old to the new git target, regardless of drift", async () => {
+  it("includes a path deleted going from the old to the new git target, when there's no local Figma drift", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: {} } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
+  });
+
+  it("excludes a path deleted going from the old to the new git target if the designer has a local edit there", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: {} } });
+    const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#0f0") } } });
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
   });
