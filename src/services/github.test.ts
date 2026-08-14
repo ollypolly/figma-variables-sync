@@ -246,6 +246,37 @@ describe("GitHubService", () => {
     });
   });
 
+  describe("createIssue", () => {
+    it("should create an issue with labels and return number and HTML URL", async () => {
+      mockRequest.mockResolvedValueOnce({
+        data: {
+          number: 7,
+          html_url: "https://github.com/issues/7",
+        },
+      });
+
+      const result = await service.createIssue(
+        "ollypolly",
+        "figma-variables-sync",
+        "issue title",
+        "issue body",
+        ["bug", "design-feedback"]
+      );
+
+      expect(result).toEqual({
+        number: 7,
+        html_url: "https://github.com/issues/7",
+      });
+      expect(mockRequest).toHaveBeenCalledWith("POST /repos/{owner}/{repo}/issues", {
+        owner: "ollypolly",
+        repo: "figma-variables-sync",
+        title: "issue title",
+        body: "issue body",
+        labels: ["bug", "design-feedback"],
+      });
+    });
+  });
+
   describe("verifyConnection", () => {
     it("should return true if repository check succeeds", async () => {
       mockRequest.mockResolvedValueOnce({ data: {} });

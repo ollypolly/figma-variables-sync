@@ -133,6 +133,27 @@ export class GitHubService {
     };
   }
 
+  // Create Issue
+  async createIssue(
+    owner: string,
+    repo: string,
+    title: string,
+    body: string,
+    labels: string[]
+  ): Promise<{ number: number; html_url: string }> {
+    const response = await this.octokit.request("POST /repos/{owner}/{repo}/issues", {
+      owner,
+      repo,
+      title,
+      body,
+      labels,
+    });
+    return {
+      number: response.data.number,
+      html_url: response.data.html_url,
+    };
+  }
+
   // Verify connection by checking repository accessibility
   async verifyConnection(owner: string, repo: string): Promise<boolean> {
     try {
