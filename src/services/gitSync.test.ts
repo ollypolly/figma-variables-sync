@@ -87,7 +87,7 @@ describe("checkFigmaChanges", () => {
 
     expect(result.collisionNotice).toBeNull();
     expect(result.resetNotice).toEqual({
-      message: "1 token had a value that couldn't be resolved and was reset to a default color.",
+      message: "1 token had a value that couldn't be resolved and was reset to a default value.",
       paths: ["Tokens.brand.warning"],
     });
     expect(result.diffs).toHaveLength(1);

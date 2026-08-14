@@ -75,7 +75,7 @@ export async function checkFigmaChanges(
   const resetNotice: ResetNotice | null =
     unresolvedAliases.length > 0
       ? {
-          message: `${unresolvedAliases.length} token${unresolvedAliases.length === 1 ? "" : "s"} had a value that couldn't be resolved and ${unresolvedAliases.length === 1 ? "was" : "were"} reset to a default color.`,
+          message: `${unresolvedAliases.length} token${unresolvedAliases.length === 1 ? "" : "s"} had a value that couldn't be resolved and ${unresolvedAliases.length === 1 ? "was" : "were"} reset to a default value.`,
           paths: unresolvedAliases,
         }
       : null;

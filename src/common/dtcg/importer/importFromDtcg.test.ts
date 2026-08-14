@@ -163,6 +163,26 @@ describe("importFromDtcg", () => {
     expect(warningVar.valuesByMode[modeId]).toEqual({ r: 0, g: 0, b: 0, a: 1 });
   });
 
+  it("flags a dimension token with a dangling alias reference, falling back to 0 instead of the raw alias string", async () => {
+    const { figmaMock } = createMockFigma();
+
+    const dtcgJson = {
+      Tokens: {
+        sizes: {
+          width: dimension("{Tokens.sizes.missing}"),
+        },
+      },
+    };
+
+    const result = await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(result.unresolvedAliases).toEqual(["Tokens.sizes.width"]);
+
+    const widthVar = figmaMock.variables.getLocalVariables()[0];
+    const modeId = figmaMock.variables.getLocalVariableCollections()[0].modes[0].modeId;
+    expect(widthVar.valuesByMode[modeId]).toBe(0);
+  });
+
   it("sets a variable's description from $description", async () => {
     const { figmaMock } = createMockFigma();
 
