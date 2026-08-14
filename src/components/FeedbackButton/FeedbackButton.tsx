@@ -1,4 +1,4 @@
-import { IconButton, IconFeedback16 } from "@create-figma-plugin/ui";
+import { Button } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 
 import { FeedbackModal } from "./FeedbackModal";
@@ -10,13 +10,14 @@ export function FeedbackButton() {
   return (
     <Fragment>
       <div style={{ position: "absolute", top: "6px", right: "8px", zIndex: 10 }}>
-        <IconButton
+        <Button
+          secondary
           onClick={feedback.openModal}
           disabled={feedback.cooldown}
-          title={feedback.cooldown ? "Thanks — you can send more feedback shortly" : "Send feedback"}
+          title={feedback.cooldown ? "Thanks — you can send more feedback shortly" : "Report a bug or suggest a feature"}
         >
-          <IconFeedback16 />
-        </IconButton>
+          Give feedback
+        </Button>
       </div>
       <FeedbackModal {...feedback} />
     </Fragment>

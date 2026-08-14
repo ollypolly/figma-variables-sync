@@ -45,6 +45,7 @@ export function useFeedback() {
       setCooldown(true);
       setTimeout(() => setCooldown(false), COOLDOWN_MS);
     } catch (e) {
+      console.error("Feedback submission failed:", e);
       setResult({ success: false, text: e instanceof Error ? e.message : "Failed to send feedback." });
     } finally {
       setSubmitting(false);

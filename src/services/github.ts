@@ -23,7 +23,7 @@ export class GitHubService {
   private octokit: Octokit;
 
   constructor(pat: string) {
-    this.octokit = new Octokit({ auth: pat });
+    this.octokit = new Octokit({ auth: pat, headers: { "X-GitHub-Api-Version": "2022-11-28" } });
   }
 
   // Get file content and SHA
