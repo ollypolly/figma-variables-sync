@@ -8,7 +8,7 @@ import {
   checkActiveProposalStatus,
   checkForProposalChanges,
   checkProposalStaleness,
-  resolveDeadProposal,
+  planResolveDeadProposal,
   submitProposal,
   updateProposalBranch,
 } from "./proposals";
@@ -232,13 +232,12 @@ describe("submitProposal with an active proposal", () => {
   });
 });
 
-describe("resolveDeadProposal", () => {
+describe("planResolveDeadProposal", () => {
   beforeEach(() => {
     vi.mocked(requestExport).mockReset();
-    vi.mocked(requestImport).mockReset();
   });
 
-  it("applies the safe subset from main, excluding a path the designer already drifted locally", async () => {
+  it("plans the safe subset from main, excluding a path the designer already drifted locally, without applying it", async () => {
     const oldGitContent = JSON.stringify({
       Tokens: { brand: { primary: color("#fff"), secondary: color("#f00") } },
     });
@@ -254,17 +253,10 @@ describe("resolveDeadProposal", () => {
     const staleDiffs = [
       { path: ["Tokens", "brand", "secondary"], dotPath: "Tokens.brand.secondary", type: "modified" as const, figmaVal: "#0f0", gitVal: "#f00" },
     ];
-    const mergedFigmaContent = JSON.stringify({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") }, tertiary: color("#123456") },
-    });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }) });
-    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport)
-      .mockResolvedValueOnce(liveFigmaContent)
-      .mockResolvedValueOnce(liveFigmaContent)
-      .mockResolvedValueOnce(mergedFigmaContent);
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
-    const result = await resolveDeadProposal(settings, github, {
+    const { plan, pending } = await planResolveDeadProposal(settings, github, {
       diffs: staleDiffs,
       figmaContent: staleFigmaContent,
       gitContent: oldGitContent,
@@ -275,11 +267,10 @@ describe("resolveDeadProposal", () => {
     });
 
     expect(github.getFile).toHaveBeenCalledWith(settings);
-    expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#0f0") }, tertiary: color("#123456") },
-    });
-    expect(result.count).toBe(1);
-    expect(result.gitContent).toBe(mainContent);
+    expect(plan.newGitContent).toBe(mainContent);
+    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(pending.diffs).toHaveLength(3);
+    expect(requestImport).not.toHaveBeenCalled();
   });
 });
 
@@ -292,7 +283,7 @@ describe("updateProposalBranch", () => {
     vi.mocked(requestImport).mockReset();
   });
 
-  it("updates the branch, waits for mergeable_state to settle, and applies the safe subset", async () => {
+  it("updates the branch, waits for mergeable_state to settle, and plans the safe subset without applying it", async () => {
     vi.useFakeTimers();
     try {
       const oldGitContent = JSON.stringify({
@@ -312,8 +303,7 @@ describe("updateProposalBranch", () => {
       const getFile = vi.fn().mockResolvedValue({ content: newGitContent, sha: "pr-sha" });
       const github = createMockGitHub({ getPullRequest, getFile });
 
-      vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-      vi.mocked(requestExport).mockResolvedValueOnce(figmaContent).mockResolvedValueOnce(newGitContent);
+      vi.mocked(requestExport).mockResolvedValue(figmaContent);
 
       const promise = updateProposalBranch(settings, github, activeProposal, {
         diffs: [],
@@ -329,9 +319,11 @@ describe("updateProposalBranch", () => {
 
       expect(github.updateBranch).toHaveBeenCalledWith(settings.owner, settings.repo, 5);
       expect(getFile).toHaveBeenCalledWith(expect.objectContaining({ branch: "figma/proposal-1" }));
-      expect(result).toEqual(
-        expect.objectContaining({ status: "updated", count: 1, gitContent: newGitContent })
-      );
+      expect(result.status).toBe("updated");
+      if (result.status !== "updated") throw new Error("unreachable");
+      expect(result.plan.newGitContent).toBe(newGitContent);
+      expect(result.plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+      expect(requestImport).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -428,14 +420,13 @@ describe("abandonProposal", () => {
 
   const activeProposal = { number: 5, title: "x", html_url: "u", head_ref: "figma/proposal-1" };
 
-  it("closes the PR, deletes its branch, then falls back to main via resolveDeadProposal", async () => {
+  it("closes the PR, deletes its branch, then plans a fallback to main via planResolveDeadProposal without applying it", async () => {
     const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const mainContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }) });
-    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(mainContent);
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
 
-    const result = await abandonProposal(settings, github, activeProposal, {
+    const { plan, pending } = await abandonProposal(settings, github, activeProposal, {
       diffs: [],
       figmaContent: oldGitContent,
       gitContent: oldGitContent,
@@ -447,8 +438,10 @@ describe("abandonProposal", () => {
 
     expect(github.closePullRequest).toHaveBeenCalledWith(settings.owner, settings.repo, 5);
     expect(github.deleteBranch).toHaveBeenCalledWith(settings.owner, settings.repo, "figma/proposal-1");
-    expect(result.gitContent).toBe(mainContent);
-    expect(result.count).toBe(1);
+    expect(plan.newGitContent).toBe(mainContent);
+    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(pending.diffs).toHaveLength(1);
+    expect(requestImport).not.toHaveBeenCalled();
   });
 });
 
@@ -576,7 +569,7 @@ describe("checkActiveProposalStatus", () => {
     expect(staleness).toBeNull();
   });
 
-  it("auto-syncs Figma when main's content moved since the last check, with no switch involved", async () => {
+  it("plans a safe sync when main's content moved since the last check, with no switch involved, but does not apply it", async () => {
     const oldGitContent = JSON.stringify({
       Tokens: { brand: { primary: color("#fff"), secondary: color("#f00") } },
     });
@@ -584,10 +577,9 @@ describe("checkActiveProposalStatus", () => {
       Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
     });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: newGitContent, sha: "main-sha" }) });
-    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(newGitContent);
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
 
-    const { result, syncedCount } = await checkActiveProposalStatus(settings, github, null, {
+    const { result, plan } = await checkActiveProposalStatus(settings, github, null, {
       diffs: [],
       figmaContent: oldGitContent,
       gitContent: oldGitContent,
@@ -597,14 +589,13 @@ describe("checkActiveProposalStatus", () => {
       primaryModeName: "Default",
     });
 
-    expect(syncedCount).toBe(1);
-    expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#f00") } },
-    });
+    expect(plan.newGitContent).toBe(newGitContent);
+    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(requestImport).not.toHaveBeenCalled();
     expect(result.gitContent).toBe(newGitContent);
   });
 
-  it("excludes a locally drifted path from the idle-drift auto-apply", async () => {
+  it("excludes a locally drifted path from the idle-drift plan", async () => {
     const oldGitContent = JSON.stringify({
       Tokens: { brand: { primary: color("#fff"), secondary: color("#f00") } },
     });
@@ -615,16 +606,9 @@ describe("checkActiveProposalStatus", () => {
       Tokens: { brand: { primary: color("#fff"), secondary: color("#123456") } },
     });
     const github = createMockGitHub({ getFile: vi.fn().mockResolvedValue({ content: newGitContent, sha: "main-sha" }) });
-    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    const mergedFigmaContent = JSON.stringify({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#123456") } },
-    });
-    vi.mocked(requestExport)
-      .mockResolvedValueOnce(liveFigmaContent)
-      .mockResolvedValueOnce(liveFigmaContent)
-      .mockResolvedValueOnce(mergedFigmaContent);
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
-    const { syncedCount } = await checkActiveProposalStatus(settings, github, null, {
+    const { plan } = await checkActiveProposalStatus(settings, github, null, {
       diffs: [
         {
           path: ["Tokens", "brand", "secondary"],
@@ -642,33 +626,30 @@ describe("checkActiveProposalStatus", () => {
       primaryModeName: "Default",
     });
 
-    expect(syncedCount).toBe(1);
-    expect(JSON.parse(vi.mocked(requestImport).mock.calls[0][0])).toEqual({
-      Tokens: { brand: { primary: color("#000"), secondary: color("#123456") } },
-    });
-  });
-
-  it("does not auto-sync on the very first check, with nothing to compare against", async () => {
-    const github = createMockGitHub();
-    vi.mocked(requestExport).mockResolvedValue("{}");
-
-    const { syncedCount } = await checkActiveProposalStatus(settings, github, null, null);
-
-    expect(syncedCount).toBe(0);
+    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
     expect(requestImport).not.toHaveBeenCalled();
   });
 
-  it("resolves and reports a merged proposal, falling back to main", async () => {
+  it("plans nothing on the very first check, with nothing to compare against", async () => {
+    const github = createMockGitHub();
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    const { plan } = await checkActiveProposalStatus(settings, github, null, null);
+
+    expect(plan.safeDotPaths.size).toBe(0);
+    expect(requestImport).not.toHaveBeenCalled();
+  });
+
+  it("resolves and reports a merged proposal, planning a fallback to main without applying it", async () => {
     const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const mainContent = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
     const github = createMockGitHub({
       listPullRequests: vi.fn().mockResolvedValue([{ number: 5, title: "x", state: "merged", html_url: "u", head_ref: "figma/proposal-1" }]),
       getFile: vi.fn().mockResolvedValue({ content: mainContent, sha: "main-sha" }),
     });
-    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
-    vi.mocked(requestExport).mockResolvedValueOnce(oldGitContent).mockResolvedValueOnce(mainContent);
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
 
-    const { result, resolvedDeadProposal } = await checkActiveProposalStatus(settings, github, activeProposal, {
+    const { result, resolvedDeadProposal, plan } = await checkActiveProposalStatus(settings, github, activeProposal, {
       diffs: [],
       figmaContent: oldGitContent,
       gitContent: oldGitContent,
@@ -678,8 +659,10 @@ describe("checkActiveProposalStatus", () => {
       primaryModeName: "Default",
     });
 
-    expect(resolvedDeadProposal).toEqual({ number: 5, reason: "merged", count: 1 });
+    expect(resolvedDeadProposal).toEqual({ number: 5, reason: "merged" });
+    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
     expect(result.gitContent).toBe(mainContent);
+    expect(requestImport).not.toHaveBeenCalled();
   });
 
   it("reports a closed (not merged) proposal as 'closed', not 'merged'", async () => {

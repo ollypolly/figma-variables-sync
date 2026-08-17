@@ -26,6 +26,14 @@ export interface FigmaDiffResult {
   primaryModeName: string;
 }
 
+// An unapplied sync — everything needed to call applySafeSubset later, once a caller has
+// decided whether to auto-commit it or hold it for confirmation.
+export interface SafeSyncPlan {
+  newGitContent: string;
+  safeDotPaths: Set<string>;
+  diffSettings: Omit<PluginSettings, "pat">;
+}
+
 // The diff base — main, or an active PR's branch if one is selected.
 export function resolveDiffSettings(
   settings: Omit<PluginSettings, "pat">,
