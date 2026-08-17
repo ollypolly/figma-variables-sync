@@ -427,6 +427,27 @@ export async function loadExportPreview(): Promise<void> {
   }
 }
 
+function settingsIdentityKey(settings: PluginSettings): string {
+  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
+}
+
+let lastSettingsIdentity = settingsIdentityKey($settings.get());
+
+// Whatever $check/lastGoodResult knew came from the previous owner/repo/branch/filePath's
+// lineage — reusing it as a drift baseline against a target it has no relation to is what let
+// idle-drift auto-apply mistake Figma's real state for "unchanged" and silently wipe it out.
+// Clearing it here forces the next check to run through applyIdleDrift's own "nothing to
+// compare against yet" path, which already never auto-applies.
+$settings.listen((settings) => {
+  const identity = settingsIdentityKey(settings);
+  if (identity === lastSettingsIdentity) return;
+  lastSettingsIdentity = identity;
+  $check.set(null);
+  $activeProposal.set(null);
+  resetStaleness();
+  $background.set(null);
+});
+
 function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void {
   const interval = setInterval(() => {
     tick().catch(() => {});
