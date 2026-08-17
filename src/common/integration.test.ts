@@ -4,6 +4,9 @@ import { importFromDtcg } from "./dtcg/importer/importFromDtcg";
 import { computeDiff } from "./diff";
 import { GitHubService } from "../services/github";
 import { submitProposal } from "../services/proposals";
+import { computeSafeSubset, applySafeSubset } from "../services/gitSync";
+import { applyStagedDiffs } from "./applyStagedDiffs";
+import { requestExport, requestImport } from "../services/figmaMessages";
 import { trimSettings, PluginSettings } from "../types";
 import { createMockFigma } from "@common/testUtils/mockFigma";
 
@@ -20,7 +23,20 @@ vi.mock("@octokit/core", () => {
 // submitProposal's module also imports requestExport, which talks to the real Figma sandbox
 // via @create-figma-plugin/utilities — unavailable outside a plugin runtime. Not exercised
 // by these tests (figmaContent is passed in directly), so a stub is enough.
-vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn() }));
+vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
+
+// computeSafeSubset/applySafeSubset go through requestExport/requestImport rather than a
+// figmaMock reference directly, so tests exercising them wire the mocked message functions
+// back to a real figmaMock — the same round trip the plugin's own handlers perform.
+function connectFigmaMessagesTo(figmaMock: any) {
+  vi.mocked(requestExport).mockImplementation(async () =>
+    exportToDtcg(figmaMock.variables.getLocalVariableCollections(), figmaMock.variables.getLocalVariables(), figmaMock)
+  );
+  vi.mocked(requestImport).mockImplementation(async (json: string) => {
+    const { quarantined } = await importFromDtcg(json, figmaMock);
+    return { success: true, message: "Variables imported successfully.", quarantined };
+  });
+}
 
 describe("Plugin Flow Integration Tests", () => {
   let github: GitHubService;
@@ -335,6 +351,78 @@ describe("Plugin Flow Integration Tests", () => {
       // All variables in Figma are detected as "added"
       expect(diffs).toHaveLength(1);
       expect(diffs[0].type).toBe("added");
+    });
+  });
+
+  describe("Diff Base Switching (safe subset)", () => {
+    function setupLoadOfVariables() {
+      const { figmaMock } = createMockFigma();
+      const colors = figmaMock.variables.createVariableCollection("Colors");
+      const primary = figmaMock.variables.createVariable("primary", colors.id, "COLOR");
+      primary.setValueForMode(colors.modes[0].modeId, { r: 1, g: 0, b: 0 });
+      const secondary = figmaMock.variables.createVariable("secondary", colors.id, "COLOR");
+      secondary.setValueForMode(colors.modes[0].modeId, { r: 0, g: 1, b: 0 });
+      const tertiary = figmaMock.variables.createVariable("tertiary", colors.id, "COLOR");
+      tertiary.setValueForMode(colors.modes[0].modeId, { r: 0, g: 0, b: 1 });
+
+      const spacing = figmaMock.variables.createVariableCollection("Spacing");
+      const small = figmaMock.variables.createVariable("small", spacing.id, "COLOR");
+      small.setValueForMode(spacing.modes[0].modeId, { r: 0.1, g: 0.1, b: 0.1 });
+      const medium = figmaMock.variables.createVariable("medium", spacing.id, "COLOR");
+      medium.setValueForMode(spacing.modes[0].modeId, { r: 0.2, g: 0.2, b: 0.2 });
+
+      return { figmaMock };
+    }
+
+    function exportCurrent(figmaMock: any): string {
+      return exportToDtcg(
+        figmaMock.variables.getLocalVariableCollections(),
+        figmaMock.variables.getLocalVariables(),
+        figmaMock
+      );
+    }
+
+    it("switching back to an empty base after proposing everything leaves Figma's variables untouched", async () => {
+      const { figmaMock } = setupLoadOfVariables();
+      connectFigmaMessagesTo(figmaMock);
+
+      const fullFigmaJson = exportCurrent(figmaMock);
+      // Proposing "everything" means the PR branch's content is a full copy of Figma's export.
+      const proposalBranchContent = fullFigmaJson;
+
+      const safeDotPaths = await computeSafeSubset(proposalBranchContent, "{}");
+      // The empty-target guard short-circuits before any per-path diffing — an empty git target
+      // is never something to sync toward, regardless of what it's a delta from.
+      expect(safeDotPaths.size).toBe(0);
+
+      const refreshed = await applySafeSubset("{}", safeDotPaths, config);
+
+      expect(figmaMock.variables.getLocalVariables()).toHaveLength(5);
+      expect(figmaMock.variables.getLocalVariableCollections()).toHaveLength(2);
+
+      // The diff list reflects that reality — all 5 immediately reappear as "added" again.
+      expect(refreshed.diffs).toHaveLength(5);
+      expect(refreshed.diffs.every((d) => d.type === "added")).toBe(true);
+    });
+
+    it("switching back to an empty base after proposing a subset still leaves Figma's variables untouched", async () => {
+      const { figmaMock } = setupLoadOfVariables();
+      connectFigmaMessagesTo(figmaMock);
+
+      const fullFigmaJson = exportCurrent(figmaMock);
+      const stagedDotPaths = new Set(["Colors.primary", "Colors.secondary"]);
+      const proposalBranchContent = applyStagedDiffs("{}", fullFigmaJson, stagedDotPaths);
+
+      const safeDotPaths = await computeSafeSubset(proposalBranchContent, "{}");
+      expect(safeDotPaths.size).toBe(0);
+
+      const refreshed = await applySafeSubset("{}", safeDotPaths, config);
+
+      expect(figmaMock.variables.getLocalVariables()).toHaveLength(5);
+      expect(figmaMock.variables.getLocalVariableCollections()).toHaveLength(2);
+
+      expect(refreshed.diffs).toHaveLength(5);
+      expect(refreshed.diffs.every((d) => d.type === "added")).toBe(true);
     });
   });
 });

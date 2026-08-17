@@ -1,6 +1,6 @@
 import { applySafeDiffsToFigmaJson } from "@common/applySafeDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
-import { NamingCollisionError } from "@common/dtcg";
+import { NamingCollisionError, parseDtcg } from "@common/dtcg";
 import { requestExport, requestImport } from "@services/figmaMessages";
 import type { ActiveProposal, PluginSettings } from "../types";
 
@@ -24,6 +24,14 @@ export interface FigmaDiffResult {
   collisionNotice: CollisionNotice | null;
   resetNotice: ResetNotice | null;
   primaryModeName: string;
+}
+
+// An unapplied sync — everything needed to call applySafeSubset later, once a caller has
+// decided whether to auto-commit it or hold it for confirmation.
+export interface SafeSyncPlan {
+  newGitContent: string;
+  safeDotPaths: Set<string>;
+  diffSettings: Omit<PluginSettings, "pat">;
 }
 
 // The diff base — main, or an active PR's branch if one is selected.
@@ -97,7 +105,15 @@ export async function resetFigmaToGit(
 
 // Never overrides the designer's local changes — fetches its own fresh export rather than
 // trusting a caller-supplied diffs array, which could be stale.
+//
+// A target with no tokens at all is never something to sync toward, no matter why it's empty
+// (a repo/branch/path swap in Settings, a genuinely emptied file, a fetch that came back null) —
+// treating it as a legitimate deletion of everything Figma has would only be correct if that
+// target were the true continuation of the same lineage Figma was tracking, which an empty
+// target can't establish on its own.
 export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<Set<string>> {
+  if (parseDtcg(newGitContent).tokens.length === 0) return new Set();
+
   const figmaContent = await requestExport();
   const { diffs: drift } = computeDiff(figmaContent, oldGitContent, "proposals");
   const drifted = new Set(drift.map((d) => d.dotPath));

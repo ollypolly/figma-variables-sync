@@ -2,13 +2,13 @@ import { applyStagedDiffs } from "@common/applyStagedDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
 import { GitHubService, PROPOSAL_BRANCH_PREFIX } from "@services/github";
 import {
-  applySafeSubset,
   checkFigmaChanges,
   computeSafeSubset,
   resolveDiffSettings,
   type CollisionNotice,
   type FigmaDiffResult,
   type ResetNotice,
+  type SafeSyncPlan,
 } from "@services/gitSync";
 import { parsePrLabels, type ActiveProposal, type PluginSettings } from "../types";
 
@@ -46,23 +46,25 @@ export async function checkForProposalChanges(
 }
 
 // Called once a designer's active PR is found to be merged/closed — falls back to main,
-// applying whatever of the pending diffs is safe to sync automatically (see computeSafeSubset).
-export async function resolveDeadProposal(
+// planning whatever of the pending diffs is safe to sync (see computeSafeSubset), left
+// uncommitted for the caller to auto-apply or hold for confirmation.
+export async function planResolveDeadProposal(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
   staleResult: ProposalCheckResult
-): Promise<{ refreshed: FigmaDiffResult; gitContent: string; count: number }> {
+): Promise<{ plan: SafeSyncPlan; pending: FigmaDiffResult }> {
   const mainFile = await github.getFile(settings);
   const newGitContent = mainFile?.content ?? "{}";
-  const safeDotPaths = await computeSafeSubset(staleResult.gitContent, newGitContent);
-  const refreshed = await applySafeSubset(newGitContent, safeDotPaths, settings);
-  return { refreshed, gitContent: newGitContent, count: safeDotPaths.size };
+  const [safeDotPaths, pending] = await Promise.all([
+    computeSafeSubset(staleResult.gitContent, newGitContent),
+    checkFigmaChanges(newGitContent, settings),
+  ]);
+  return { plan: { newGitContent, safeDotPaths, diffSettings: settings }, pending };
 }
 
 export interface ResolvedDeadProposal {
   number: number;
   reason: "merged" | "closed";
-  count: number;
 }
 
 export interface ProposalStaleness {
@@ -97,27 +99,20 @@ export async function checkProposalStaleness(
 }
 
 // Handles the diff target moving for reasons unrelated to a discretionary switch (a push to
-// main, a commit on the PR branch) — same safe-subset rule as everywhere else.
-async function applyIdleDrift(
+// main, a commit on the PR branch) — same safe-subset rule as everywhere else, left uncommitted.
+async function planIdleDrift(
   settings: Omit<PluginSettings, "pat">,
   result: ProposalCheckResult,
   lastGoodResult: ProposalCheckResult | null,
   activeProposal: ActiveProposal | null
-): Promise<{ result: ProposalCheckResult; syncedCount: number }> {
+): Promise<SafeSyncPlan> {
+  const diffSettings = resolveDiffSettings(settings, activeProposal);
   if (!lastGoodResult || result.gitContent === lastGoodResult.gitContent) {
-    return { result, syncedCount: 0 };
+    return { newGitContent: result.gitContent, safeDotPaths: new Set(), diffSettings };
   }
 
   const safeDotPaths = await computeSafeSubset(lastGoodResult.gitContent, result.gitContent);
-  if (safeDotPaths.size === 0) {
-    return { result, syncedCount: 0 };
-  }
-
-  const refreshed = await applySafeSubset(result.gitContent, safeDotPaths, resolveDiffSettings(settings, activeProposal));
-  return {
-    result: { ...refreshed, gitContent: result.gitContent, proposals: result.proposals },
-    syncedCount: safeDotPaths.size,
-  };
+  return { newGitContent: result.gitContent, safeDotPaths, diffSettings };
 }
 
 // Is the active proposal still open? If not, resolve it and report what happened.
@@ -133,7 +128,7 @@ export async function checkActiveProposalStatus(
   result: ProposalCheckResult;
   resolvedDeadProposal: ResolvedDeadProposal | null;
   staleness: ProposalStaleness | null;
-  syncedCount: number;
+  plan: SafeSyncPlan;
 }> {
   const listedProposals = await github.listPullRequests(settings.owner, settings.repo, settings.branch);
 
@@ -155,39 +150,40 @@ export async function checkActiveProposalStatus(
 
     if (!match || match.state !== "open") {
       const staleResult = lastGoodResult ?? (await checkForProposalChanges(settings, github, activeProposal, proposals));
-      const { refreshed, gitContent, count } = await resolveDeadProposal(settings, github, staleResult);
+      const { plan, pending } = await planResolveDeadProposal(settings, github, staleResult);
       return {
-        result: { ...refreshed, gitContent, proposals },
+        result: { ...pending, gitContent: plan.newGitContent, proposals },
         resolvedDeadProposal: {
           number: activeProposal.number,
           reason: match?.state === "merged" ? "merged" : "closed",
-          count,
         },
         staleness: null,
-        syncedCount: 0,
+        plan,
       };
     }
 
     const rawResult = await checkForProposalChanges(settings, github, activeProposal, proposals);
-    const { result, syncedCount } = await applyIdleDrift(settings, rawResult, lastGoodResult, activeProposal);
+    const plan = await planIdleDrift(settings, rawResult, lastGoodResult, activeProposal);
     return {
-      result,
+      result: rawResult,
       resolvedDeadProposal: null,
       staleness: await checkProposalStaleness(settings, github, activeProposal),
-      syncedCount,
+      plan,
     };
   }
 
   const rawResult = await checkForProposalChanges(settings, github, activeProposal, listedProposals);
-  const { result, syncedCount } = await applyIdleDrift(settings, rawResult, lastGoodResult, null);
-  return { result, resolvedDeadProposal: null, staleness: null, syncedCount };
+  const plan = await planIdleDrift(settings, rawResult, lastGoodResult, null);
+  return { result: rawResult, resolvedDeadProposal: null, staleness: null, plan };
 }
 
 export type UpdateBranchResult =
-  | { status: "updated"; count: number; gitContent: string; refreshed: FigmaDiffResult }
+  | { status: "updated"; plan: SafeSyncPlan; pending: FigmaDiffResult }
   | { status: "conflict"; detail: string };
 
-// Reuses the same safe-subset mechanism a discretionary diff-base switch already uses.
+// Reuses the same safe-subset mechanism a discretionary diff-base switch already uses. The
+// branch merge itself (a git-side action, not a variable mutation) always happens; only the
+// resulting sync into Figma is left uncommitted for the caller to auto-apply or hold.
 export async function updateProposalBranch(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
@@ -213,9 +209,12 @@ export async function updateProposalBranch(
 
   const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
   const newGitContent = branchFile?.content ?? "{}";
-  const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
-  const refreshed = await applySafeSubset(newGitContent, safeDotPaths, resolveDiffSettings(settings, activeProposal));
-  return { status: "updated", count: safeDotPaths.size, gitContent: newGitContent, refreshed };
+  const diffSettings = resolveDiffSettings(settings, activeProposal);
+  const [safeDotPaths, pending] = await Promise.all([
+    computeSafeSubset(current.gitContent, newGitContent),
+    checkFigmaChanges(newGitContent, diffSettings),
+  ]);
+  return { status: "updated", plan: { newGitContent, safeDotPaths, diffSettings }, pending };
 }
 
 const MERGE_POLL_INTERVAL_MS = 2_000;
@@ -244,10 +243,10 @@ export async function abandonProposal(
   github: GitHubService,
   activeProposal: ActiveProposal,
   current: ProposalCheckResult
-): Promise<{ refreshed: FigmaDiffResult; gitContent: string; count: number }> {
+): Promise<{ plan: SafeSyncPlan; pending: FigmaDiffResult }> {
   await github.closePullRequest(settings.owner, settings.repo, activeProposal.number);
   await github.deleteBranch(settings.owner, settings.repo, activeProposal.head_ref);
-  return resolveDeadProposal(settings, github, current);
+  return planResolveDeadProposal(settings, github, current);
 }
 
 export async function submitProposal(

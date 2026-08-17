@@ -162,20 +162,37 @@ describe("computeSafeSubset", () => {
   });
 
   it("includes a path deleted going from the old to the new git target, when there's no local Figma drift", async () => {
-    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
-    const newGit = JSON.stringify({ Tokens: { brand: {} } });
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff"), secondary: color("#aaa") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
 
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
   });
 
   it("excludes a path deleted going from the old to the new git target if the designer has a local edit there", async () => {
-    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
-    const newGit = JSON.stringify({ Tokens: { brand: {} } });
-    const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#0f0") } } });
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff"), secondary: color("#aaa") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
+    const liveFigmaContent = JSON.stringify({
+      Tokens: { brand: { primary: color("#0f0"), secondary: color("#aaa") } },
+    });
     vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
     expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+  });
+
+  it("returns nothing when the new git target has no tokens at all, even though everything changed", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+
+    expect(await computeSafeSubset(oldGit, "{}")).toEqual(new Set());
+    expect(requestExport).not.toHaveBeenCalled();
+  });
+
+  it("returns nothing for a target that's structurally non-trivial but has zero real tokens", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: {} } });
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+    expect(requestExport).not.toHaveBeenCalled();
   });
 
   it("always fetches a fresh Figma export rather than trusting caller-supplied drift info", async () => {

@@ -10,6 +10,7 @@ import {
   resetFigmaToGit,
   resolveDiffSettings,
   type FigmaDiffResult,
+  type SafeSyncPlan,
 } from "@services/gitSync";
 import {
   abandonProposal as requestAbandonProposal,
@@ -33,8 +34,7 @@ import { $settings } from "./settingsStore";
 const FAST_POLL_INTERVAL_MS = 3_000;
 const SLOW_POLL_INTERVAL_MS = 30_000;
 
-interface PendingSwitch {
-  target: ActiveProposal | null;
+interface PendingSync {
   targetLabel: string;
   count: number;
   commit: () => Promise<void>;
@@ -70,7 +70,7 @@ export const $checking = atom(false);
 export const $checkError = atom<string | null>(null);
 
 export const $background = atom<{ success: boolean; text: string } | null>(null);
-export const $pendingSwitch = atom<PendingSwitch | null>(null);
+export const $pendingSync = atom<PendingSync | null>(null);
 export const $switchLoading = atom(false);
 
 export const $staleness = atom<ProposalStaleness | null>(null);
@@ -147,6 +147,33 @@ function setDataIfChanged<T>(store: WritableAtom<T | null>, next: T): void {
   store.set(next);
 }
 
+// The single gate every Figma-mutating sync path runs through: nothing to sync never shows a
+// dialog, skipSwitchConfirmation always auto-applies, and otherwise the plan waits in
+// $pendingSync for the designer to confirm via SyncConfirmDialog.
+async function resolvePendingSync(
+  plan: SafeSyncPlan,
+  targetLabel: string,
+  onCommitted: (refreshed: FigmaDiffResult) => void,
+  onError: (e: unknown) => void
+): Promise<void> {
+  const commit = async () => {
+    try {
+      const refreshed = await applySafeSubset(plan.newGitContent, plan.safeDotPaths, plan.diffSettings);
+      onCommitted(refreshed);
+      $pendingSync.set(null);
+    } catch (e) {
+      onError(e);
+    }
+  };
+
+  if ($settings.get().skipSwitchConfirmation || plan.safeDotPaths.size === 0) {
+    await commit();
+    return;
+  }
+
+  $pendingSync.set({ targetLabel, count: plan.safeDotPaths.size, commit });
+}
+
 async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   const settings = $settings.get();
   const github = getGitHub(settings);
@@ -154,35 +181,48 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   const activeProposal = $activeProposal.get();
   const lastGoodResult = $check.get();
 
-  const {
-    result,
-    resolvedDeadProposal,
-    staleness: nextStaleness,
-    syncedCount,
-  } = await checkActiveProposalStatus(settings, github, activeProposal, lastGoodResult);
+  const { result, resolvedDeadProposal, staleness: nextStaleness, plan } = await checkActiveProposalStatus(
+    settings,
+    github,
+    activeProposal,
+    lastGoodResult
+  );
 
   if (resolvedDeadProposal) {
     $activeProposal.set(null);
     resetStaleness();
     $background.set({
       success: true,
-      text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on ${settings.branch}, and ${resolvedDeadProposal.count} variable${resolvedDeadProposal.count === 1 ? "" : "s"} were updated to match.`,
+      text: `PR #${resolvedDeadProposal.number} was ${resolvedDeadProposal.reason} — you're back on ${settings.branch}.`,
     });
   } else {
     $staleness.set(nextStaleness);
     if (nextStaleness === null) {
       $conflictNotice.set(null);
     }
-    if (syncedCount > 0) {
-      const targetLabel = activeProposal ? `PR #${activeProposal.number}` : settings.branch;
-      $background.set({
-        success: true,
-        text: `${syncedCount} variable${syncedCount === 1 ? "" : "s"} updated to match ${targetLabel}.`,
-      });
-    }
   }
 
-  return result;
+  if (plan.safeDotPaths.size === 0) return result;
+
+  const targetLabel = resolvedDeadProposal ? settings.branch : activeProposal ? `PR #${activeProposal.number}` : settings.branch;
+  let finalResult = result;
+  await resolvePendingSync(
+    plan,
+    targetLabel,
+    (refreshed) => {
+      finalResult = { ...refreshed, gitContent: plan.newGitContent, proposals: result.proposals };
+      $background.set({
+        success: true,
+        text: `${plan.safeDotPaths.size} variable${plan.safeDotPaths.size === 1 ? "" : "s"} updated to match ${targetLabel}.`,
+      });
+    },
+    (e) =>
+      $background.set({
+        success: false,
+        text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to sync." }),
+      })
+  );
+  return finalResult;
 }
 
 export async function checkForChanges(): Promise<ProposalCheckResult | null> {
@@ -210,45 +250,28 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
   $background.set(null);
   const targetSettings = resolveDiffSettings(settings, target);
 
-  const planSwitch = async () => {
-    const latest = $check.get();
-    if (!latest) throw new Error("Nothing to switch from.");
-    const file = await github.getFile(targetSettings);
-    const newGitContent = file?.content ?? "{}";
-    const safeDotPaths = await computeSafeSubset(latest.gitContent, newGitContent);
-    return { newGitContent, safeDotPaths };
-  };
-
-  const commit = async () => {
-    try {
-      const { newGitContent, safeDotPaths } = await planSwitch();
-      const refreshed = await applySafeSubset(newGitContent, safeDotPaths, targetSettings);
-      $activeProposal.set(target);
-      resetStaleness();
-      const prev = $check.get();
-      $check.set({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] });
-      $pendingSwitch.set(null);
-    } catch (e) {
-      $background.set({
-        success: false,
-        text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to switch." }),
-      });
-    }
-  };
-
   $switchLoading.set(true);
   try {
-    if (settings.skipSwitchConfirmation) {
-      await commit();
-      return;
-    }
-    const { safeDotPaths } = await planSwitch();
-    $pendingSwitch.set({
-      target,
-      targetLabel: target ? `PR #${target.number}` : settings.branch,
-      count: safeDotPaths.size,
-      commit,
-    });
+    const file = await github.getFile(targetSettings);
+    const newGitContent = file?.content ?? "{}";
+    const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
+    const plan: SafeSyncPlan = { newGitContent, safeDotPaths, diffSettings: targetSettings };
+
+    await resolvePendingSync(
+      plan,
+      target ? `PR #${target.number}` : settings.branch,
+      (refreshed) => {
+        $activeProposal.set(target);
+        resetStaleness();
+        const prev = $check.get();
+        $check.set({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] });
+      },
+      (e) =>
+        $background.set({
+          success: false,
+          text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to switch." }),
+        })
+    );
   } catch (e) {
     $background.set({
       success: false,
@@ -259,8 +282,8 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
   }
 }
 
-export function cancelSwitch(): void {
-  $pendingSwitch.set(null);
+export function cancelPendingSync(): void {
+  $pendingSync.set(null);
 }
 
 export async function updateBranch(): Promise<void> {
@@ -291,11 +314,26 @@ export async function updateBranch(): Promise<void> {
     } else {
       resetStaleness();
       const prev = $check.get();
-      $check.set({ ...result.refreshed, gitContent: result.gitContent, proposals: prev?.proposals ?? [] });
-      $background.set({
-        success: true,
-        text: `PR #${activeProposal.number}'s branch updated to match ${settings.branch} — ${result.count} variable${result.count === 1 ? "" : "s"} were updated to match.`,
-      });
+      $check.set({ ...result.pending, gitContent: result.plan.newGitContent, proposals: prev?.proposals ?? [] });
+
+      const targetLabel = `PR #${activeProposal.number}`;
+      await resolvePendingSync(
+        result.plan,
+        targetLabel,
+        (refreshed) => {
+          const prevAfterCommit = $check.get();
+          $check.set({ ...refreshed, gitContent: result.plan.newGitContent, proposals: prevAfterCommit?.proposals ?? [] });
+          $background.set({
+            success: true,
+            text: `${targetLabel}'s branch updated to match ${settings.branch} — ${result.plan.safeDotPaths.size} variable${result.plan.safeDotPaths.size === 1 ? "" : "s"} were updated to match.`,
+          });
+        },
+        (e) =>
+          $background.set({
+            success: false,
+            text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to update branch." }),
+          })
+      );
     }
   } catch (e) {
     $staleness.set(null);
@@ -317,16 +355,34 @@ export async function abandonProposal(): Promise<void> {
   $mergingBranch.set(true);
   $background.set(null);
   try {
-    const { refreshed, gitContent, count } = await requestAbandonProposal(settings, github, activeProposal, current);
+    const { plan, pending } = await requestAbandonProposal(settings, github, activeProposal, current);
     const abandonedNumber = activeProposal.number;
     $activeProposal.set(null);
     resetStaleness();
     const prev = $check.get();
-    $check.set({ ...refreshed, gitContent, proposals: prev?.proposals ?? [] });
+    $check.set({ ...pending, gitContent: plan.newGitContent, proposals: prev?.proposals ?? [] });
     $background.set({
       success: true,
-      text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${count} variable${count === 1 ? "" : "s"} were updated to match.`,
+      text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}.`,
     });
+
+    await resolvePendingSync(
+      plan,
+      settings.branch,
+      (refreshed) => {
+        const prevAfterCommit = $check.get();
+        $check.set({ ...refreshed, gitContent: plan.newGitContent, proposals: prevAfterCommit?.proposals ?? [] });
+        $background.set({
+          success: true,
+          text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${plan.safeDotPaths.size} variable${plan.safeDotPaths.size === 1 ? "" : "s"} were updated to match.`,
+        });
+      },
+      (e) =>
+        $background.set({
+          success: false,
+          text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to abandon PR." }),
+        })
+    );
   } catch (e) {
     $background.set({
       success: false,
@@ -427,6 +483,27 @@ export async function loadExportPreview(): Promise<void> {
   }
 }
 
+function settingsIdentityKey(settings: PluginSettings): string {
+  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
+}
+
+let lastSettingsIdentity = settingsIdentityKey($settings.get());
+
+// Whatever $check/lastGoodResult knew came from the previous owner/repo/branch/filePath's
+// lineage — reusing it as a drift baseline against a target it has no relation to is what let
+// idle-drift auto-apply mistake Figma's real state for "unchanged" and silently wipe it out.
+// Clearing it here forces the next check to run through applyIdleDrift's own "nothing to
+// compare against yet" path, which already never auto-applies.
+$settings.listen((settings) => {
+  const identity = settingsIdentityKey(settings);
+  if (identity === lastSettingsIdentity) return;
+  lastSettingsIdentity = identity;
+  $check.set(null);
+  $activeProposal.set(null);
+  resetStaleness();
+  $background.set(null);
+});
+
 function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void {
   const interval = setInterval(() => {
     tick().catch(() => {});
@@ -446,6 +523,7 @@ export function initProposalsSync(): () => void {
   });
 
   const stopSlowPoll = pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
+    if ($pendingSync.get()) return;
     const result = await refreshActiveProposal();
     setDataIfChanged($check, result);
   });

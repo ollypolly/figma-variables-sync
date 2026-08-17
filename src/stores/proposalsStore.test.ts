@@ -1,0 +1,254 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@create-figma-plugin/utilities", () => ({ on: vi.fn(() => vi.fn()), emit: vi.fn() }));
+vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
+
+const mockGithub = vi.hoisted(() => ({
+  getFile: vi.fn(),
+  listPullRequests: vi.fn(),
+  getPullRequest: vi.fn(),
+  getMergeBaseSha: vi.fn(),
+  updateBranch: vi.fn(),
+  closePullRequest: vi.fn(),
+  deleteBranch: vi.fn(),
+}));
+
+vi.mock("@services/github", () => ({
+  GitHubService: vi.fn().mockImplementation(function () {
+    return mockGithub;
+  }),
+  PROPOSAL_BRANCH_PREFIX: "figma/proposal-",
+}));
+
+import { requestExport, requestImport } from "@services/figmaMessages";
+import { $activeProposal } from "./activeProposalStore";
+import {
+  $background,
+  $check,
+  $conflictNotice,
+  $dismissedStalenessCount,
+  $pendingSync,
+  $staleness,
+  $switchLoading,
+  cancelPendingSync,
+  requestSwitch,
+} from "./proposalsStore";
+import { updateSettings } from "./settingsStore";
+import type { ProposalCheckResult } from "@services/proposals";
+import type { ActiveProposal } from "../types";
+
+const staleResult: ProposalCheckResult = {
+  diffs: [],
+  figmaContent: "{}",
+  gitContent: "{}",
+  proposals: [],
+  collisionNotice: null,
+  resetNotice: null,
+  primaryModeName: "Default",
+};
+
+const staleActiveProposal: ActiveProposal = {
+  number: 1,
+  title: "x",
+  html_url: "u",
+  head_ref: "figma/proposal-1",
+};
+
+function seedStaleState() {
+  $check.set(staleResult);
+  $activeProposal.set(staleActiveProposal);
+  $staleness.set({ count: 3 });
+  $dismissedStalenessCount.set(3);
+  $conflictNotice.set({ number: 1, head_ref: "x", html_url: "u", detail: "d", fixInstructions: "f" });
+  $background.set({ success: true, text: "stale message" });
+}
+
+describe("proposalsStore — settings identity invalidation", () => {
+  beforeEach(() => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+  });
+
+  it("clears the stale check/proposal/staleness baseline when the owner changes", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s, owner: "different-owner" }));
+
+    expect($check.get()).toBeNull();
+    expect($activeProposal.get()).toBeNull();
+    expect($staleness.get()).toBeNull();
+    expect($dismissedStalenessCount.get()).toBe(0);
+    expect($conflictNotice.get()).toBeNull();
+    expect($background.get()).toBeNull();
+  });
+
+  it("clears the stale baseline when the branch changes, even though owner/repo/filePath stay the same", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s, branch: "figma/proposal-2" }));
+
+    expect($check.get()).toBeNull();
+    expect($activeProposal.get()).toBeNull();
+  });
+
+  it("clears the stale baseline when the filePath changes", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s, filePath: "other-tokens.json" }));
+
+    expect($check.get()).toBeNull();
+    expect($activeProposal.get()).toBeNull();
+  });
+
+  it("leaves the check/proposal baseline untouched when only the PAT changes", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s, pat: "a-new-pat" }));
+
+    expect($check.get()).toEqual(staleResult);
+    expect($activeProposal.get()).toEqual(staleActiveProposal);
+  });
+
+  it("leaves the check/proposal baseline untouched when only skipSwitchConfirmation changes", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s, skipSwitchConfirmation: true }));
+
+    expect($check.get()).toEqual(staleResult);
+    expect($activeProposal.get()).toEqual(staleActiveProposal);
+  });
+
+  it("leaves the check/proposal baseline untouched on a no-op update that doesn't change identity fields", () => {
+    seedStaleState();
+    updateSettings((s) => ({ ...s }));
+
+    expect($check.get()).toEqual(staleResult);
+    expect($activeProposal.get()).toEqual(staleActiveProposal);
+  });
+});
+
+describe("proposalsStore — sync confirm gating", () => {
+  const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+  const newGitContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    vi.mocked(requestImport).mockReset();
+    mockGithub.getFile.mockReset();
+    mockGithub.listPullRequests.mockReset();
+    $pendingSync.set(null);
+    $switchLoading.set(false);
+    $check.set({
+      diffs: [],
+      figmaContent: oldGitContent,
+      gitContent: oldGitContent,
+      proposals: [],
+      collisionNotice: null,
+      resetNotice: null,
+      primaryModeName: "Default",
+    });
+  });
+
+  it("holds a non-empty safe sync for confirmation instead of applying it, when skipSwitchConfirmation is off", async () => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+    mockGithub.getFile.mockResolvedValue({ content: newGitContent, sha: "main-sha" });
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
+
+    await requestSwitch(null);
+
+    expect(requestImport).not.toHaveBeenCalled();
+    expect($pendingSync.get()).toEqual(
+      expect.objectContaining({ targetLabel: "main", count: 1, commit: expect.any(Function) })
+    );
+  });
+
+  it("applies the held sync once its commit() is invoked, clearing $pendingSync afterward", async () => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+    mockGithub.getFile.mockResolvedValue({ content: newGitContent, sha: "main-sha" });
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+
+    await requestSwitch(null);
+    await $pendingSync.get()?.commit();
+
+    expect(requestImport).toHaveBeenCalledTimes(1);
+    expect($pendingSync.get()).toBeNull();
+  });
+
+  it("cancelPendingSync clears the held sync without applying it", async () => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+    mockGithub.getFile.mockResolvedValue({ content: newGitContent, sha: "main-sha" });
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
+
+    await requestSwitch(null);
+    cancelPendingSync();
+
+    expect($pendingSync.get()).toBeNull();
+    expect(requestImport).not.toHaveBeenCalled();
+  });
+
+  it("auto-applies without a dialog when skipSwitchConfirmation is on, even with a non-empty safe subset", async () => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: true,
+    });
+    mockGithub.getFile.mockResolvedValue({ content: newGitContent, sha: "main-sha" });
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
+    vi.mocked(requestImport).mockResolvedValue({ success: true, message: "Imported.", quarantined: [] });
+
+    await requestSwitch(null);
+
+    expect(requestImport).toHaveBeenCalledTimes(1);
+    expect($pendingSync.get()).toBeNull();
+  });
+
+  it("auto-applies without a dialog when there is nothing to sync, even with skipSwitchConfirmation off", async () => {
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+    mockGithub.getFile.mockResolvedValue({ content: oldGitContent, sha: "main-sha" });
+    vi.mocked(requestExport).mockResolvedValue(oldGitContent);
+
+    await requestSwitch(null);
+
+    expect(requestImport).not.toHaveBeenCalled();
+    expect($pendingSync.get()).toBeNull();
+  });
+});

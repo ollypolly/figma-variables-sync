@@ -3,7 +3,7 @@ import { Fragment, h } from "preact";
 import { useState } from "preact/hooks";
 
 import { WarningNotice } from "@components/WarningNotice";
-import { DiffBaseSwitchDialog } from "@components/DiffBaseSwitchDialog";
+import { SyncConfirmDialog } from "@components/SyncConfirmDialog";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
 import { PrSelector } from "@components/PrSelector";
@@ -22,9 +22,9 @@ export function ProposalsTab() {
     openProposals,
     activeProposal,
     requestSwitch,
-    pendingSwitch,
+    pendingSync,
     switchLoading,
-    cancelSwitch,
+    cancelPendingSync,
     baseBranch,
     showStalenessNotice,
     staleness,
@@ -55,10 +55,10 @@ export function ProposalsTab() {
   const [confirmingSwitch, setConfirmingSwitch] = useState(false);
 
   const handleConfirmSwitch = async () => {
-    if (!pendingSwitch) return;
+    if (!pendingSync) return;
     setConfirmingSwitch(true);
     try {
-      await pendingSwitch.commit();
+      await pendingSync.commit();
     } finally {
       setConfirmingSwitch(false);
     }
@@ -213,13 +213,13 @@ export function ProposalsTab() {
         loading={exportPreviewLoading}
         error={exportPreviewError}
       />
-      <DiffBaseSwitchDialog
-        open={pendingSwitch !== null}
-        targetLabel={pendingSwitch?.targetLabel ?? ""}
-        count={pendingSwitch?.count ?? 0}
+      <SyncConfirmDialog
+        open={pendingSync !== null}
+        targetLabel={pendingSync?.targetLabel ?? ""}
+        count={pendingSync?.count ?? 0}
         loading={confirmingSwitch}
         onConfirm={handleConfirmSwitch}
-        onCancel={cancelSwitch}
+        onCancel={cancelPendingSync}
       />
     </TabGuard>
   );
