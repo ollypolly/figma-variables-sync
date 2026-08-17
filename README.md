@@ -35,6 +35,16 @@ This builds the files into the `manifest.json` referenced outputs. You can load 
 > [!TIP]
 > Turn on the **Hot reload plugin** option in Figma's developer menu to automatically reload when files change.
 
+### 🔑 GitHub Personal Access Token (PAT)
+
+The plugin's **Settings** tab needs a GitHub PAT to read/write your token file and open Pull Requests. A fine-grained, repo-scoped token is recommended over a classic `repo`-scope token, since it lets you grant access only to the specific repositories below rather than your entire account.
+
+Grant access to two repositories:
+- **Your design-tokens repository** (wherever `design-tokens.json` lives) — needs `Contents: Read and write` and `Pull requests: Read and write`.
+- **This repository** (`ollypolly/figma-variables-sync`) — needs `Issues: Read and write`, so the in-plugin "Send feedback" button can file bug reports/feature requests on your behalf. Skip this one if you don't plan to use that button.
+
+`Metadata: Read-only` is required and auto-granted for any repository you select — no action needed there.
+
 ### 🧪 QA Test Kit
 
 We provide a portable QA test kit for validating the plugin end-to-end (import, export, diffs, and GitHub PR proposals).
@@ -47,7 +57,7 @@ See the [QA Checklist & Setup Guide](test-kit/QA.md) for details on how to confi
 
 - `src/common/` : Code shared between the UI and the Plugin contexts.
 - `src/services/` : Services for GitHub API and Figma interactions.
-- `src/tabs/` : Plugin tab view screens (Settings, Updates, Proposals).
+- `src/tabs/` : Plugin tab view screens (Settings, Changes).
 - `plans/` : Reference roadmaps and architecture design details.
 - `test-kit/` : Self-contained end-to-end QA token set and testing checklist.
 
@@ -82,13 +92,9 @@ Example mapping structure:
 
 ---
 
-## 🚀 Future Roadmap (v2+)
+## 🗺️ Roadmap
 
-- **Staging UI** — Let designers select specific changes to include in a proposal.
-- **Drafts & Workstreams** — Support multiple concurrent named drafts (branches).
-- **Multi-File Token Support** — Organize tokens across directories and files instead of a single path.
-- **Token-to-Component Bindings** — Track component-to-semantic-token bindings to view downstream impacts.
-- **Bidirectional conflict resolution** — Ask designers which version wins directly inside Figma when merge conflicts happen.
+See [`plans/`](plans/) for the current, actively-maintained roadmap and architecture decisions.
 
 ---
 

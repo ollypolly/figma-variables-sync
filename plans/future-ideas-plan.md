@@ -47,6 +47,12 @@ Re-checked against the codebase after Bugs 1-5 landed (`data-integrity-fixes`) �
 - **Color parsing silently falls back to black on malformed input.** `parseColor.ts` intentionally returns `{r:0,g:0,b:0,a:1}` for anything it can't parse (covered by an existing test), but this is a silent-corruption risk with no signal back to the user — worth revisiting whether it should quarantine/warn instead, consistent with how Bug 1 handles other invalid input.
 - **Unresolved alias references fail silently.** `resolveDtcgValue.ts` only `console.warn`s when an alias path doesn't resolve, then falls through — for a color token this hits the color-parsing fallback above (writes solid black), for other types it writes the raw unresolved `{path}` string into the variable. No quarantine, no user-facing notice, unlike Bug 1's collision handling.
 
+## Feedback Button Requires Access to a Personal Repo
+
+The in-plugin "Send feedback" button (`src/services/feedback.ts`) files GitHub issues against `ollypolly/figma-variables-sync` using whichever PAT the user has configured in Settings — which means anyone using this feature needs `Issues: Read and write` on that specific repo. Fine for the current single-designer test period, but doesn't scale to a public Figma Community release: asking every installer to get repo access from the maintainer just to submit feedback isn't reasonable.
+
+Before wider release, replace this with a mechanism that doesn't require granting repo access — options include a hosted form (e.g. a simple serverless endpoint that creates the issue on the maintainer's behalf), a third-party feedback widget, or just linking out to a public issue template/Discussions page instead of creating issues directly from the plugin.
+
 ## In-Plugin Onboarding for the PR/Branch/Sync Model
 
 As the "Pull Request:" dropdown, auto-apply (Slice 3), and staging/revert (Slice 4) accumulate, there's a real amount of mental model a designer needs to build — what a PR actually is, when Figma's variables update automatically vs. need a manual action, what "Reset" discards. Right now that's all just discoverable through use, or explained by whoever set the plugin up for them. Some kind of lightweight in-plugin explainer (a first-run walkthrough, an expandable "How this works" panel, contextual hints the first time each concept comes up) would make this a lot easier to pick up cold.

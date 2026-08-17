@@ -137,7 +137,7 @@ Not resolving this now — worth a dedicated think on its own before Slice 3 goe
 - **Still open: per-row and per-group revert.** Each row needs a "revert" action alongside its +/− (a discard-changes icon, VS Code-style) that writes just that one path's git value back into Figma; a group gets the same action for every descendant leaf in that subtree. Today the only option is "Reset" (all-or-nothing) — there's still no way to discard a single unwanted change without also discarding everything else pending.
 - **How:** this is the same git→Figma write-back direction as "Revert all" above and Slice 3's 3c/3d auto-apply — just scoped to a subset of paths instead of the whole tree. Deletions need the same care noted in Slice 3 — reverting a path that was added locally (doesn't exist on git at all) means deleting the Figma variable, not just changing its value.
 
-**Risk:** Highest of all slices — new core function (`applyStagedDiffs`) needs thorough test coverage (added/modified/deleted, nested paths, mode overrides) before it touches anything submitted to GitHub. This is the slice most worth having a second look at (tests-first, maybe a dry-run/preview before wiring to actual submit). Revert adds a second highest-risk area of its own: it's a destructive local write, and "Revert all" specifically can discard more than a designer intended with one click.
+**Risk:** Highest of all slices — new core function (`applyStagedDiffs`) needs thorough test coverage (added/modified/deleted, nested paths, mode overrides) before it touches anything submitted to GitHub. This is the slice most worth having a second look at (tests-first, maybe a dry-run/preview before wiring to actual submit). Revert adds a second highest-risk area of its own: it's a destructive local write, and "Revert all" specifically can discard more than a designer intended with one click. See **Testing strategy** below — a nock fixture covering stage-some/revert-one/submit is the cheap way to keep re-verifying this multi-call sequence in CI as staging logic changes, without a live disposable repo each time.
 
 **Reference/alias resolution for display — candidate for this slice, or later:** `exportToDtcg` deliberately exports an aliased variable as a DTCG reference string (`{Primitive.color.brand.teal.9}`), not its resolved literal value — correct for what actually gets committed, since baking semantic tokens into hardcoded literals would defeat the point of having them. But `parseDtcg` doesn't resolve references either, so a diff row for a referenced token shows the raw reference string on both sides instead of an actual value — no color swatch, harder to read at a glance. Resolving the chain (recursively — a semantic token can reference another semantic token before hitting a primitive) is self-contained per side: for a given side's full token map, look up a `{refPath}` in that same map and take its value, repeating with a cycle/depth guard until a literal is found. This is purely a *display* resolution — `DiffItem.figmaVal`/`gitVal` and everything actually exported/committed stay untouched. Worth spiking together with a future "link/navigate between related variables" exploration (e.g. jump from a semantic token's diff row to the primitive it points to) rather than as two unrelated pieces of work, since resolving the chain for display already means walking the same reference graph that navigation would need.
 
@@ -154,3 +154,47 @@ Combined with Slice 3's PR-status check-in: on load, if a persisted `activePropo
 ## Terminology (resolved)
 
 "Pull Request:" dropdown + "New Request" button — no separate "working on" label or banner needed; the dropdown's selected value is the state. A small icon-and-label link next to the dropdown opens the PR on GitHub when one is selected; wherever else this state needs surfacing (e.g. staleness banners in Slice 3), follow the same pattern rather than a full title/description block.
+
+## Testing strategy: nock-based integration fixtures
+
+`github.test.ts` today mocks out the whole `Octokit` class and stubs `.request()` directly — that verifies our own logic (what params we pass, how we branch on `error.status`) but skips Octokit's actual request-building/serialization, so a wrong endpoint template or param name wouldn't be caught. Fine for pure-logic tests (diff computation, error-mapping); not enough once a flow chains several real GitHub calls together in sequence, which is exactly the shape of Slice 4's stage → revert → submit flow.
+
+**Proposed addition, not a replacement:** use [`nock`](https://github.com/nock/nock) to intercept at the HTTP layer instead of stubbing `.request()`. Octokit's real request path (URL templating, auth headers, JSON/base64 body encoding) runs for real; nock throws on any unmocked request, and `nock.isDone()` fails if an expected call never happened — so a flow that's supposed to hit GitHub 5 times in sequence gets caught if it actually calls 4 or 6.
+
+Sketch for `submitProposal`'s new-PR path (`createBranch` → `getFile` → `updateFile` → `createPullRequest` → label assignment):
+
+```ts
+import nock from "nock";
+import { GitHubService } from "@services/github";
+import { submitProposal } from "@services/proposals";
+
+describe("submitProposal (nock integration)", () => {
+  afterEach(() => nock.cleanAll());
+
+  it("creates a branch, commits merged content, opens a PR", async () => {
+    nock("https://api.github.com")
+      .get("/repos/test-owner/test-repo/git/ref/heads/main")
+      .reply(200, { object: { sha: "base-sha" } })
+      .post("/repos/test-owner/test-repo/git/refs")
+      .reply(201, {})
+      .get(/\/repos\/test-owner\/test-repo\/contents\/tokens\.json/)
+      .reply(200, { type: "file", content: Buffer.from("{}").toString("base64"), sha: "file-sha" })
+      .put("/repos/test-owner/test-repo/contents/tokens.json")
+      .reply(200, { commit: { sha: "new-sha" } })
+      .post("/repos/test-owner/test-repo/pulls")
+      .reply(201, { number: 42, html_url: "https://github.com/test-owner/test-repo/pull/42" })
+      .post("/repos/test-owner/test-repo/issues/42/labels")
+      .reply(200, []);
+
+    const github = new GitHubService("fake-pat");
+    const result = await submitProposal(settings, github, figmaContent, diffs, "desc", null);
+
+    expect(result.number).toBe(42);
+    expect(nock.isDone()).toBe(true); // fails if any call was skipped, or an extra one happened
+  });
+});
+```
+
+**Tradeoff:** fixtures are more verbose than the current per-call `vi.fn()` mocks — every endpoint in a chain needs a real response shape, and a flow's fixture needs updating whenever its call sequence changes. In exchange it catches a class of bug unit mocks structurally can't: a dropped call, an accidental double-fetch, a param that would actually fail real serialization. Not a wholesale swap — keep `vi.mock('@octokit/core')`-style unit tests for pure logic, add `nock` fixtures for the multi-call flows: `submitProposal`, `updateProposalBranch`, and — once built — Slice 4's stage-some/revert-one/submit sequence.
+
+**Where this helps Slice 4 specifically:** that slice's Risk note above already calls for "tests-first, maybe a dry-run/preview before wiring to actual submit." A nock fixture over the full stage/revert/submit sequence is that dry-run, runnable in CI on every commit instead of only by hand against a disposable repo — cheaper to keep re-checking as staging logic evolves, without spending real GitHub API calls or needing a live test repo per run. Manual in-Figma testing still stays the final check before shipping (real variable diffing, real UI) — this just narrows how much of that has to be re-walked by hand each time.

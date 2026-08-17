@@ -23,7 +23,7 @@ export class GitHubService {
   private octokit: Octokit;
 
   constructor(pat: string) {
-    this.octokit = new Octokit({ auth: pat });
+    this.octokit = new Octokit({ auth: pat, headers: { "X-GitHub-Api-Version": "2022-11-28" } });
   }
 
   // Get file content and SHA
@@ -133,18 +133,36 @@ export class GitHubService {
     };
   }
 
-  // Verify connection by checking repository accessibility
+  // Create Issue
+  async createIssue(
+    owner: string,
+    repo: string,
+    title: string,
+    body: string,
+    labels: string[]
+  ): Promise<{ number: number; html_url: string }> {
+    const response = await this.octokit.request("POST /repos/{owner}/{repo}/issues", {
+      owner,
+      repo,
+      title,
+      body,
+      labels,
+    });
+    return {
+      number: response.data.number,
+      html_url: response.data.html_url,
+    };
+  }
+
+  // Verify connection by checking repository accessibility. Throws on failure so the caller can
+  // report what actually went wrong (bad PAT, no access, wrong repo name) instead of a single
+  // generic "couldn't connect".
   async verifyConnection(owner: string, repo: string): Promise<boolean> {
-    try {
-      await this.octokit.request("GET /repos/{owner}/{repo}", {
-        owner,
-        repo,
-      });
-      return true;
-    } catch (e) {
-      console.error("Connection verification failed:", e);
-      return false;
-    }
+    await this.octokit.request("GET /repos/{owner}/{repo}", {
+      owner,
+      repo,
+    });
+    return true;
   }
 
   // Fetch pull requests created by this plugin (branches prefixed with PROPOSAL_BRANCH_PREFIX)
