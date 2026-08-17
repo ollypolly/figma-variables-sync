@@ -1,4 +1,4 @@
-import { Button, Modal, Muted, SegmentedControl, Text, TextboxMultiline } from "@create-figma-plugin/ui";
+import { Button, Modal, Muted, SegmentedControl, Text, Textbox, TextboxMultiline } from "@create-figma-plugin/ui";
 import { h } from "preact";
 
 import { StatusBanner } from "@components/StatusBanner";
@@ -9,6 +9,8 @@ interface FeedbackModalProps {
   closeModal: () => void;
   type: FeedbackType;
   setType: (type: FeedbackType) => void;
+  title: string;
+  setTitle: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
   submitting: boolean;
@@ -22,6 +24,8 @@ export function FeedbackModal({
   closeModal,
   type,
   setType,
+  title,
+  setTitle,
   description,
   setDescription,
   submitting,
@@ -39,6 +43,11 @@ export function FeedbackModal({
             { value: "bug", children: "Bug" },
             { value: "feature", children: "Feature" },
           ]}
+        />
+        <Textbox
+          value={title}
+          onValueInput={setTitle}
+          placeholder={type === "bug" ? "Short summary of the bug" : "Short summary of the feature"}
         />
         <TextboxMultiline
           value={description}

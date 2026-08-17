@@ -17,12 +17,17 @@ export function useFeedback() {
   const settings = useStore($settings);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState<FeedbackType>("bug");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<FeedbackResult | null>(null);
   const [cooldown, setCooldown] = useState(false);
 
-  const canSubmit = description.trim().length >= MIN_DESCRIPTION_LENGTH && !submitting && !result?.success;
+  const canSubmit =
+    title.trim().length > 0 &&
+    description.trim().length >= MIN_DESCRIPTION_LENGTH &&
+    !submitting &&
+    !result?.success;
 
   function openModal(): void {
     if (cooldown) return;
@@ -30,6 +35,7 @@ export function useFeedback() {
     // draft (or a visible error) should still be there when the user reopens.
     if (result?.success) {
       setType("bug");
+      setTitle("");
       setDescription("");
       setResult(null);
     }
@@ -44,7 +50,7 @@ export function useFeedback() {
     if (!canSubmit) return;
     setSubmitting(true);
     try {
-      const issue = await submitFeedback(settings.pat, type, description);
+      const issue = await submitFeedback(settings.pat, type, title, description);
       setResult({ success: true, text: `Thanks — issue #${issue.number} filed.`, link: issue.html_url });
       setCooldown(true);
       setTimeout(() => setCooldown(false), COOLDOWN_MS);
@@ -62,6 +68,8 @@ export function useFeedback() {
     closeModal,
     type,
     setType,
+    title,
+    setTitle,
     description,
     setDescription,
     submitting,
