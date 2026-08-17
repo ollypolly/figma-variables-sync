@@ -67,7 +67,10 @@ export { $description };
 
 export const $check = atom<ProposalCheckResult | null>(null);
 export const $checking = atom(false);
-export const $checkError = atom<string | null>(null);
+// Set by any failed attempt to confirm changes against GitHub — the initial/manual check or a
+// poll tick alike — and cleared by the next one that succeeds. One atom, not two, so a poll
+// succeeding doesn't leave a stale error from the check (or vice versa) stuck on screen.
+export const $connectionError = atom<string | null>(null);
 
 export const $background = atom<{ success: boolean; text: string } | null>(null);
 export const $pendingSync = atom<PendingSync | null>(null);
@@ -110,8 +113,8 @@ export const $showResetNotice = computed(
 );
 
 export const $status = computed(
-  [$background, $resetError, $resetResult, $submitError, $submitResult, $checkError],
-  (background, resetError, resetResult, submitError, submitResult, checkError) => {
+  [$background, $resetError, $resetResult, $submitError, $submitResult, $connectionError],
+  (background, resetError, resetResult, submitError, submitResult, connectionError) => {
     if (background) return background;
     if (resetError) return { success: false, text: resetError };
     if (resetResult) return { success: true, text: "Figma reset to match git." };
@@ -125,7 +128,7 @@ export const $status = computed(
         link: submitResult.html_url,
       };
     }
-    if (checkError) return { success: false, text: checkError };
+    if (connectionError) return { success: false, text: connectionError };
     return null;
   }
 );
@@ -174,19 +177,35 @@ async function resolvePendingSync(
   $pendingSync.set({ targetLabel, count: plan.safeDotPaths.size, commit });
 }
 
-async function refreshActiveProposal(): Promise<ProposalCheckResult> {
+interface ActiveProposalRefresh {
+  result: ProposalCheckResult;
+  // Set when GitHub couldn't be reached to confirm the git side, but we could still show local
+  // Figma changes against the last confirmed git baseline. The result is real but unverified —
+  // proposals/staleness/pending-sync data is whatever was last confirmed, not refreshed this cycle.
+  error: string | null;
+}
+
+async function refreshActiveProposal(): Promise<ActiveProposalRefresh> {
   const settings = $settings.get();
   const github = getGitHub(settings);
   if (!github) throw new Error("Not configured.");
   const activeProposal = $activeProposal.get();
   const lastGoodResult = $check.get();
 
-  const { result, resolvedDeadProposal, staleness: nextStaleness, plan } = await checkActiveProposalStatus(
-    settings,
-    github,
-    activeProposal,
-    lastGoodResult
-  );
+  let statusCheck: Awaited<ReturnType<typeof checkActiveProposalStatus>>;
+  try {
+    statusCheck = await checkActiveProposalStatus(settings, github, activeProposal, lastGoodResult);
+  } catch (e) {
+    if (!lastGoodResult) throw e;
+    const diffSettings = resolveDiffSettings(settings, activeProposal);
+    const localRefresh = await checkFigmaChanges(lastGoodResult.gitContent, diffSettings);
+    return {
+      result: { ...lastGoodResult, ...localRefresh },
+      error: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Couldn't confirm changes against GitHub." }),
+    };
+  }
+
+  const { result, resolvedDeadProposal, staleness: nextStaleness, plan } = statusCheck;
 
   if (resolvedDeadProposal) {
     $activeProposal.set(null);
@@ -202,7 +221,7 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
     }
   }
 
-  if (plan.safeDotPaths.size === 0) return result;
+  if (plan.safeDotPaths.size === 0) return { result, error: null };
 
   const targetLabel = resolvedDeadProposal ? settings.branch : activeProposal ? `PR #${activeProposal.number}` : settings.branch;
   let finalResult = result;
@@ -222,21 +241,21 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
         text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to sync." }),
       })
   );
-  return finalResult;
+  return { result: finalResult, error: null };
 }
 
 export async function checkForChanges(): Promise<ProposalCheckResult | null> {
   $checking.set(true);
-  $checkError.set(null);
   try {
-    const result = await refreshActiveProposal();
+    const { result, error } = await refreshActiveProposal();
     $check.set(result);
     $checking.set(false);
+    $connectionError.set(error);
     return result;
   } catch (e) {
     $checking.set(false);
     const { owner, repo } = $settings.get();
-    $checkError.set(describeGitHubError(e, { owner, repo, fallback: "An error occurred." }));
+    $connectionError.set(describeGitHubError(e, { owner, repo, fallback: "An error occurred." }));
     $check.set(null);
     return null;
   }
@@ -484,7 +503,7 @@ export async function loadExportPreview(): Promise<void> {
 }
 
 function settingsIdentityKey(settings: PluginSettings): string {
-  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
+  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
 }
 
 let lastSettingsIdentity = settingsIdentityKey($settings.get());
@@ -506,7 +525,10 @@ $settings.listen((settings) => {
 
 function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void {
   const interval = setInterval(() => {
-    tick().catch(() => {});
+    tick().catch((e) => {
+      const { owner, repo } = $settings.get();
+      $connectionError.set(describeGitHubError(e, { owner, repo, fallback: "A background sync check failed." }));
+    });
   }, intervalMs);
   return () => clearInterval(interval);
 }
@@ -514,6 +536,8 @@ function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void
 export function initProposalsSync(): () => void {
   checkForChanges();
 
+  // Figma-only — never touches GitHub — so a successful tick here says nothing about whether
+  // the connection to GitHub (tracked by the slow poll below) is actually healthy again.
   const stopFastPoll = pollSilently(FAST_POLL_INTERVAL_MS, async () => {
     const current = $check.get();
     if (!current) return;
@@ -524,8 +548,9 @@ export function initProposalsSync(): () => void {
 
   const stopSlowPoll = pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
     if ($pendingSync.get()) return;
-    const result = await refreshActiveProposal();
+    const { result, error } = await refreshActiveProposal();
     setDataIfChanged($check, result);
+    $connectionError.set(error);
   });
 
   return () => {

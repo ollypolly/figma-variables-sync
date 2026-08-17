@@ -28,8 +28,12 @@ export function describeGitHubError(e: unknown, context: GitHubErrorContext): st
     case 401:
       return "GitHub rejected your personal access token. Check it's valid and not expired in Settings.";
     case 403: {
-      const permission = context.requiredPermission ? ` with "${context.requiredPermission}"` : "";
-      return `Your PAT doesn't have access to ${repoLabel}. Grant it access${permission} in GitHub.`;
+      const permission = context.requiredPermission ? ` requiring "${context.requiredPermission}"` : "";
+      return (
+        `GitHub rejected this request to ${repoLabel} as forbidden (403)${permission}. ` +
+        `If your PAT normally works, this can also mean GitHub itself is degraded — check https://www.githubstatus.com. ` +
+        `Otherwise, grant the PAT access to ${repoLabel} in GitHub.`
+      );
     }
     case 404:
       return `${repoLabel} — repository, branch, or file not found. Check Settings match an existing path.`;
