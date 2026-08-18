@@ -516,7 +516,7 @@ $settings.listen((settings) => {
   $background.set(null);
 });
 
-function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void {
+function pollWithErrorReporting(intervalMs: number, tick: () => Promise<void>): () => void {
   const interval = setInterval(() => {
     tick().catch((e) => {
       const { owner, repo } = $settings.get();
@@ -531,7 +531,7 @@ export function initProposalsSync(): () => void {
 
   // Figma-only — never touches GitHub — so a successful tick here says nothing about whether
   // the connection to GitHub (tracked by the slow poll below) is actually healthy again.
-  const stopFastPoll = pollSilently(FAST_POLL_INTERVAL_MS, async () => {
+  const stopFastPoll = pollWithErrorReporting(FAST_POLL_INTERVAL_MS, async () => {
     const current = $check.get();
     if (!current) return;
     const diffSettings = resolveDiffSettings($settings.get(), $activeProposal.get());
@@ -539,7 +539,7 @@ export function initProposalsSync(): () => void {
     setDataIfChanged($check, { ...current, ...result });
   });
 
-  const stopSlowPoll = pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
+  const stopSlowPoll = pollWithErrorReporting(SLOW_POLL_INTERVAL_MS, async () => {
     if ($pendingSync.get()) return;
     await refreshAndSyncCheck();
   });
