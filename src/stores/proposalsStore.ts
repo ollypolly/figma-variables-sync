@@ -503,7 +503,7 @@ export async function loadExportPreview(): Promise<void> {
 }
 
 function settingsIdentityKey(settings: PluginSettings): string {
-  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
+  return JSON.stringify([settings.owner, settings.repo, settings.branch, settings.filePath]);
 }
 
 let lastSettingsIdentity = settingsIdentityKey($settings.get());
