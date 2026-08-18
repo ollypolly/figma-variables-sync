@@ -1,7 +1,7 @@
 import { atom, computed, type WritableAtom } from "nanostores";
 
 import { GitHubService } from "@services/github";
-import { describeGitHubError } from "@services/githubErrors";
+import { describeError, describeGitHubError } from "@services/githubErrors";
 import { requestExport } from "@services/figmaMessages";
 import {
   applySafeSubset,
@@ -67,7 +67,10 @@ export { $description };
 
 export const $check = atom<ProposalCheckResult | null>(null);
 export const $checking = atom(false);
-export const $checkError = atom<string | null>(null);
+// Set by any failed attempt to confirm changes against GitHub — the initial/manual check or a
+// poll tick alike — and cleared by the next one that succeeds. One atom, not two, so a poll
+// succeeding doesn't leave a stale error from the check (or vice versa) stuck on screen.
+export const $connectionError = atom<string | null>(null);
 
 export const $background = atom<{ success: boolean; text: string } | null>(null);
 export const $pendingSync = atom<PendingSync | null>(null);
@@ -110,8 +113,8 @@ export const $showResetNotice = computed(
 );
 
 export const $status = computed(
-  [$background, $resetError, $resetResult, $submitError, $submitResult, $checkError],
-  (background, resetError, resetResult, submitError, submitResult, checkError) => {
+  [$background, $resetError, $resetResult, $submitError, $submitResult, $connectionError],
+  (background, resetError, resetResult, submitError, submitResult, connectionError) => {
     if (background) return background;
     if (resetError) return { success: false, text: resetError };
     if (resetResult) return { success: true, text: "Figma reset to match git." };
@@ -125,7 +128,7 @@ export const $status = computed(
         link: submitResult.html_url,
       };
     }
-    if (checkError) return { success: false, text: checkError };
+    if (connectionError) return { success: false, text: connectionError };
     return null;
   }
 );
@@ -225,21 +228,30 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   return finalResult;
 }
 
-export async function checkForChanges(): Promise<ProposalCheckResult | null> {
-  $checking.set(true);
-  $checkError.set(null);
+// GitHub is the only source of truth for whether a diff is still accurate — if it can't be
+// reached, we can't tell whether the last confirmed baseline still holds, so any previously
+// shown local changes are hidden rather than left displayed against a possibly-stale baseline.
+async function refreshAndSyncCheck(): Promise<ProposalCheckResult | null> {
+  const hadPriorResult = $check.get() !== null;
   try {
     const result = await refreshActiveProposal();
-    $check.set(result);
-    $checking.set(false);
+    setDataIfChanged($check, result);
+    $connectionError.set(null);
     return result;
   } catch (e) {
-    $checking.set(false);
     const { owner, repo } = $settings.get();
-    $checkError.set(describeGitHubError(e, { owner, repo, fallback: "An error occurred." }));
+    const reason = describeError(e, { owner, repo, fallback: "An error occurred." });
+    $connectionError.set(hadPriorResult ? `${reason} Local changes are hidden until this succeeds.` : reason);
     $check.set(null);
     return null;
   }
+}
+
+export async function checkForChanges(): Promise<ProposalCheckResult | null> {
+  $checking.set(true);
+  const result = await refreshAndSyncCheck();
+  $checking.set(false);
+  return result;
 }
 
 export async function requestSwitch(target: ActiveProposal | null): Promise<void> {
@@ -484,7 +496,7 @@ export async function loadExportPreview(): Promise<void> {
 }
 
 function settingsIdentityKey(settings: PluginSettings): string {
-  return [settings.owner, settings.repo, settings.branch, settings.filePath].join(" ");
+  return JSON.stringify([settings.owner, settings.repo, settings.branch, settings.filePath]);
 }
 
 let lastSettingsIdentity = settingsIdentityKey($settings.get());
@@ -504,9 +516,12 @@ $settings.listen((settings) => {
   $background.set(null);
 });
 
-function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void {
+function pollWithErrorReporting(intervalMs: number, tick: () => Promise<void>): () => void {
   const interval = setInterval(() => {
-    tick().catch(() => {});
+    tick().catch((e) => {
+      const { owner, repo } = $settings.get();
+      $connectionError.set(describeError(e, { owner, repo, fallback: "A background sync check failed." }));
+    });
   }, intervalMs);
   return () => clearInterval(interval);
 }
@@ -514,7 +529,9 @@ function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void
 export function initProposalsSync(): () => void {
   checkForChanges();
 
-  const stopFastPoll = pollSilently(FAST_POLL_INTERVAL_MS, async () => {
+  // Figma-only — never touches GitHub — so a successful tick here says nothing about whether
+  // the connection to GitHub (tracked by the slow poll below) is actually healthy again.
+  const stopFastPoll = pollWithErrorReporting(FAST_POLL_INTERVAL_MS, async () => {
     const current = $check.get();
     if (!current) return;
     const diffSettings = resolveDiffSettings($settings.get(), $activeProposal.get());
@@ -522,10 +539,9 @@ export function initProposalsSync(): () => void {
     setDataIfChanged($check, { ...current, ...result });
   });
 
-  const stopSlowPoll = pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
+  const stopSlowPoll = pollWithErrorReporting(SLOW_POLL_INTERVAL_MS, async () => {
     if ($pendingSync.get()) return;
-    const result = await refreshActiveProposal();
-    setDataIfChanged($check, result);
+    await refreshAndSyncCheck();
   });
 
   return () => {

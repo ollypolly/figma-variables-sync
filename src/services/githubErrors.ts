@@ -28,8 +28,12 @@ export function describeGitHubError(e: unknown, context: GitHubErrorContext): st
     case 401:
       return "GitHub rejected your personal access token. Check it's valid and not expired in Settings.";
     case 403: {
-      const permission = context.requiredPermission ? ` with "${context.requiredPermission}"` : "";
-      return `Your PAT doesn't have access to ${repoLabel}. Grant it access${permission} in GitHub.`;
+      const permission = context.requiredPermission ? ` requiring "${context.requiredPermission}"` : "";
+      return (
+        `GitHub rejected this request to ${repoLabel} as forbidden (403)${permission}. ` +
+        `If your PAT normally works, this can also mean GitHub itself is degraded — check https://www.githubstatus.com. ` +
+        `Otherwise, grant the PAT access to ${repoLabel} in GitHub.`
+      );
     }
     case 404:
       return `${repoLabel} — repository, branch, or file not found. Check Settings match an existing path.`;
@@ -39,4 +43,14 @@ export function describeGitHubError(e: unknown, context: GitHubErrorContext): st
     default:
       return message ?? context.fallback ?? "Something went wrong talking to GitHub.";
   }
+}
+
+// For call sites that can receive an error from either GitHub or somewhere else entirely (e.g. a
+// Figma-side export failure) — only routes to describeGitHubError once the error actually looks
+// like it came from GitHub, so a non-GitHub failure doesn't get mislabeled as a connection issue.
+export function describeError(e: unknown, context: GitHubErrorContext): string {
+  if (statusOf(e) === undefined) {
+    return e instanceof Error ? e.message : context.fallback ?? "Something went wrong.";
+  }
+  return describeGitHubError(e, context);
 }

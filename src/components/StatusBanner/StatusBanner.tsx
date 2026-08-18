@@ -1,8 +1,31 @@
 import { Banner, IconCheck16, IconWarning16, Link } from "@create-figma-plugin/ui";
-import { h } from "preact";
+import { Fragment, h, type ComponentChildren } from "preact";
 
 interface StatusBannerProps {
   status: { success: boolean; text: string; link?: string } | null;
+}
+
+const URL_PATTERN = /https?:\/\/\S+?(?=[.,;:!?]?(?:\s|$))/g;
+
+function linkifyUrls(text: string): ComponentChildren {
+  const urls = text.match(URL_PATTERN);
+  if (!urls) return text;
+
+  const parts = text.split(URL_PATTERN);
+  return (
+    <Fragment>
+      {parts.map((part, i) => (
+        <Fragment key={i}>
+          {part}
+          {urls[i] && (
+            <Link href={urls[i]} target="_blank">
+              {urls[i]}
+            </Link>
+          )}
+        </Fragment>
+      ))}
+    </Fragment>
+  );
 }
 
 export function StatusBanner({ status }: StatusBannerProps) {
@@ -18,7 +41,7 @@ export function StatusBanner({ status }: StatusBannerProps) {
           {status.text}
         </Link>
       ) : (
-        status.text
+        linkifyUrls(status.text)
       )}
     </Banner>
   );

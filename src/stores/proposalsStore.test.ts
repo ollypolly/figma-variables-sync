@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@create-figma-plugin/utilities", () => ({ on: vi.fn(() => vi.fn()), emit: vi.fn() }));
 vi.mock("@services/figmaMessages", () => ({ requestExport: vi.fn(), requestImport: vi.fn() }));
@@ -25,12 +25,15 @@ import { $activeProposal } from "./activeProposalStore";
 import {
   $background,
   $check,
+  $connectionError,
   $conflictNotice,
   $dismissedStalenessCount,
   $pendingSync,
   $staleness,
+  $status,
   $switchLoading,
   cancelPendingSync,
+  initProposalsSync,
   requestSwitch,
 } from "./proposalsStore";
 import { updateSettings } from "./settingsStore";
@@ -250,5 +253,165 @@ describe("proposalsStore — sync confirm gating", () => {
 
     expect(requestImport).not.toHaveBeenCalled();
     expect($pendingSync.get()).toBeNull();
+  });
+});
+
+describe("proposalsStore — connection error surfacing and fallback", () => {
+  const gitContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+  const forbidden = Object.assign(new Error("Resource not accessible by personal access token"), { status: 403 });
+
+  async function flushMicrotasks(times = 20) {
+    for (let i = 0; i < times; i++) await Promise.resolve();
+  }
+
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    vi.mocked(requestImport).mockReset();
+    mockGithub.getFile.mockReset();
+    mockGithub.listPullRequests.mockReset();
+    $check.set(null);
+    $pendingSync.set(null);
+    $connectionError.set(null);
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("surfaces a background poll failure via $status instead of swallowing it", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(gitContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+      expect($check.get()).not.toBeNull();
+
+      mockGithub.listPullRequests.mockRejectedValue(forbidden);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($connectionError.get()).toContain("403");
+      expect($status.get()).toEqual({ success: false, text: $connectionError.get() });
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps a connection error visible across fast-poll ticks, since those never touch GitHub", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(gitContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+
+      mockGithub.listPullRequests.mockRejectedValue(forbidden);
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+      expect($connectionError.get()).toContain("403");
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await flushMicrotasks();
+      expect($connectionError.get()).toContain("403");
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("doesn't mislabel a non-GitHub fast-poll failure as a GitHub connection issue", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(gitContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+
+      vi.mocked(requestExport).mockRejectedValue(new Error("Figma export failed: unsupported variable type."));
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await flushMicrotasks();
+
+      expect($connectionError.get()).toBe("Figma export failed: unsupported variable type.");
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("clears a connection error once a later poll succeeds, with nothing to fall back to on the first failure", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGithub.getFile.mockRejectedValue(forbidden);
+      mockGithub.listPullRequests.mockRejectedValue(forbidden);
+      vi.mocked(requestExport).mockResolvedValue(gitContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+      expect($connectionError.get()).toContain("403");
+      expect($check.get()).toBeNull();
+
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($connectionError.get()).toBeNull();
+      expect($check.get()).not.toBeNull();
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("hides previously shown local changes once GitHub can no longer confirm the baseline", async () => {
+    vi.useFakeTimers();
+    try {
+      const localFigmaContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(localFigmaContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+      expect($check.get()?.diffs).toHaveLength(1);
+      expect($connectionError.get()).toBeNull();
+
+      mockGithub.listPullRequests.mockRejectedValue(forbidden);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($check.get()).toBeNull();
+      expect($connectionError.get()).toContain("403");
+      expect($connectionError.get()).toContain("Local changes are hidden");
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
