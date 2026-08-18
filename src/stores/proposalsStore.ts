@@ -177,35 +177,19 @@ async function resolvePendingSync(
   $pendingSync.set({ targetLabel, count: plan.safeDotPaths.size, commit });
 }
 
-interface ActiveProposalRefresh {
-  result: ProposalCheckResult;
-  // Set when GitHub couldn't be reached to confirm the git side, but we could still show local
-  // Figma changes against the last confirmed git baseline. The result is real but unverified —
-  // proposals/staleness/pending-sync data is whatever was last confirmed, not refreshed this cycle.
-  error: string | null;
-}
-
-async function refreshActiveProposal(): Promise<ActiveProposalRefresh> {
+async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   const settings = $settings.get();
   const github = getGitHub(settings);
   if (!github) throw new Error("Not configured.");
   const activeProposal = $activeProposal.get();
   const lastGoodResult = $check.get();
 
-  let statusCheck: Awaited<ReturnType<typeof checkActiveProposalStatus>>;
-  try {
-    statusCheck = await checkActiveProposalStatus(settings, github, activeProposal, lastGoodResult);
-  } catch (e) {
-    if (!lastGoodResult) throw e;
-    const diffSettings = resolveDiffSettings(settings, activeProposal);
-    const localRefresh = await checkFigmaChanges(lastGoodResult.gitContent, diffSettings);
-    return {
-      result: { ...lastGoodResult, ...localRefresh },
-      error: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Couldn't confirm changes against GitHub." }),
-    };
-  }
-
-  const { result, resolvedDeadProposal, staleness: nextStaleness, plan } = statusCheck;
+  const { result, resolvedDeadProposal, staleness: nextStaleness, plan } = await checkActiveProposalStatus(
+    settings,
+    github,
+    activeProposal,
+    lastGoodResult
+  );
 
   if (resolvedDeadProposal) {
     $activeProposal.set(null);
@@ -221,7 +205,7 @@ async function refreshActiveProposal(): Promise<ActiveProposalRefresh> {
     }
   }
 
-  if (plan.safeDotPaths.size === 0) return { result, error: null };
+  if (plan.safeDotPaths.size === 0) return result;
 
   const targetLabel = resolvedDeadProposal ? settings.branch : activeProposal ? `PR #${activeProposal.number}` : settings.branch;
   let finalResult = result;
@@ -241,24 +225,33 @@ async function refreshActiveProposal(): Promise<ActiveProposalRefresh> {
         text: describeGitHubError(e, { owner: settings.owner, repo: settings.repo, fallback: "Failed to sync." }),
       })
   );
-  return { result: finalResult, error: null };
+  return finalResult;
+}
+
+// GitHub is the only source of truth for whether a diff is still accurate — if it can't be
+// reached, we can't tell whether the last confirmed baseline still holds, so any previously
+// shown local changes are hidden rather than left displayed against a possibly-stale baseline.
+async function refreshAndSyncCheck(): Promise<ProposalCheckResult | null> {
+  const hadPriorResult = $check.get() !== null;
+  try {
+    const result = await refreshActiveProposal();
+    setDataIfChanged($check, result);
+    $connectionError.set(null);
+    return result;
+  } catch (e) {
+    const { owner, repo } = $settings.get();
+    const reason = describeError(e, { owner, repo, fallback: "An error occurred." });
+    $connectionError.set(hadPriorResult ? `${reason} Local changes are hidden until this succeeds.` : reason);
+    $check.set(null);
+    return null;
+  }
 }
 
 export async function checkForChanges(): Promise<ProposalCheckResult | null> {
   $checking.set(true);
-  try {
-    const { result, error } = await refreshActiveProposal();
-    $check.set(result);
-    $checking.set(false);
-    $connectionError.set(error);
-    return result;
-  } catch (e) {
-    $checking.set(false);
-    const { owner, repo } = $settings.get();
-    $connectionError.set(describeError(e, { owner, repo, fallback: "An error occurred." }));
-    $check.set(null);
-    return null;
-  }
+  const result = await refreshAndSyncCheck();
+  $checking.set(false);
+  return result;
 }
 
 export async function requestSwitch(target: ActiveProposal | null): Promise<void> {
@@ -548,9 +541,7 @@ export function initProposalsSync(): () => void {
 
   const stopSlowPoll = pollSilently(SLOW_POLL_INTERVAL_MS, async () => {
     if ($pendingSync.get()) return;
-    const { result, error } = await refreshActiveProposal();
-    setDataIfChanged($check, result);
-    $connectionError.set(error);
+    await refreshAndSyncCheck();
   });
 
   return () => {

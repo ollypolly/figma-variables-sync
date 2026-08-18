@@ -387,7 +387,7 @@ describe("proposalsStore — connection error surfacing and fallback", () => {
     }
   });
 
-  it("falls back to a local Figma-only diff against the last known git baseline instead of wiping known changes", async () => {
+  it("hides previously shown local changes once GitHub can no longer confirm the baseline", async () => {
     vi.useFakeTimers();
     try {
       const localFigmaContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
@@ -405,8 +405,9 @@ describe("proposalsStore — connection error surfacing and fallback", () => {
       await vi.advanceTimersByTimeAsync(30_000);
       await flushMicrotasks();
 
-      expect($check.get()?.diffs).toHaveLength(1);
+      expect($check.get()).toBeNull();
       expect($connectionError.get()).toContain("403");
+      expect($connectionError.get()).toContain("Local changes are hidden");
 
       stop();
     } finally {
