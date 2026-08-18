@@ -337,6 +337,29 @@ describe("proposalsStore — connection error surfacing and fallback", () => {
     }
   });
 
+  it("doesn't mislabel a non-GitHub fast-poll failure as a GitHub connection issue", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGithub.getFile.mockResolvedValue({ content: gitContent, sha: "sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(gitContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+
+      vi.mocked(requestExport).mockRejectedValue(new Error("Figma export failed: unsupported variable type."));
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await flushMicrotasks();
+
+      expect($connectionError.get()).toBe("Figma export failed: unsupported variable type.");
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("clears a connection error once a later poll succeeds, with nothing to fall back to on the first failure", async () => {
     vi.useFakeTimers();
     try {

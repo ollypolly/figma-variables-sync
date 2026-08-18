@@ -1,7 +1,7 @@
 import { atom, computed, type WritableAtom } from "nanostores";
 
 import { GitHubService } from "@services/github";
-import { describeGitHubError } from "@services/githubErrors";
+import { describeError, describeGitHubError } from "@services/githubErrors";
 import { requestExport } from "@services/figmaMessages";
 import {
   applySafeSubset,
@@ -255,7 +255,7 @@ export async function checkForChanges(): Promise<ProposalCheckResult | null> {
   } catch (e) {
     $checking.set(false);
     const { owner, repo } = $settings.get();
-    $connectionError.set(describeGitHubError(e, { owner, repo, fallback: "An error occurred." }));
+    $connectionError.set(describeError(e, { owner, repo, fallback: "An error occurred." }));
     $check.set(null);
     return null;
   }
@@ -527,7 +527,7 @@ function pollSilently(intervalMs: number, tick: () => Promise<void>): () => void
   const interval = setInterval(() => {
     tick().catch((e) => {
       const { owner, repo } = $settings.get();
-      $connectionError.set(describeGitHubError(e, { owner, repo, fallback: "A background sync check failed." }));
+      $connectionError.set(describeError(e, { owner, repo, fallback: "A background sync check failed." }));
     });
   }, intervalMs);
   return () => clearInterval(interval);

@@ -44,3 +44,13 @@ export function describeGitHubError(e: unknown, context: GitHubErrorContext): st
       return message ?? context.fallback ?? "Something went wrong talking to GitHub.";
   }
 }
+
+// For call sites that can receive an error from either GitHub or somewhere else entirely (e.g. a
+// Figma-side export failure) — only routes to describeGitHubError once the error actually looks
+// like it came from GitHub, so a non-GitHub failure doesn't get mislabeled as a connection issue.
+export function describeError(e: unknown, context: GitHubErrorContext): string {
+  if (statusOf(e) === undefined) {
+    return e instanceof Error ? e.message : context.fallback ?? "Something went wrong.";
+  }
+  return describeGitHubError(e, context);
+}
