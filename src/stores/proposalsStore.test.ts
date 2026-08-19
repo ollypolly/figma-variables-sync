@@ -11,6 +11,9 @@ const mockGithub = vi.hoisted(() => ({
   updateBranch: vi.fn(),
   closePullRequest: vi.fn(),
   deleteBranch: vi.fn(),
+  createBranch: vi.fn(),
+  updateFile: vi.fn(),
+  createPullRequest: vi.fn(),
 }));
 
 vi.mock("@services/github", () => ({
@@ -35,6 +38,8 @@ import {
   cancelPendingSync,
   initProposalsSync,
   requestSwitch,
+  setDescription,
+  submitProposal,
 } from "./proposalsStore";
 import { updateSettings } from "./settingsStore";
 import type { ProposalCheckResult } from "@services/proposals";
@@ -408,6 +413,88 @@ describe("proposalsStore — connection error surfacing and fallback", () => {
       expect($check.get()).toBeNull();
       expect($connectionError.get()).toContain("403");
       expect($connectionError.get()).toContain("Local changes are hidden");
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("proposalsStore — stale read after our own write", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+    mockGithub.getFile.mockReset();
+    mockGithub.listPullRequests.mockReset();
+    mockGithub.getPullRequest.mockReset();
+    mockGithub.createBranch.mockReset();
+    mockGithub.updateFile.mockReset();
+    mockGithub.createPullRequest.mockReset();
+    $check.set(null);
+    $activeProposal.set(null);
+    $pendingSync.set(null);
+    $connectionError.set(null);
+    updateSettings({
+      pat: "test-pat",
+      owner: "owner",
+      repo: "repo",
+      filePath: "tokens.json",
+      branch: "main",
+      prLabels: "",
+      skipSwitchConfirmation: false,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function flushMicrotasks(times = 20) {
+    for (let i = 0; i < times; i++) await Promise.resolve();
+  }
+
+  it("doesn't sync a designer's fresh submit back to the old value when a poll still reports the pre-write sha", async () => {
+    vi.useFakeTimers();
+    try {
+      const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+      const newFigmaContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+
+      mockGithub.getFile.mockResolvedValue({ content: oldGitContent, sha: "old-sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(newFigmaContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+      expect($check.get()?.diffs).toHaveLength(1);
+
+      mockGithub.createBranch.mockResolvedValue(undefined);
+      mockGithub.updateFile.mockResolvedValue("new-sha");
+      mockGithub.createPullRequest.mockResolvedValue({ number: 1, html_url: "https://github.com/pull/1" });
+      mockGithub.getPullRequest.mockResolvedValue({ state: "open", mergeable: true, mergeable_state: "clean" });
+
+      setDescription("Update brand primary");
+      await submitProposal();
+
+      const freshGitContent = $check.get()?.gitContent;
+      expect(freshGitContent).not.toBe(oldGitContent);
+      expect($check.get()?.diffs).toEqual([]);
+
+      // GitHub's Contents API hasn't caught up yet — the next poll still reads the pre-write content/sha.
+      mockGithub.getFile.mockResolvedValue({ content: oldGitContent, sha: "old-sha" });
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($check.get()?.gitContent).toBe(freshGitContent);
+      expect($pendingSync.get()).toBeNull();
+
+      // GitHub catches up — the read now matches what we wrote, so normal drift-checking resumes.
+      mockGithub.getFile.mockResolvedValue({ content: freshGitContent, sha: "new-sha" });
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($check.get()?.gitContent).toBe(freshGitContent);
 
       stop();
     } finally {
