@@ -201,7 +201,11 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   );
 
   if (staleGitSha !== null) {
-    if (result.gitSha === staleGitSha) return lastGoodResult ?? result;
+    // A missing gitSha (a 404 on the branch we just wrote to, or a result that never read
+    // branch contents at all) is just as unconfirmed as seeing the old sha again — clearing
+    // the guard on it would let a transient read-after-write 404 through as if it were real
+    // drift.
+    if (!result.gitSha || result.gitSha === staleGitSha) return lastGoodResult ?? result;
     staleGitSha = null;
   }
 

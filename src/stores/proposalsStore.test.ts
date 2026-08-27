@@ -501,4 +501,52 @@ describe("proposalsStore — stale read after our own write", () => {
       vi.useRealTimers();
     }
   });
+
+  it("keeps holding the guard through a 404 on the branch it just wrote to, instead of treating a missing sha as confirmation", async () => {
+    vi.useFakeTimers();
+    try {
+      const oldGitContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#fff" } } } });
+      const newFigmaContent = JSON.stringify({ Tokens: { brand: { primary: { $type: "color", $value: "#000" } } } });
+
+      mockGithub.getFile.mockResolvedValue({ content: oldGitContent, sha: "old-sha" });
+      mockGithub.listPullRequests.mockResolvedValue([]);
+      vi.mocked(requestExport).mockResolvedValue(newFigmaContent);
+
+      const stop = initProposalsSync();
+      await flushMicrotasks();
+      expect($check.get()?.diffs).toHaveLength(1);
+
+      mockGithub.createBranch.mockResolvedValue(undefined);
+      mockGithub.updateFile.mockResolvedValue("new-sha");
+      mockGithub.createPullRequest.mockResolvedValue({ number: 1, html_url: "https://github.com/pull/1" });
+      mockGithub.getPullRequest.mockResolvedValue({ state: "open", mergeable: true, mergeable_state: "clean" });
+
+      setDescription("Update brand primary");
+      await submitProposal();
+
+      const freshGitContent = $check.get()?.gitContent;
+
+      // The new branch briefly 404s before it's fully propagated — not the old content, no
+      // content at all.
+      mockGithub.getFile.mockResolvedValue(null);
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($check.get()?.gitContent).toBe(freshGitContent);
+      expect($pendingSync.get()).toBeNull();
+
+      // GitHub catches up — the read now matches what we wrote, so normal drift-checking resumes.
+      mockGithub.getFile.mockResolvedValue({ content: freshGitContent, sha: "new-sha" });
+
+      await vi.advanceTimersByTimeAsync(30_000);
+      await flushMicrotasks();
+
+      expect($check.get()?.gitContent).toBe(freshGitContent);
+
+      stop();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
