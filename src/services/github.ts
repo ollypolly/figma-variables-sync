@@ -100,7 +100,11 @@ export class GitHubService {
       sha: currentSha,
       branch: branchName,
     });
-    return response.data.content!.sha!;
+    const newSha = response.data.content?.sha;
+    if (!newSha) {
+      throw new Error("GitHub didn't return the new file's sha after committing.");
+    }
+    return newSha;
   }
 
   // Create Pull Request
