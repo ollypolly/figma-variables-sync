@@ -145,9 +145,12 @@ describe("GitHubService", () => {
   });
 
   describe("updateFile", () => {
-    it("should update/commit the file contents and return commit sha", async () => {
+    it("should update/commit the file contents and return the new content sha", async () => {
       mockRequest.mockResolvedValueOnce({
         data: {
+          content: {
+            sha: "new-content-sha",
+          },
           commit: {
             sha: "new-commit-sha",
           },
@@ -163,7 +166,7 @@ describe("GitHubService", () => {
         "feature/new-branch"
       );
 
-      expect(resultSha).toBe("new-commit-sha");
+      expect(resultSha).toBe("new-content-sha");
       expect(mockRequest).toHaveBeenCalledWith(
         "PUT /repos/{owner}/{repo}/contents/{path}",
         {

@@ -22,7 +22,7 @@ function createMockGitHub(overrides: Record<string, any> = {}) {
     getFile: vi.fn().mockResolvedValue({ content: "{}", sha: "base-sha" }),
     listPullRequests: vi.fn().mockResolvedValue([]),
     createBranch: vi.fn().mockResolvedValue(undefined),
-    updateFile: vi.fn().mockResolvedValue("new-commit-sha"),
+    updateFile: vi.fn().mockResolvedValue("new-content-sha"),
     createPullRequest: vi.fn().mockResolvedValue({ number: 1, html_url: "https://github.com/pull/1" }),
     getMergeBaseSha: vi.fn().mockResolvedValue("merge-base-sha"),
     getPullRequest: vi.fn().mockResolvedValue({ mergeable: true, mergeable_state: "clean" }),
@@ -181,7 +181,14 @@ describe("submitProposal", () => {
       branchName,
       []
     );
-    expect(pr).toEqual({ number: 1, html_url: "https://github.com/pull/1", head_ref: branchName, gitContent: writtenContent });
+    expect(pr).toEqual({
+      number: 1,
+      html_url: "https://github.com/pull/1",
+      head_ref: branchName,
+      gitContent: writtenContent,
+      previousGitSha: "base-sha",
+      gitSha: "new-content-sha",
+    });
   });
 });
 
@@ -218,6 +225,8 @@ describe("submitProposal with an active proposal", () => {
       html_url: "https://github.com/pull/5",
       head_ref: "figma/proposal-1",
       gitContent: writtenContent,
+      previousGitSha: "pr-sha",
+      gitSha: "new-content-sha",
     });
   });
 

@@ -182,7 +182,7 @@ describe("Plugin Flow Integration Tests", () => {
         // mock getFile (inside submit to get current SHA)
         .mockResolvedValueOnce({ data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" } })
         // mock updateFile PUT repo contents
-        .mockResolvedValueOnce({ data: { commit: { sha: "new-commit-sha" } } })
+        .mockResolvedValueOnce({ data: { content: { sha: "new-content-sha" }, commit: { sha: "new-commit-sha" } } })
         // mock createPullRequest POST pulls
         .mockResolvedValueOnce({ data: { number: 99, html_url: "https://github.com/pull/99" } });
 
@@ -194,6 +194,8 @@ describe("Plugin Flow Integration Tests", () => {
         html_url: "https://github.com/pull/99",
         head_ref: expect.any(String),
         gitContent: expect.any(String),
+        previousGitSha: "base-sha",
+        gitSha: "new-content-sha",
       });
 
       // Verify the PUT content is the merged tree (here equivalent to the full export,
@@ -239,7 +241,7 @@ describe("Plugin Flow Integration Tests", () => {
         .mockResolvedValueOnce({ data: { object: { sha: "parent-commit-sha" } } })
         .mockResolvedValueOnce({ data: {} })
         .mockResolvedValueOnce({ data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" } })
-        .mockResolvedValueOnce({ data: { commit: { sha: "new-commit-sha" } } })
+        .mockResolvedValueOnce({ data: { content: { sha: "new-content-sha" }, commit: { sha: "new-commit-sha" } } })
         .mockResolvedValueOnce({ data: { number: 100, html_url: "https://github.com/pull/100" } });
 
       await submitProposal(config, github, figmaJson, diffs, "Update primary", null);
@@ -285,7 +287,7 @@ describe("Plugin Flow Integration Tests", () => {
         .mockResolvedValueOnce({ data: { object: { sha: "parent-commit-sha" } } })
         .mockResolvedValueOnce({ data: {} })
         .mockResolvedValueOnce({ data: { type: "file", content: btoa(JSON.stringify(gitTokens)), sha: "base-sha" } })
-        .mockResolvedValueOnce({ data: { commit: { sha: "new-commit-sha" } } })
+        .mockResolvedValueOnce({ data: { content: { sha: "new-content-sha" }, commit: { sha: "new-commit-sha" } } })
         .mockResolvedValueOnce({ data: { number: 101, html_url: "https://github.com/pull/101" } });
 
       await submitProposal(config, github, figmaJson, diffs, "Remove secondary", null);

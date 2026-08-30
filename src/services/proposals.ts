@@ -24,6 +24,10 @@ export interface ProposalCheckResult {
   diffs: DiffItem[];
   figmaContent: string;
   gitContent: string;
+  // The git blob sha this gitContent was read at (undefined for results that never read
+  // straight off a branch — e.g. dead-proposal/merge fallbacks). Lets a caller tell a
+  // lagging Contents API read apart from a genuinely new change.
+  gitSha?: string | null;
   proposals: Proposal[];
   collisionNotice: CollisionNotice | null;
   resetNotice: ResetNotice | null;
@@ -42,7 +46,7 @@ export async function checkForProposalChanges(
 
   const { diffs, figmaContent, collisionNotice, resetNotice, primaryModeName } = await checkFigmaChanges(gitContent, diffSettings);
   const proposals = knownProposals ?? (await github.listPullRequests(settings.owner, settings.repo, settings.branch));
-  return { diffs, figmaContent, gitContent, proposals, collisionNotice, resetNotice, primaryModeName };
+  return { diffs, figmaContent, gitContent, gitSha: fileData?.sha ?? null, proposals, collisionNotice, resetNotice, primaryModeName };
 }
 
 // Called once a designer's active PR is found to be merged/closed — falls back to main,
@@ -249,6 +253,18 @@ export async function abandonProposal(
   return planResolveDeadProposal(settings, github, current);
 }
 
+export interface SubmitProposalResult {
+  number: number;
+  html_url: string;
+  head_ref: string;
+  gitContent: string;
+  // The sha of the content this write replaced, and the sha it wrote. A read that still
+  // reports previousGitSha shortly after this resolves means the Contents API hasn't caught
+  // up yet — not a real subsequent change — see refreshActiveProposal's staleness guard.
+  previousGitSha: string | null;
+  gitSha: string;
+}
+
 export async function submitProposal(
   settings: Omit<PluginSettings, "pat">,
   github: GitHubService,
@@ -256,7 +272,7 @@ export async function submitProposal(
   diffs: DiffItem[],
   description: string,
   activeProposal: ActiveProposal | null
-): Promise<{ number: number; html_url: string; head_ref: string; gitContent: string }> {
+): Promise<SubmitProposalResult> {
   const stagedDotPaths = new Set(diffs.map((d) => d.dotPath));
 
   if (activeProposal) {
@@ -265,12 +281,14 @@ export async function submitProposal(
       throw new Error("This PR's branch is no longer available — it may have been merged or closed.");
     }
     const mergedContent = applyStagedDiffs(freshBranchFile.content, figmaContent, stagedDotPaths);
-    await github.updateFile(settings, description, mergedContent, freshBranchFile.sha, activeProposal.head_ref);
+    const gitSha = await github.updateFile(settings, description, mergedContent, freshBranchFile.sha, activeProposal.head_ref);
     return {
       number: activeProposal.number,
       html_url: activeProposal.html_url,
       head_ref: activeProposal.head_ref,
       gitContent: mergedContent,
+      previousGitSha: freshBranchFile.sha,
+      gitSha,
     };
   }
 
@@ -281,7 +299,7 @@ export async function submitProposal(
   const baseJson = fileData?.content ?? "{}";
   const mergedContent = applyStagedDiffs(baseJson, figmaContent, stagedDotPaths);
 
-  await github.updateFile(settings, description, mergedContent, fileData?.sha, branchName);
+  const gitSha = await github.updateFile(settings, description, mergedContent, fileData?.sha, branchName);
 
   const pr = await github.createPullRequest(
     settings,
@@ -290,5 +308,5 @@ export async function submitProposal(
     branchName,
     parsePrLabels(settings.prLabels)
   );
-  return { ...pr, head_ref: branchName, gitContent: mergedContent };
+  return { ...pr, head_ref: branchName, gitContent: mergedContent, previousGitSha: fileData?.sha ?? null, gitSha };
 }

@@ -30,6 +30,8 @@ Currently the plugin syncs variable **values** but not variable **bindings** —
 
 The GitHub contents API can take ~10 seconds to reflect a merged PR. After merging, the plugin may briefly show stale diffs. Consider a "last checked" timestamp, a short polling retry after submit, or a toast explaining the delay. Distinct from the data-loss bugs already fixed (naming collisions, metadata round-trip, orphan cleanup, merge-based proposals, diff visibility) — this is read-after-write API lag, not a correctness bug.
 
+**Update from real designer usage (see [`designer-feedback-2026-08-19.md`](./designer-feedback-2026-08-19.md)):** this is worse than "briefly shows a stale diff" — the same lag lets idle-drift's auto-apply write stale (pre-push) content back over a designer's just-submitted local changes right after creating/updating a PR. Flagged urgent; worth prioritizing ahead of the rest of this list.
+
 ## Self-Service Fix for Git-Side Naming Collisions
 
 When `computeDiff` finds a path that's quarantined on the git side but clean on Figma's side (invalid DTCG already committed to the repo — a token name doubling as a group name), today's `WarningNotice` says an engineer has to edit the file directly. But Figma is the real source of truth here, and export already guarantees Figma's current state can't have this collision — so the "correct" content for that path is knowable: whatever Figma currently has for it.

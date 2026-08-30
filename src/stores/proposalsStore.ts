@@ -177,6 +177,15 @@ async function resolvePendingSync(
   $pendingSync.set({ targetLabel, count: plan.safeDotPaths.size, commit });
 }
 
+// Set right after our own write to the tracked branch/file, to the sha that write replaced.
+// GitHub's Contents API can lag a write by a few seconds, so the very next read can come back
+// still reporting this exact old sha — that's not a new change, just our own write not caught
+// up yet, and treating it as drift would sync the designer's own fresh values right back to
+// what they used to be. Cleared the moment a read reports anything else, which is either the
+// write finally showing up or a genuinely different subsequent change — both are safe to
+// process normally.
+let staleGitSha: string | null = null;
+
 async function refreshActiveProposal(): Promise<ProposalCheckResult> {
   const settings = $settings.get();
   const github = getGitHub(settings);
@@ -190,6 +199,15 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
     activeProposal,
     lastGoodResult
   );
+
+  if (staleGitSha !== null) {
+    // A missing gitSha (a 404 on the branch we just wrote to, or a result that never read
+    // branch contents at all) is just as unconfirmed as seeing the old sha again — clearing
+    // the guard on it would let a transient read-after-write 404 through as if it were real
+    // drift.
+    if (!result.gitSha || result.gitSha === staleGitSha) return lastGoodResult ?? result;
+    staleGitSha = null;
+  }
 
   if (resolvedDeadProposal) {
     $activeProposal.set(null);
@@ -446,7 +464,8 @@ export async function submitProposal(): Promise<void> {
       head_ref: pr.head_ref,
       title: activeProposal?.title ?? description,
     });
-    $check.set({ ...check, diffs: [], gitContent: pr.gitContent });
+    $check.set({ ...check, diffs: [], gitContent: pr.gitContent, gitSha: pr.gitSha });
+    staleGitSha = pr.previousGitSha;
     $description.set("");
     $submitResult.set({ ...pr, wasUpdate });
     $submitting.set(false);
@@ -514,6 +533,7 @@ $settings.listen((settings) => {
   $activeProposal.set(null);
   resetStaleness();
   $background.set(null);
+  staleGitSha = null;
 });
 
 function pollWithErrorReporting(intervalMs: number, tick: () => Promise<void>): () => void {

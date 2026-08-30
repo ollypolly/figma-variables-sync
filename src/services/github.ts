@@ -81,7 +81,9 @@ export class GitHubService {
     });
   }
 
-  // Commit / update file in a branch
+  // Commit / update file in a branch. Returns the new file's content sha (not the commit
+  // sha) — the same sha a later getFile() call on this path will report, which is what lets
+  // callers tell a lagging Contents API read apart from a genuinely new change.
   async updateFile(
     config: Omit<GitHubConfig, "pat">,
     commitMessage: string,
@@ -98,7 +100,11 @@ export class GitHubService {
       sha: currentSha,
       branch: branchName,
     });
-    return response.data.commit.sha!;
+    const newSha = response.data.content?.sha;
+    if (!newSha) {
+      throw new Error("GitHub didn't return the new file's sha after committing.");
+    }
+    return newSha;
   }
 
   // Create Pull Request
