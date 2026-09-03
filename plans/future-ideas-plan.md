@@ -20,6 +20,10 @@ Currently the plugin syncs a single `filePath` to one JSON file. In practice, DT
 - How do popular tools (Style Dictionary, Tokens Studio) expect tokens to be organized?
 - What changes are needed in the plugin to support syncing a directory of token files rather than a single file path?
 
+## No Multi-Repo Support
+
+Settings (`pat`/`owner`/`repo`/`filePath`/`branch`) are a single stored config (`SETTINGS_KEY` in `figma.clientStorage`) — there's no way to have more than one repo configured and switch between them. Surfaced from real usage: configuring the plugin against a second repo overwrites the first's settings entirely, with no path back short of re-entering everything. Needs solving before a Figma Community release, where users will realistically want to point the same plugin install at different repos over time (or switch between projects). Options: multiple named configs with a switcher, or leaning on `clientStorage`'s per-file scoping more deliberately (worth checking whether that alone already covers the common case, or whether it's the same file being pointed at different repos over time that actually matters here).
+
 ## Token-to-Component Binding Awareness
 
 Currently the plugin syncs variable **values** but not variable **bindings** — which variable is applied to which property on which component. Capturing this mapping (e.g. "Button background uses `brand/primary`") would let designers see the downstream impact of a token change. Needs research into whether the Figma Plugin API exposes bound-variable-to-node relationships in a way that's exportable.
