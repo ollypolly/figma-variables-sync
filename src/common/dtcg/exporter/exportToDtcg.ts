@@ -64,7 +64,7 @@ export function exportToDtcg(
 
   if (externalAliasPaths.length > 0) {
     throw new NamingCollisionError(
-      `These variables are aliased to a variable from an external library, which can't be tracked here — bind them to a variable that exists locally in this file instead.`,
+      `These variables are aliased to a variable that isn't in this file's local variable set — either a reference to an external library, or a variable that no longer exists. Rebind them to a variable that exists locally in this file.`,
       externalAliasPaths
     );
   }

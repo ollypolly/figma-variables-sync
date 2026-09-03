@@ -53,25 +53,40 @@ to a stale or mismatched id rather than the current local `Brandon-Text`
 variable — rather than the designer's original hunch that this is just how Figma
 talks about fonts.
 
-**Blocked on**: live Figma file access to confirm. Need to check, via the Figma
-MCP `use_figma` tool: (a) the actual `valuesByMode` alias id currently bound to
-`Semantic.Typography.Font.Family`, (b) whether that id resolves to a variable with
-`remote: true` (a genuine team-library reference — hypothesis wrong, this is
-correct behavior) or `remote: false`/unresolvable (bug — bound to a dead/wrong
-id), and (c) the actual `Brandon-Text` variable's own id, to see if the two
-simply don't match. Don't have a route to the file directly yet — next step once
-access is sorted.
+**Confirmed via live Figma inspection** (`design/n4N51UjLuXdFcfgKnfCMCP` —
+Goodlord Design System): this is not an external library reference at all.
 
-If it turns out to be a real, currently-unhandled case (either this bug, or a
-legitimate external alias we should stop hard-blocking on), the design asked for
-is: **assume external, don't reset** — treat an alias target we can't find as
-intentionally pointing outside the local set (leave it alone) rather than
-resetting to a default. That's a different failure mode than what
-`resolveDtcgValue.ts` currently does on import (falls back to
-`defaultValueForType` and `console.warn`s) — worth revisiting once the live-state
-question above is answered, and note it'd need its own decision for the *export*
-side's current hard-block-with-`NamingCollisionError` behavior too, not just
-import.
+`Semantic/Typography/Font/Family`'s alias points to `VariableID:12854:42`,
+named `Family/Brandon Text` (space). That variable still resolves through
+`figma.variables.getVariableByIdAsync` — `remote: false`, so it's local — but
+it is **absent from its own collection's `variableIds` list**
+(`Primitives — Typography`, collection `VariableCollectionId:12854:35`): a
+soft-deleted/orphaned variable. Meanwhile a separate, currently-live variable,
+`Family/Brandon-Text` (hyphenated) at `VariableID:13879:1119`, sits in that
+same collection's `variableIds` list and is presumably the one meant to be
+bound. Likely cause: someone renamed "Brandon Text" → "Brandon-Text" by
+creating a new variable and deleting the old one instead of renaming in
+place, and the semantic alias never got repointed.
+
+Since `exportToDtcg`'s `variableMap` is built only from
+`figma.variables.getLocalVariables()` (which correctly excludes the orphaned
+variable), it can't resolve the alias — so it threw `NamingCollisionError`
+with the same message used for genuine external-library aliases. That message
+was misleading for this case: it's a dangling reference to a deleted *local*
+variable, not a library reference, and it's fixable by rebinding in Figma —
+not by "binding to a variable that exists locally" (it already should be).
+
+**Status: fixed.** Distinguishing the two cases properly (dangling local vs.
+genuine external) would mean making `exportToDtcg` async so it can call
+`getVariableByIdAsync` per unresolved alias and check `remote` — a wide change
+touching all 23 call sites across the handler and 4 test files, plus a new
+mock capability for the "resolvable but orphaned" case the current mock can't
+simulate. Given `exportToDtcg`'s sync inputs can't actually tell the two cases
+apart without that, went with the cheaper fix instead: reworded the message to
+stop asserting "external library" as fact, covering both possibilities and
+pointing at the fix (rebind in Figma) either way. Left this file's actual data
+alone — no alias rebind — since the message fix covers the designer-facing
+problem on its own.
 
 ## 2. Stale GitHub Contents API cache overwrites fresh local changes — urgent
 
