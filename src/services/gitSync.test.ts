@@ -182,6 +182,14 @@ describe("computeSafeSubset", () => {
     expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
   });
 
+  it("excludes a path deleted going from the old to the new git target when its value reappears under a different added path, even with no local Figma drift", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { group: { primary: color("#fff") } } } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
+  });
+
   it("excludes a path that's new on the target relative to the old baseline, even with no local Figma drift", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa"), primary: color("#fff") } } });

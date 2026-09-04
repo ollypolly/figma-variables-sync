@@ -25,11 +25,11 @@ export function SyncConfirmDialog({
 }: SyncConfirmDialogProps) {
   const count = items.length;
   return (
-    <Modal open={open} title="Sync variables" onCloseButtonClick={onCancel} onOverlayClick={onCancel} position="center">
+    <Modal open={open} title="Pull in changes?" onCloseButtonClick={onCancel} onOverlayClick={onCancel} position="center">
       <div style={{ width: "360px", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
         <Text>
-          This will update or remove {count} variable{count === 1 ? "" : "s"} in Figma to match {targetLabel}. Any
-          local changes you haven't proposed yet won't be touched.
+          {targetLabel} has {count} change{count === 1 ? "" : "s"} you don't have in Figma yet. Would you like to
+          pull {count === 1 ? "it" : "them"} in? Anything you haven't proposed yet stays untouched either way.
         </Text>
         <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid var(--figma-color-border)", borderRadius: "2px" }}>
           <DiffList
@@ -37,16 +37,16 @@ export function SyncConfirmDialog({
             mode="updates"
             primaryModeName={primaryModeName}
             checking={false}
-            emptyMessage="Nothing to sync."
+            emptyMessage="Nothing to pull in."
             countLabel={(n) => `${n} variable${n === 1 ? "" : "s"}`}
           />
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <Button onClick={onConfirm} loading={loading}>
-            Sync
+            Pull in changes
           </Button>
           <Button onClick={onCancel} secondary disabled={loading}>
-            Cancel
+            Not now
           </Button>
         </div>
       </div>

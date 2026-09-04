@@ -179,4 +179,20 @@ Three coordinated changes:
 3. **The sync dialog lists the actual variables**, not just a count — threading
    the real `DiffItem[]` (already computed by `computeSafeSubset` before being
    reduced to a bare path set, previously discarded) through `SafeSyncPlan`
-   into `SyncConfirmDialog`.
+   into `SyncConfirmDialog`. Reframed as an optional pull ("Would you like to
+   pull these changes in?", with "Pull in changes" / "Not now" actions) rather
+   than a warning about an update that's about to happen — it's an offer the
+   designer can accept or decline, not something gating the switch.
+
+**Follow-up found while testing against a repro fixture** (a stale PR whose
+old baseline still had the pre-rename flat paths, unlike #518's empty
+baseline): the same ambiguity exists in the other direction. A rename is one
+`"added"` item (the new path) and one `"deleted"` item (the old path) — (1)
+above only excluded the added side, so when the old baseline still has the
+pre-rename path matching Figma's current export exactly (no drift), the
+deleted side sailed through as "safe" and the dialog offered to *delete* the
+designer's live, still-correct variable, believing the target had genuinely
+removed it. Fixed by excluding a deletion too when its value reappears under
+some other added path in the same delta — the same "this needs an explicit
+look, not a silent apply" treatment, just recognizing a rename from the
+other direction.

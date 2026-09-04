@@ -119,12 +119,19 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
   const drifted = new Set(drift.map((d) => d.dotPath));
 
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
+  // A renamed/relocated path shows up as one "added" item (the new path) and one "deleted" item
+  // (the old path) with the same value — same ambiguity as the added side, just from the other
+  // direction, so a deletion whose value reappears under some other added path gets the same
+  // "needs an explicit look" treatment rather than being auto-removed from Figma.
+  const addedValues = new Set(delta.filter((d) => d.type === "added").map((d) => d.figmaVal));
+
   const safe: DiffItem[] = [];
   for (const d of delta) {
     // A path new relative to the old baseline always requires an explicit look — Figma has
     // nothing to compare it against, so there's no way to tell a genuine addition apart from a
     // rename away from a path that no longer exists under its old name.
     if (d.type === "added") continue;
+    if (d.type === "deleted" && addedValues.has(d.gitVal)) continue;
     if (drifted.has(d.dotPath)) continue;
     safe.push(d);
   }
