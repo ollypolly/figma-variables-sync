@@ -154,7 +154,7 @@ not just the sync, so there was no way to target #518 (to push an update to it)
 without either accepting the revert or not switching at all. And the dialog only
 ever showed a count, never which variables or what they'd become.
 
-**Status: fixed, PR [#25](https://github.com/ollypolly/figma-variables-sync/pull/25)** (placeholder — update once opened).
+**Status: fix up for review, PR [#24](https://github.com/ollypolly/figma-variables-sync/pull/24).**
 Three coordinated changes:
 
 1. **`computeSafeSubset` never auto-adds a path Figma doesn't currently have.**
