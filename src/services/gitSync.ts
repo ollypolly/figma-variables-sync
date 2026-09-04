@@ -1,6 +1,6 @@
 import { applySafeDiffsToFigmaJson } from "@common/applySafeDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
-import { NamingCollisionError, parseDtcg } from "@common/dtcg";
+import { NamingCollisionError, parseDtcg, type ParsedToken } from "@common/dtcg";
 import { requestExport, requestImport } from "@services/figmaMessages";
 import type { ActiveProposal, PluginSettings } from "../types";
 
@@ -125,7 +125,7 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
   // "needs an explicit look" treatment rather than being auto-removed from Figma.
   const addedValues = new Set(delta.filter((d) => d.type === "added").map((d) => d.figmaVal));
 
-  const safe: DiffItem[] = [];
+  const safeDotPaths = new Set<string>();
   for (const d of delta) {
     // A path new relative to the old baseline always requires an explicit look — Figma has
     // nothing to compare it against, so there's no way to tell a genuine addition apart from a
@@ -133,9 +133,46 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
     if (d.type === "added") continue;
     if (d.type === "deleted" && addedValues.has(d.gitVal)) continue;
     if (drifted.has(d.dotPath)) continue;
-    safe.push(d);
+    safeDotPaths.add(d.dotPath);
   }
-  return safe;
+
+  // A safe item can still alias a path that won't actually exist in Figma once the sync runs —
+  // e.g. a renamed-away primitive we deliberately excluded above, which a safe alias update still
+  // points at. Applying that would bind the alias to nothing, resetting it to a default on import.
+  // Drop any safe item whose incoming value references a path that's neither already live in
+  // Figma nor itself part of this same safe set, repeating until nothing more needs to be dropped.
+  const targetTokensByPath = new Map(
+    parseDtcg(newGitContent).tokens.map((t): [string, ParsedToken] => [t.path.join("."), t])
+  );
+  const liveFigmaPaths = new Set(parseDtcg(figmaContent).tokens.map((t) => t.path.join(".")));
+  const aliasTargets = (t: ParsedToken): string[] =>
+    [t.value, ...Object.values(t.modes ?? {})]
+      .filter((v): v is string => typeof v === "string" && v.startsWith("{") && v.endsWith("}"))
+      .map((v) => v.slice(1, -1));
+
+  let droppedSome = true;
+  while (droppedSome) {
+    droppedSome = false;
+    for (const dotPath of safeDotPaths) {
+      const token = targetTokensByPath.get(dotPath);
+      if (!token) continue;
+      const unresolvable = aliasTargets(token).some(
+        (ref) => !liveFigmaPaths.has(ref) && !safeDotPaths.has(ref)
+      );
+      if (unresolvable) {
+        safeDotPaths.delete(dotPath);
+        droppedSome = true;
+      }
+    }
+  }
+
+  // delta's items compare the new target against the old baseline, not against Figma's current
+  // state — its figmaVal/gitVal fields hold the two git snapshots, neither of which is what's
+  // actually live in Figma right now. Re-derive the items to show from a genuine Figma-vs-target
+  // diff so the dialog reads as "what you have in Figma" -> "what the branch has", not old baseline
+  // vs. new baseline.
+  const { diffs: figmaVsTarget } = computeDiff(figmaContent, newGitContent, "updates");
+  return figmaVsTarget.filter((d) => safeDotPaths.has(d.dotPath));
 }
 
 export async function applySafeSubset(

@@ -220,6 +220,61 @@ describe("computeSafeSubset", () => {
     expect(requestExport).not.toHaveBeenCalled();
   });
 
+  it("excludes a safe alias update whose new target points at a path excluded from the same sync", async () => {
+    const oldGit = JSON.stringify({
+      Tokens: {
+        Primitive: { radius: { 2: color("#fff") } },
+        Semantic: { radius: { xs: { $type: "color", $value: "{Tokens.Primitive.radius.2}" } } },
+      },
+    });
+    const newGit = JSON.stringify({
+      Tokens: {
+        Primitive: { radius: { group: { 2: color("#fff") } } },
+        Semantic: { radius: { xs: { $type: "color", $value: "{Tokens.Primitive.radius.group.2}" } } },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).not.toContain("Tokens.Semantic.radius.xs");
+  });
+
+  it("includes a safe alias update whose new target points at a path that's already live in Figma", async () => {
+    const oldGit = JSON.stringify({
+      Tokens: {
+        Primitive: { radius: { 2: color("#fff") } },
+        Semantic: { radius: { xs: { $type: "color", $value: "{Tokens.Primitive.radius.2}" } } },
+      },
+    });
+    const newGit = JSON.stringify({
+      Tokens: {
+        Primitive: { radius: { 2: color("#fff"), 4: color("#aaa") } },
+        Semantic: { radius: { xs: { $type: "color", $value: "{Tokens.Primitive.radius.4}" } } },
+      },
+    });
+    const liveFigmaContent = JSON.stringify({
+      Tokens: {
+        Primitive: { radius: { 2: color("#fff"), 4: color("#aaa") } },
+        Semantic: { radius: { xs: { $type: "color", $value: "{Tokens.Primitive.radius.2}" } } },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
+
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).toContain("Tokens.Semantic.radius.xs");
+  });
+
+  it("reports safe items as what's live in Figma now versus what the target has, not the old baseline versus the target", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
+
+    const [item] = await computeSafeSubset(oldGit, newGit);
+    expect(item.figmaVal).toContain("#fff");
+    expect(item.gitVal).toContain("#000");
+  });
+
   it("always fetches a fresh Figma export rather than trusting caller-supplied drift info", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff"), secondary: color("#aaa") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000"), secondary: color("#bbb") } } });

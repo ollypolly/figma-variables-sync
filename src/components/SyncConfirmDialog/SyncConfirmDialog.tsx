@@ -29,7 +29,7 @@ export function SyncConfirmDialog({
       <div style={{ width: "360px", padding: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
         <Text>
           {targetLabel} has {count} change{count === 1 ? "" : "s"} you don't have in Figma yet. Would you like to
-          pull {count === 1 ? "it" : "them"} in? Anything you haven't proposed yet stays untouched either way.
+          pull {count === 1 ? "it" : "them"} into Figma? Anything you haven't proposed yet stays untouched either way.
         </Text>
         <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid var(--figma-color-border)", borderRadius: "2px" }}>
           <DiffList
@@ -43,7 +43,7 @@ export function SyncConfirmDialog({
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <Button onClick={onConfirm} loading={loading}>
-            Pull in changes
+            Pull into Figma
           </Button>
           <Button onClick={onCancel} secondary disabled={loading}>
             Not now
