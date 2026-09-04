@@ -130,3 +130,84 @@ and won't ship in the final product, so this doesn't need a general
 credential-management design. Just add a second, separate PAT field for now (e.g.
 a designer-scoped PAT alongside the existing one) so a designer can act under their
 own token rather than the repo owner's. No broader redesign needed.
+
+## 4. Switching PR target can silently resurrect renamed-away variables, with no visibility into what changed — urgent
+
+Observed: designer selected PR #518 in the dropdown (their own initial, long-stale
+proposal, unmerged and untouched since 2026-08-19) and got a "Sync variables ...
+This will update or remove 10 variables in Figma to match PR #518" dialog. They
+correctly suspected this would revert real, already-fixed work (a radius/spacing
+naming cleanup, a colour correction) and asked to push their current state as an
+*update* to #518 instead, without pulling its stale content in first.
+
+**Confirmed against the real repo** (`ohgoodlord/design-system`): `main` has had
+no `tokens/design-tokens.json` at all since 2026-08-11 (deleted "to make way for
+a fresh Figma export"); PR #518, opened 2026-08-19, is the only place a tokens
+file exists in git, and it's never been updated since. Pulled #518's actual
+content: it has the old, redundant-nested names
+(`Primitives-—-Radius.radius.2/4/10/full`, `Primitives-—-Spacing.spacing.5/10/…`)
+— 10 paths, matching the dialog's count exactly. Checked live Figma: those
+variables are now named without the redundant subgroup (`2`, `4`, `10`, `full` /
+`5`, `10`, …) — the designer's rename already happened. `Teal/100` is correctly
+protected (still exists as a live path, so it registers as drift) — the bug is
+specific to paths that no longer exist under their old name.
+
+**Root cause**: `computeSafeSubset` (`src/services/gitSync.ts`) treats any path
+present in the new target but absent from both Figma's current export and the
+old baseline as safe to add. A rename looks exactly like that from a pure
+dot-path diff — old path "deleted", new path "added" — and when the old
+baseline is empty (as `main` is here), *nothing* generates the protective
+"this path used to exist and is now gone, leave it alone" signal, so the stale
+path sails through. `applySafeDiffsToFigmaJson` then `setPath`s it back into
+the merged export — not reverting a value, but **recreating the old variable as
+a duplicate alongside the already-renamed one**, resurrecting the exact naming
+collision the designer just fixed.
+
+Separately, the switch UX made this worse: selecting a PR and syncing Figma to
+match it are one atomic action — canceling the dialog cancels the whole switch,
+not just the sync, so there was no way to target #518 (to push an update to it)
+without either accepting the revert or not switching at all. And the dialog only
+ever showed a count, never which variables or what they'd become.
+
+**Status: fix up for review, PR [#24](https://github.com/ollypolly/figma-variables-sync/pull/24).**
+Three coordinated changes:
+
+1. **`computeSafeSubset` never auto-adds a path Figma doesn't currently have.**
+   Filter out `type === "added"` delta items before building the safe set —
+   paths that are new relative to the old baseline always require an explicit
+   look, regardless of `skipSwitchConfirmation`. This subsumes the empty-baseline
+   case entirely (when the old baseline is empty, *every* delta item is
+   `"added"`, so the safe set is correctly empty) without needing a separate
+   guard. Modifications and removals of paths Figma already has are unaffected
+   and stay eligible for auto-sync as before.
+2. **`requestSwitch` no longer gates the switch itself on the sync decision.**
+   Restructured to match `abandonProposal`/`updateProposalBranch`'s existing
+   shape: fetch the target's content, diff Figma against it, and set
+   `$activeProposal`/`$check` unconditionally — then separately offer the
+   (now-corrected) safe subset as an optional, cancelable sync. Canceling
+   declines the sync; the switch already happened. This is what actually
+   guarantees the designer can always get to the state they want: after
+   switching, the diff shown is the real, current diff against the target
+   (including their renames), and submitting is merge-based (patches only
+   what changed) — pushing an update to #518 never requires pulling its stale
+   content in first.
+3. **The sync dialog lists the actual variables**, not just a count — threading
+   the real `DiffItem[]` (already computed by `computeSafeSubset` before being
+   reduced to a bare path set, previously discarded) through `SafeSyncPlan`
+   into `SyncConfirmDialog`. Reframed as an optional pull ("Would you like to
+   pull these changes in?", with "Pull in changes" / "Not now" actions) rather
+   than a warning about an update that's about to happen — it's an offer the
+   designer can accept or decline, not something gating the switch.
+
+**Follow-up found while testing against a repro fixture** (a stale PR whose
+old baseline still had the pre-rename flat paths, unlike #518's empty
+baseline): the same ambiguity exists in the other direction. A rename is one
+`"added"` item (the new path) and one `"deleted"` item (the old path) — (1)
+above only excluded the added side, so when the old baseline still has the
+pre-rename path matching Figma's current export exactly (no drift), the
+deleted side sailed through as "safe" and the dialog offered to *delete* the
+designer's live, still-correct variable, believing the target had genuinely
+removed it. Fixed by excluding a deletion too when its value reappears under
+some other added path in the same delta — the same "this needs an explicit
+look, not a silent apply" treatment, just recognizing a rename from the
+other direction.

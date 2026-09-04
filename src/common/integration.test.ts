@@ -392,12 +392,12 @@ describe("Plugin Flow Integration Tests", () => {
       // Proposing "everything" means the PR branch's content is a full copy of Figma's export.
       const proposalBranchContent = fullFigmaJson;
 
-      const safeDotPaths = await computeSafeSubset(proposalBranchContent, "{}");
+      const safeDiffs = await computeSafeSubset(proposalBranchContent, "{}");
       // The empty-target guard short-circuits before any per-path diffing — an empty git target
       // is never something to sync toward, regardless of what it's a delta from.
-      expect(safeDotPaths.size).toBe(0);
+      expect(safeDiffs.length).toBe(0);
 
-      const refreshed = await applySafeSubset("{}", safeDotPaths, config);
+      const refreshed = await applySafeSubset("{}", new Set(safeDiffs.map((d) => d.dotPath)), config);
 
       expect(figmaMock.variables.getLocalVariables()).toHaveLength(5);
       expect(figmaMock.variables.getLocalVariableCollections()).toHaveLength(2);
@@ -415,10 +415,10 @@ describe("Plugin Flow Integration Tests", () => {
       const stagedDotPaths = new Set(["Colors.primary", "Colors.secondary"]);
       const proposalBranchContent = applyStagedDiffs("{}", fullFigmaJson, stagedDotPaths);
 
-      const safeDotPaths = await computeSafeSubset(proposalBranchContent, "{}");
-      expect(safeDotPaths.size).toBe(0);
+      const safeDiffs = await computeSafeSubset(proposalBranchContent, "{}");
+      expect(safeDiffs.length).toBe(0);
 
-      const refreshed = await applySafeSubset("{}", safeDotPaths, config);
+      const refreshed = await applySafeSubset("{}", new Set(safeDiffs.map((d) => d.dotPath)), config);
 
       expect(figmaMock.variables.getLocalVariables()).toHaveLength(5);
       expect(figmaMock.variables.getLocalVariableCollections()).toHaveLength(2);

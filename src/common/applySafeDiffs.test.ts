@@ -87,8 +87,8 @@ describe("applySafeDiffsToFigmaJson", () => {
     });
 
     vi.mocked(requestExport).mockResolvedValue(figmaJson);
-    const safeDotPaths = await computeSafeSubset(oldGitJson, newGitJson);
-    const result = applySafeDiffsToFigmaJson(figmaJson, newGitJson, safeDotPaths);
+    const safeDiffs = await computeSafeSubset(oldGitJson, newGitJson);
+    const result = applySafeDiffsToFigmaJson(figmaJson, newGitJson, new Set(safeDiffs.map((d) => d.dotPath)));
 
     expect(JSON.parse(result)).toEqual({
       Tokens: {

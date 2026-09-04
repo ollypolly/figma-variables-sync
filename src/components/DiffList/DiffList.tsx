@@ -13,7 +13,7 @@ interface DiffListProps {
   mode: "updates" | "proposals";
   primaryModeName: string;
   checking: boolean;
-  onRefresh: () => void;
+  onRefresh?: () => void;
   refreshDisabled?: boolean;
   emptyMessage: string;
   countLabel: (count: number) => ComponentChildren;
@@ -57,9 +57,11 @@ export function DiffList({
               {allExpanded ? "Collapse all" : "Expand all"}
             </Button>
           )}
-          <Button onClick={onRefresh} disabled={checking || refreshDisabled} secondary>
-            Refresh
-          </Button>
+          {onRefresh && (
+            <Button onClick={onRefresh} disabled={checking || refreshDisabled} secondary>
+              Refresh
+            </Button>
+          )}
         </div>
       </div>
 

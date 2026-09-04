@@ -1,6 +1,6 @@
 import { applySafeDiffsToFigmaJson } from "@common/applySafeDiffs";
 import { computeDiff, type DiffItem } from "@common/diff";
-import { NamingCollisionError, parseDtcg } from "@common/dtcg";
+import { NamingCollisionError, parseDtcg, type ParsedToken } from "@common/dtcg";
 import { requestExport, requestImport } from "@services/figmaMessages";
 import type { ActiveProposal, PluginSettings } from "../types";
 
@@ -30,7 +30,7 @@ export interface FigmaDiffResult {
 // decided whether to auto-commit it or hold it for confirmation.
 export interface SafeSyncPlan {
   newGitContent: string;
-  safeDotPaths: Set<string>;
+  safeDiffs: DiffItem[];
   diffSettings: Omit<PluginSettings, "pat">;
 }
 
@@ -111,20 +111,87 @@ export async function resetFigmaToGit(
 // treating it as a legitimate deletion of everything Figma has would only be correct if that
 // target were the true continuation of the same lineage Figma was tracking, which an empty
 // target can't establish on its own.
-export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<Set<string>> {
-  if (parseDtcg(newGitContent).tokens.length === 0) return new Set();
+export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<DiffItem[]> {
+  if (parseDtcg(newGitContent).tokens.length === 0) return [];
 
   const figmaContent = await requestExport();
   const { diffs: drift } = computeDiff(figmaContent, oldGitContent, "proposals");
   const drifted = new Set(drift.map((d) => d.dotPath));
 
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
-  const safe = new Set<string>();
+  // A renamed/relocated path shows up as one "added" item (the new path) and one "deleted" item
+  // (the old path) with the same value — same ambiguity as the added side, just from the other
+  // direction, so a deletion whose value reappears under some other added path gets the same
+  // "needs an explicit look" treatment rather than being auto-removed from Figma.
+  const addedValues = new Set(delta.filter((d) => d.type === "added").map((d) => d.figmaVal));
+
+  const safeDotPaths = new Set<string>();
   for (const d of delta) {
+    // A path new relative to the old baseline always requires an explicit look — Figma has
+    // nothing to compare it against, so there's no way to tell a genuine addition apart from a
+    // rename away from a path that no longer exists under its old name.
+    if (d.type === "added") continue;
+    if (d.type === "deleted" && addedValues.has(d.gitVal)) continue;
     if (drifted.has(d.dotPath)) continue;
-    safe.add(d.dotPath);
+    safeDotPaths.add(d.dotPath);
   }
-  return safe;
+
+  // A safe item can still alias a path that won't actually exist in Figma once the sync runs —
+  // e.g. a renamed-away primitive we deliberately excluded above, which a safe alias update still
+  // points at. Applying that would bind the alias to nothing, resetting it to a default on import.
+  // Drop any safe item whose incoming value references a path that's neither already live in
+  // Figma nor itself part of this same safe set, repeating until nothing more needs to be dropped.
+  const targetTokensByPath = new Map(
+    parseDtcg(newGitContent).tokens.map((t): [string, ParsedToken] => [t.path.join("."), t])
+  );
+  const liveFigmaPaths = new Set(parseDtcg(figmaContent).tokens.map((t) => t.path.join(".")));
+  const aliasTargets = (t: ParsedToken): string[] =>
+    [t.value, ...Object.values(t.modes ?? {})]
+      .filter((v): v is string => typeof v === "string" && v.startsWith("{") && v.endsWith("}"))
+      .map((v) => v.slice(1, -1));
+
+  // A path already live in Figma still won't survive the sync if it's itself a safe item being
+  // deleted (present in the old baseline, absent from the target) — safe-set membership decides
+  // its fate over its current live status.
+  const willExistAfterSync = (dotPath: string): boolean =>
+    safeDotPaths.has(dotPath) ? targetTokensByPath.has(dotPath) : liveFigmaPaths.has(dotPath);
+
+  let droppedSome = true;
+  while (droppedSome) {
+    droppedSome = false;
+    for (const dotPath of safeDotPaths) {
+      const token = targetTokensByPath.get(dotPath);
+      if (!token) continue;
+      const unresolvable = aliasTargets(token).some((ref) => !willExistAfterSync(ref));
+      if (unresolvable) {
+        safeDotPaths.delete(dotPath);
+        droppedSome = true;
+      }
+    }
+  }
+
+  // delta's items compare the new target against the old baseline, not against Figma's current
+  // state — its figmaVal/gitVal fields hold the two git snapshots, neither of which is what's
+  // actually live in Figma right now. Re-derive the items to show from a genuine Figma-vs-target
+  // diff so the dialog reads as "what you have in Figma" -> "what the branch has", not old baseline
+  // vs. new baseline.
+  const { diffs: figmaVsTarget } = computeDiff(figmaContent, newGitContent, "updates");
+  return figmaVsTarget.filter((d) => safeDotPaths.has(d.dotPath));
+}
+
+// checkFigmaChanges and computeSafeSubset each call requestExport() independently, and
+// requestExport() has no request correlation — it resolves the next EXPORT_RESULT message it
+// sees, so running two calls concurrently can resolve both off the same response and silently
+// drop the other. Sequencing them avoids that, and skipping computeSafeSubset on a collision
+// keeps checkFigmaChanges's own NamingCollisionError handling as the one place that error surfaces.
+export async function planSafeSync(
+  oldGitContent: string,
+  newGitContent: string,
+  diffSettings: Omit<PluginSettings, "pat">
+): Promise<{ safeDiffs: DiffItem[]; pending: FigmaDiffResult }> {
+  const pending = await checkFigmaChanges(newGitContent, diffSettings);
+  const safeDiffs = pending.collisionNotice ? [] : await computeSafeSubset(oldGitContent, newGitContent);
+  return { safeDiffs, pending };
 }
 
 export async function applySafeSubset(

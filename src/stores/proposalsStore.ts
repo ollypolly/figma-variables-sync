@@ -1,12 +1,13 @@
 import { atom, computed, type WritableAtom } from "nanostores";
 
+import type { DiffItem } from "@common/diff";
 import { GitHubService } from "@services/github";
 import { describeError, describeGitHubError } from "@services/githubErrors";
 import { requestExport } from "@services/figmaMessages";
 import {
   applySafeSubset,
   checkFigmaChanges,
-  computeSafeSubset,
+  planSafeSync,
   resetFigmaToGit,
   resolveDiffSettings,
   type FigmaDiffResult,
@@ -36,7 +37,7 @@ const SLOW_POLL_INTERVAL_MS = 30_000;
 
 interface PendingSync {
   targetLabel: string;
-  count: number;
+  items: DiffItem[];
   commit: () => Promise<void>;
 }
 
@@ -161,7 +162,8 @@ async function resolvePendingSync(
 ): Promise<void> {
   const commit = async () => {
     try {
-      const refreshed = await applySafeSubset(plan.newGitContent, plan.safeDotPaths, plan.diffSettings);
+      const safeDotPaths = new Set(plan.safeDiffs.map((d) => d.dotPath));
+      const refreshed = await applySafeSubset(plan.newGitContent, safeDotPaths, plan.diffSettings);
       onCommitted(refreshed);
       $pendingSync.set(null);
     } catch (e) {
@@ -169,12 +171,12 @@ async function resolvePendingSync(
     }
   };
 
-  if ($settings.get().skipSwitchConfirmation || plan.safeDotPaths.size === 0) {
+  if ($settings.get().skipSwitchConfirmation || plan.safeDiffs.length === 0) {
     await commit();
     return;
   }
 
-  $pendingSync.set({ targetLabel, count: plan.safeDotPaths.size, commit });
+  $pendingSync.set({ targetLabel, items: plan.safeDiffs, commit });
 }
 
 // Set right after our own write to the tracked branch/file, to the sha that write replaced.
@@ -223,7 +225,7 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
     }
   }
 
-  if (plan.safeDotPaths.size === 0) return result;
+  if (plan.safeDiffs.length === 0) return result;
 
   const targetLabel = resolvedDeadProposal ? settings.branch : activeProposal ? `PR #${activeProposal.number}` : settings.branch;
   let finalResult = result;
@@ -234,7 +236,7 @@ async function refreshActiveProposal(): Promise<ProposalCheckResult> {
       finalResult = { ...refreshed, gitContent: plan.newGitContent, proposals: result.proposals };
       $background.set({
         success: true,
-        text: `${plan.safeDotPaths.size} variable${plan.safeDotPaths.size === 1 ? "" : "s"} updated to match ${targetLabel}.`,
+        text: `${plan.safeDiffs.length} variable${plan.safeDiffs.length === 1 ? "" : "s"} updated to match ${targetLabel}.`,
       });
     },
     (e) =>
@@ -284,17 +286,21 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
   try {
     const file = await github.getFile(targetSettings);
     const newGitContent = file?.content ?? "{}";
-    const safeDotPaths = await computeSafeSubset(current.gitContent, newGitContent);
-    const plan: SafeSyncPlan = { newGitContent, safeDotPaths, diffSettings: targetSettings };
+    const { safeDiffs, pending } = await planSafeSync(current.gitContent, newGitContent, targetSettings);
+    const plan: SafeSyncPlan = { newGitContent, safeDiffs, diffSettings: targetSettings };
 
+    $activeProposal.set(target);
+    resetStaleness();
+    const prev = $check.get();
+    $check.set({ ...pending, gitContent: newGitContent, proposals: prev?.proposals ?? [] });
+
+    const targetLabel = target ? `PR #${target.number}` : settings.branch;
     await resolvePendingSync(
       plan,
-      target ? `PR #${target.number}` : settings.branch,
+      targetLabel,
       (refreshed) => {
-        $activeProposal.set(target);
-        resetStaleness();
-        const prev = $check.get();
-        $check.set({ ...refreshed, gitContent: newGitContent, proposals: prev?.proposals ?? [] });
+        const prevAfterCommit = $check.get();
+        $check.set({ ...refreshed, gitContent: newGitContent, proposals: prevAfterCommit?.proposals ?? [] });
       },
       (e) =>
         $background.set({
@@ -355,7 +361,7 @@ export async function updateBranch(): Promise<void> {
           $check.set({ ...refreshed, gitContent: result.plan.newGitContent, proposals: prevAfterCommit?.proposals ?? [] });
           $background.set({
             success: true,
-            text: `${targetLabel}'s branch updated to match ${settings.branch} — ${result.plan.safeDotPaths.size} variable${result.plan.safeDotPaths.size === 1 ? "" : "s"} were updated to match.`,
+            text: `${targetLabel}'s branch updated to match ${settings.branch} — ${result.plan.safeDiffs.length} variable${result.plan.safeDiffs.length === 1 ? "" : "s"} were updated to match.`,
           });
         },
         (e) =>
@@ -404,7 +410,7 @@ export async function abandonProposal(): Promise<void> {
         $check.set({ ...refreshed, gitContent: plan.newGitContent, proposals: prevAfterCommit?.proposals ?? [] });
         $background.set({
           success: true,
-          text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${plan.safeDotPaths.size} variable${plan.safeDotPaths.size === 1 ? "" : "s"} were updated to match.`,
+          text: `PR #${abandonedNumber} abandoned — you're back on ${settings.branch}, and ${plan.safeDiffs.length} variable${plan.safeDiffs.length === 1 ? "" : "s"} were updated to match.`,
         });
       },
       (e) =>
