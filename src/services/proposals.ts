@@ -4,6 +4,7 @@ import { GitHubService, PROPOSAL_BRANCH_PREFIX } from "@services/github";
 import {
   checkFigmaChanges,
   computeSafeSubset,
+  planSafeSync,
   resolveDiffSettings,
   type CollisionNotice,
   type FigmaDiffResult,
@@ -59,10 +60,7 @@ export async function planResolveDeadProposal(
 ): Promise<{ plan: SafeSyncPlan; pending: FigmaDiffResult }> {
   const mainFile = await github.getFile(settings);
   const newGitContent = mainFile?.content ?? "{}";
-  const [safeDiffs, pending] = await Promise.all([
-    computeSafeSubset(staleResult.gitContent, newGitContent),
-    checkFigmaChanges(newGitContent, settings),
-  ]);
+  const { safeDiffs, pending } = await planSafeSync(staleResult.gitContent, newGitContent, settings);
   return { plan: { newGitContent, safeDiffs, diffSettings: settings }, pending };
 }
 
@@ -214,10 +212,7 @@ export async function updateProposalBranch(
   const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
   const newGitContent = branchFile?.content ?? "{}";
   const diffSettings = resolveDiffSettings(settings, activeProposal);
-  const [safeDiffs, pending] = await Promise.all([
-    computeSafeSubset(current.gitContent, newGitContent),
-    checkFigmaChanges(newGitContent, diffSettings),
-  ]);
+  const { safeDiffs, pending } = await planSafeSync(current.gitContent, newGitContent, diffSettings);
   return { status: "updated", plan: { newGitContent, safeDiffs, diffSettings }, pending };
 }
 

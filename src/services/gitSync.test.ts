@@ -7,6 +7,7 @@ import {
   applySafeSubset,
   checkFigmaChanges,
   computeSafeSubset,
+  planSafeSync,
   resetFigmaToGit,
   resolveDiffSettings,
 } from "./gitSync";
@@ -264,6 +265,24 @@ describe("computeSafeSubset", () => {
     expect(safe.map((d) => d.dotPath)).toContain("Tokens.Semantic.radius.xs");
   });
 
+  it("excludes a safe alias update whose ref is itself being deleted by this same sync, even though it's still live in Figma right now", async () => {
+    const oldGit = JSON.stringify({
+      Tokens: {
+        Primitive: { base: color("#fff") },
+        Semantic: { accent: { $type: "color", $value: "{Tokens.Primitive.base}", $description: "old" } },
+      },
+    });
+    const newGit = JSON.stringify({
+      Tokens: {
+        Semantic: { accent: { $type: "color", $value: "{Tokens.Primitive.base}", $description: "new" } },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).not.toContain("Tokens.Semantic.accent");
+  });
+
   it("reports safe items as what's live in Figma now versus what the target has, not the old baseline versus the target", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
@@ -327,5 +346,37 @@ describe("applySafeSubset", () => {
     expect(requestImport).not.toHaveBeenCalled();
     expect(requestExport).toHaveBeenCalledTimes(1);
     expect(result.diffs).toEqual([]);
+  });
+});
+
+describe("planSafeSync", () => {
+  beforeEach(() => {
+    vi.mocked(requestExport).mockReset();
+  });
+
+  it("runs checkFigmaChanges and computeSafeSubset sequentially, not concurrently", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    const { safeDiffs, pending } = await planSafeSync(oldGit, newGit, settings);
+
+    expect(safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
+    expect(pending.diffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
+    expect(requestExport).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips computeSafeSubset when the export hits a naming collision, instead of throwing past checkFigmaChanges's own handling", async () => {
+    vi.mocked(requestExport).mockRejectedValue(new NamingCollisionError("Colliding names.", ["Tokens.Primary"]));
+
+    const { safeDiffs, pending } = await planSafeSync("{}", "{}", settings);
+
+    expect(pending.collisionNotice).toEqual({
+      message: "Colliding names.",
+      paths: ["Tokens.Primary"],
+      resolution: "designer",
+    });
+    expect(safeDiffs).toEqual([]);
+    expect(requestExport).toHaveBeenCalledTimes(1);
   });
 });

@@ -7,7 +7,7 @@ import { requestExport } from "@services/figmaMessages";
 import {
   applySafeSubset,
   checkFigmaChanges,
-  computeSafeSubset,
+  planSafeSync,
   resetFigmaToGit,
   resolveDiffSettings,
   type FigmaDiffResult,
@@ -286,10 +286,7 @@ export async function requestSwitch(target: ActiveProposal | null): Promise<void
   try {
     const file = await github.getFile(targetSettings);
     const newGitContent = file?.content ?? "{}";
-    const [safeDiffs, pending] = await Promise.all([
-      computeSafeSubset(current.gitContent, newGitContent),
-      checkFigmaChanges(newGitContent, targetSettings),
-    ]);
+    const { safeDiffs, pending } = await planSafeSync(current.gitContent, newGitContent, targetSettings);
     const plan: SafeSyncPlan = { newGitContent, safeDiffs, diffSettings: targetSettings };
 
     $activeProposal.set(target);

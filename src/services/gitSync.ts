@@ -150,15 +150,19 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
       .filter((v): v is string => typeof v === "string" && v.startsWith("{") && v.endsWith("}"))
       .map((v) => v.slice(1, -1));
 
+  // A path already live in Figma still won't survive the sync if it's itself a safe item being
+  // deleted (present in the old baseline, absent from the target) — safe-set membership decides
+  // its fate over its current live status.
+  const willExistAfterSync = (dotPath: string): boolean =>
+    safeDotPaths.has(dotPath) ? targetTokensByPath.has(dotPath) : liveFigmaPaths.has(dotPath);
+
   let droppedSome = true;
   while (droppedSome) {
     droppedSome = false;
     for (const dotPath of safeDotPaths) {
       const token = targetTokensByPath.get(dotPath);
       if (!token) continue;
-      const unresolvable = aliasTargets(token).some(
-        (ref) => !liveFigmaPaths.has(ref) && !safeDotPaths.has(ref)
-      );
+      const unresolvable = aliasTargets(token).some((ref) => !willExistAfterSync(ref));
       if (unresolvable) {
         safeDotPaths.delete(dotPath);
         droppedSome = true;
@@ -173,6 +177,21 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
   // vs. new baseline.
   const { diffs: figmaVsTarget } = computeDiff(figmaContent, newGitContent, "updates");
   return figmaVsTarget.filter((d) => safeDotPaths.has(d.dotPath));
+}
+
+// checkFigmaChanges and computeSafeSubset each call requestExport() independently, and
+// requestExport() has no request correlation — it resolves the next EXPORT_RESULT message it
+// sees, so running two calls concurrently can resolve both off the same response and silently
+// drop the other. Sequencing them avoids that, and skipping computeSafeSubset on a collision
+// keeps checkFigmaChanges's own NamingCollisionError handling as the one place that error surfaces.
+export async function planSafeSync(
+  oldGitContent: string,
+  newGitContent: string,
+  diffSettings: Omit<PluginSettings, "pat">
+): Promise<{ safeDiffs: DiffItem[]; pending: FigmaDiffResult }> {
+  const pending = await checkFigmaChanges(newGitContent, diffSettings);
+  const safeDiffs = pending.collisionNotice ? [] : await computeSafeSubset(oldGitContent, newGitContent);
+  return { safeDiffs, pending };
 }
 
 export async function applySafeSubset(
