@@ -277,7 +277,7 @@ describe("planResolveDeadProposal", () => {
 
     expect(github.getFile).toHaveBeenCalledWith(settings);
     expect(plan.newGitContent).toBe(mainContent);
-    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
     expect(pending.diffs).toHaveLength(3);
     expect(requestImport).not.toHaveBeenCalled();
   });
@@ -331,7 +331,7 @@ describe("updateProposalBranch", () => {
       expect(result.status).toBe("updated");
       if (result.status !== "updated") throw new Error("unreachable");
       expect(result.plan.newGitContent).toBe(newGitContent);
-      expect(result.plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+      expect(result.plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
       expect(requestImport).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -448,7 +448,7 @@ describe("abandonProposal", () => {
     expect(github.closePullRequest).toHaveBeenCalledWith(settings.owner, settings.repo, 5);
     expect(github.deleteBranch).toHaveBeenCalledWith(settings.owner, settings.repo, "figma/proposal-1");
     expect(plan.newGitContent).toBe(mainContent);
-    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
     expect(pending.diffs).toHaveLength(1);
     expect(requestImport).not.toHaveBeenCalled();
   });
@@ -599,7 +599,7 @@ describe("checkActiveProposalStatus", () => {
     });
 
     expect(plan.newGitContent).toBe(newGitContent);
-    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
     expect(requestImport).not.toHaveBeenCalled();
     expect(result.gitContent).toBe(newGitContent);
   });
@@ -635,7 +635,7 @@ describe("checkActiveProposalStatus", () => {
       primaryModeName: "Default",
     });
 
-    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
     expect(requestImport).not.toHaveBeenCalled();
   });
 
@@ -645,7 +645,7 @@ describe("checkActiveProposalStatus", () => {
 
     const { plan } = await checkActiveProposalStatus(settings, github, null, null);
 
-    expect(plan.safeDotPaths.size).toBe(0);
+    expect(plan.safeDiffs.length).toBe(0);
     expect(requestImport).not.toHaveBeenCalled();
   });
 
@@ -669,7 +669,7 @@ describe("checkActiveProposalStatus", () => {
     });
 
     expect(resolvedDeadProposal).toEqual({ number: 5, reason: "merged" });
-    expect(plan.safeDotPaths).toEqual(new Set(["Tokens.brand.primary"]));
+    expect(plan.safeDiffs.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
     expect(result.gitContent).toBe(mainContent);
     expect(requestImport).not.toHaveBeenCalled();
   });

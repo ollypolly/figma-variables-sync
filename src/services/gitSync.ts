@@ -30,7 +30,7 @@ export interface FigmaDiffResult {
 // decided whether to auto-commit it or hold it for confirmation.
 export interface SafeSyncPlan {
   newGitContent: string;
-  safeDotPaths: Set<string>;
+  safeDiffs: DiffItem[];
   diffSettings: Omit<PluginSettings, "pat">;
 }
 
@@ -111,18 +111,22 @@ export async function resetFigmaToGit(
 // treating it as a legitimate deletion of everything Figma has would only be correct if that
 // target were the true continuation of the same lineage Figma was tracking, which an empty
 // target can't establish on its own.
-export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<Set<string>> {
-  if (parseDtcg(newGitContent).tokens.length === 0) return new Set();
+export async function computeSafeSubset(oldGitContent: string, newGitContent: string): Promise<DiffItem[]> {
+  if (parseDtcg(newGitContent).tokens.length === 0) return [];
 
   const figmaContent = await requestExport();
   const { diffs: drift } = computeDiff(figmaContent, oldGitContent, "proposals");
   const drifted = new Set(drift.map((d) => d.dotPath));
 
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
-  const safe = new Set<string>();
+  const safe: DiffItem[] = [];
   for (const d of delta) {
+    // A path new relative to the old baseline always requires an explicit look — Figma has
+    // nothing to compare it against, so there's no way to tell a genuine addition apart from a
+    // rename away from a path that no longer exists under its old name.
+    if (d.type === "added") continue;
     if (drifted.has(d.dotPath)) continue;
-    safe.add(d.dotPath);
+    safe.push(d);
   }
   return safe;
 }

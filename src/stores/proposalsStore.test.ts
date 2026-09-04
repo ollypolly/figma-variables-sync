@@ -176,7 +176,11 @@ describe("proposalsStore — sync confirm gating", () => {
 
     expect(requestImport).not.toHaveBeenCalled();
     expect($pendingSync.get()).toEqual(
-      expect.objectContaining({ targetLabel: "main", count: 1, commit: expect.any(Function) })
+      expect.objectContaining({
+        targetLabel: "main",
+        items: [expect.objectContaining({ dotPath: "Tokens.brand.primary" })],
+        commit: expect.any(Function),
+      })
     );
   });
 

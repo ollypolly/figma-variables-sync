@@ -141,7 +141,7 @@ describe("computeSafeSubset", () => {
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
   });
 
   it("includes a path that changed on the new target with no local Figma drift", async () => {
@@ -149,7 +149,8 @@ describe("computeSafeSubset", () => {
     const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#000") } } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
   });
 
   it("excludes a path that changed on the new target if the designer already has a local edit there", async () => {
@@ -158,7 +159,7 @@ describe("computeSafeSubset", () => {
     const liveFigmaContent = JSON.stringify({ Tokens: { brand: { primary: color("#0f0") } } });
     vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
   });
 
   it("includes a path deleted going from the old to the new git target, when there's no local Figma drift", async () => {
@@ -166,7 +167,8 @@ describe("computeSafeSubset", () => {
     const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
   });
 
   it("excludes a path deleted going from the old to the new git target if the designer has a local edit there", async () => {
@@ -177,13 +179,28 @@ describe("computeSafeSubset", () => {
     });
     vi.mocked(requestExport).mockResolvedValue(liveFigmaContent);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
+  });
+
+  it("excludes a path that's new on the target relative to the old baseline, even with no local Figma drift", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
+    const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa"), primary: color("#fff") } } });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
+  });
+
+  it("excludes every path when the old baseline is empty, even though every path in the new target reads as new", async () => {
+    const newGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    vi.mocked(requestExport).mockResolvedValue("{}");
+
+    expect(await computeSafeSubset("{}", newGit)).toEqual([]);
   });
 
   it("returns nothing when the new git target has no tokens at all, even though everything changed", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
 
-    expect(await computeSafeSubset(oldGit, "{}")).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, "{}")).toEqual([]);
     expect(requestExport).not.toHaveBeenCalled();
   });
 
@@ -191,7 +208,7 @@ describe("computeSafeSubset", () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
     const newGit = JSON.stringify({ Tokens: { brand: {} } });
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set());
+    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
     expect(requestExport).not.toHaveBeenCalled();
   });
 
@@ -203,7 +220,8 @@ describe("computeSafeSubset", () => {
     });
     vi.mocked(requestExport).mockResolvedValue(figmaContentEditedJustNow);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual(new Set(["Tokens.brand.primary"]));
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
   });
 });
 

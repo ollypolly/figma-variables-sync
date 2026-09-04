@@ -216,7 +216,8 @@ export function ProposalsTab() {
       <SyncConfirmDialog
         open={pendingSync !== null}
         targetLabel={pendingSync?.targetLabel ?? ""}
-        count={pendingSync?.count ?? 0}
+        items={pendingSync?.items ?? []}
+        primaryModeName={primaryModeName}
         loading={confirmingSwitch}
         onConfirm={handleConfirmSwitch}
         onCancel={cancelPendingSync}

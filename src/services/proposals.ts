@@ -59,11 +59,11 @@ export async function planResolveDeadProposal(
 ): Promise<{ plan: SafeSyncPlan; pending: FigmaDiffResult }> {
   const mainFile = await github.getFile(settings);
   const newGitContent = mainFile?.content ?? "{}";
-  const [safeDotPaths, pending] = await Promise.all([
+  const [safeDiffs, pending] = await Promise.all([
     computeSafeSubset(staleResult.gitContent, newGitContent),
     checkFigmaChanges(newGitContent, settings),
   ]);
-  return { plan: { newGitContent, safeDotPaths, diffSettings: settings }, pending };
+  return { plan: { newGitContent, safeDiffs, diffSettings: settings }, pending };
 }
 
 export interface ResolvedDeadProposal {
@@ -112,11 +112,11 @@ async function planIdleDrift(
 ): Promise<SafeSyncPlan> {
   const diffSettings = resolveDiffSettings(settings, activeProposal);
   if (!lastGoodResult || result.gitContent === lastGoodResult.gitContent) {
-    return { newGitContent: result.gitContent, safeDotPaths: new Set(), diffSettings };
+    return { newGitContent: result.gitContent, safeDiffs: [], diffSettings };
   }
 
-  const safeDotPaths = await computeSafeSubset(lastGoodResult.gitContent, result.gitContent);
-  return { newGitContent: result.gitContent, safeDotPaths, diffSettings };
+  const safeDiffs = await computeSafeSubset(lastGoodResult.gitContent, result.gitContent);
+  return { newGitContent: result.gitContent, safeDiffs, diffSettings };
 }
 
 // Is the active proposal still open? If not, resolve it and report what happened.
@@ -214,11 +214,11 @@ export async function updateProposalBranch(
   const branchFile = await github.getFile({ ...settings, branch: activeProposal.head_ref });
   const newGitContent = branchFile?.content ?? "{}";
   const diffSettings = resolveDiffSettings(settings, activeProposal);
-  const [safeDotPaths, pending] = await Promise.all([
+  const [safeDiffs, pending] = await Promise.all([
     computeSafeSubset(current.gitContent, newGitContent),
     checkFigmaChanges(newGitContent, diffSettings),
   ]);
-  return { status: "updated", plan: { newGitContent, safeDotPaths, diffSettings }, pending };
+  return { status: "updated", plan: { newGitContent, safeDiffs, diffSettings }, pending };
 }
 
 const MERGE_POLL_INTERVAL_MS = 2_000;
