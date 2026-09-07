@@ -120,17 +120,20 @@ export async function computeSafeSubset(oldGitContent: string, newGitContent: st
 
   const { diffs: delta } = computeDiff(newGitContent, oldGitContent, "proposals");
   // A renamed/relocated path shows up as one "added" item (the new path) and one "deleted" item
-  // (the old path) with the same value — same ambiguity as the added side, just from the other
-  // direction, so a deletion whose value reappears under some other added path gets the same
-  // "needs an explicit look" treatment rather than being auto-removed from Figma.
+  // (the old path) with the same value — same ambiguity, from either direction, so a match on
+  // either side gets the same "needs an explicit look" treatment rather than being auto-applied.
   const addedValues = new Set(delta.filter((d) => d.type === "added").map((d) => d.figmaVal));
+  const deletedValues = new Set(delta.filter((d) => d.type === "deleted").map((d) => d.gitVal));
+
+  // An empty old baseline can't distinguish a genuine addition from a rename away from a path
+  // that no longer exists under its old name — every path in the target reads as "added" with
+  // nothing to compare it against, so all of them need an explicit look rather than being
+  // auto-applied wholesale.
+  const oldBaselineHadNoTokens = parseDtcg(oldGitContent).tokens.length === 0;
 
   const safeDotPaths = new Set<string>();
   for (const d of delta) {
-    // A path new relative to the old baseline always requires an explicit look — Figma has
-    // nothing to compare it against, so there's no way to tell a genuine addition apart from a
-    // rename away from a path that no longer exists under its old name.
-    if (d.type === "added") continue;
+    if (d.type === "added" && (oldBaselineHadNoTokens || deletedValues.has(d.figmaVal))) continue;
     if (d.type === "deleted" && addedValues.has(d.gitVal)) continue;
     if (drifted.has(d.dotPath)) continue;
     safeDotPaths.add(d.dotPath);

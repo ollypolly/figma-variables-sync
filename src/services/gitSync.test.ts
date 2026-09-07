@@ -191,12 +191,31 @@ describe("computeSafeSubset", () => {
     expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
   });
 
-  it("excludes a path that's new on the target relative to the old baseline, even with no local Figma drift", async () => {
+  it("includes a path that's new on the target relative to a non-empty old baseline, when nothing was deleted to match it", async () => {
     const oldGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa") } } });
     const newGit = JSON.stringify({ Tokens: { brand: { secondary: color("#aaa"), primary: color("#fff") } } });
     vi.mocked(requestExport).mockResolvedValue(oldGit);
 
-    expect(await computeSafeSubset(oldGit, newGit)).toEqual([]);
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath)).toEqual(["Tokens.brand.primary"]);
+  });
+
+  it("includes a whole new top-level group added alongside a semantic alias that references it", async () => {
+    const oldGit = JSON.stringify({ Tokens: { brand: { primary: color("#fff") } } });
+    const newGit = JSON.stringify({
+      Tokens: {
+        brand: { primary: color("#fff") },
+        Primitive: { breakpoint: { sm: color("#600") } },
+        Semantic: { breakpoint: { sm: { $type: "color", $value: "{Tokens.Primitive.breakpoint.sm}" } } },
+      },
+    });
+    vi.mocked(requestExport).mockResolvedValue(oldGit);
+
+    const safe = await computeSafeSubset(oldGit, newGit);
+    expect(safe.map((d) => d.dotPath).sort()).toEqual([
+      "Tokens.Primitive.breakpoint.sm",
+      "Tokens.Semantic.breakpoint.sm",
+    ]);
   });
 
   it("excludes every path when the old baseline is empty, even though every path in the new target reads as new", async () => {
