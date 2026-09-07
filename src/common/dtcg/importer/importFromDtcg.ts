@@ -1,6 +1,7 @@
-import { DEFAULT_VARIABLE_SCOPES, ParsedToken, TokenParseResult } from "../types";
+import { ParsedToken, TokenParseResult } from "../types";
 import { sanitizeName } from "../utils/sanitizeName";
 import { dtcgTypeToFigma } from "../utils/dtcgTypeToFigma";
+import { defaultScopesForDtcgType } from "../utils/figmaTypeToDtcg";
 import { parseDtcg } from "../parser/parseDtcg";
 import { resolveDtcgValue } from "./resolveDtcgValue";
 import { getVariablePath } from "../utils/getVariablePath";
@@ -154,12 +155,9 @@ export async function importFromDtcg(
         variable = undefined;
       }
 
-      let defaultScopes: string[] = DEFAULT_VARIABLE_SCOPES;
+      const defaultScopes = defaultScopesForDtcgType(t.type);
       if (!variable) {
         variable = figmaInstance.variables.createVariable(varName, updatedCollection.id, targetType);
-        if (!t.figmaScopes && targetType === "FLOAT" && t.type.toLowerCase() === "dimension") {
-          defaultScopes = ["WIDTH_HEIGHT"];
-        }
       }
 
       variable.description = t.description ?? "";
