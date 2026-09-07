@@ -322,6 +322,39 @@ export function cancelPendingSync(): void {
   $pendingSync.set(null);
 }
 
+// A manual escape hatch for paths stuck showing "deleted" in the outgoing diff — e.g. a
+// designer dismissed the automatic "Pull in changes?" offer, or missed the one-time window
+// where planIdleDrift's baseline still had a delta to compute it from. A "deleted" item here
+// (present in git, absent from Figma) is field-for-field the same shape as an "added" item in
+// updates mode, so relabeling and re-showing the existing dialog needs no new diff or fetch.
+// Bypasses resolvePendingSync's skipSwitchConfirmation shortcut on purpose — the click itself
+// is the "let me look again" request, so it should always show the review dialog.
+export function requestPullInDeletions(): void {
+  const check = $check.get();
+  if (!check) return;
+  const items = check.diffs.filter((d) => d.type === "deleted").map((d) => ({ ...d, type: "added" as const }));
+  if (items.length === 0) return;
+
+  const settings = $settings.get();
+  const activeProposal = $activeProposal.get();
+  const diffSettings = resolveDiffSettings(settings, activeProposal);
+  const dotPaths = new Set(items.map((d) => d.dotPath));
+
+  const commit = async () => {
+    try {
+      const refreshed = await applySafeSubset(check.gitContent, dotPaths, diffSettings);
+      const prev = $check.get();
+      $check.set({ ...refreshed, gitContent: check.gitContent, proposals: prev?.proposals ?? [] });
+      $pendingSync.set(null);
+    } catch (e) {
+      $background.set({ success: false, text: e instanceof Error ? e.message : "An error occurred." });
+    }
+  };
+
+  const targetLabel = activeProposal ? `PR #${activeProposal.number}` : settings.branch;
+  $pendingSync.set({ targetLabel, items, commit });
+}
+
 export async function updateBranch(): Promise<void> {
   const settings = $settings.get();
   const github = getGitHub(settings);

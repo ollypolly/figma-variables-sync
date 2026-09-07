@@ -18,6 +18,8 @@ export function ProposalsTab() {
     isConfigured,
     checking,
     diffItems,
+    hasDeletedItems,
+    requestPullInDeletions,
     primaryModeName,
     openProposals,
     activeProposal,
@@ -186,6 +188,11 @@ export function ProposalsTab() {
               )}
               headerAction={
                 <Fragment>
+                  {hasDeletedItems && (
+                    <Button secondary onClick={requestPullInDeletions}>
+                      Pull in changes?
+                    </Button>
+                  )}
                   {diffItems.length > 0 && (
                     <Button secondary onClick={handleReset} loading={resetting} disabled={submitting}>
                       Reset
