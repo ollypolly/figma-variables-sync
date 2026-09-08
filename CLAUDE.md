@@ -12,6 +12,10 @@ This applies equally to test files. A one-line summary on top of a function that
 
 Never reference planning-doc terminology in code comments (e.g. "the 3a decision", "same mechanism 3c/3d use", "Slice 3"). Plan files under `plans/` are working documents and get deleted once their work ships — a comment that only makes sense next to the plan orphans itself the moment that happens. Describe the actual behavior/reasoning in the comment instead.
 
+## Branching
+
+Do non-trivial work (a bug fix, a feature, a refactor) on a feature branch, not directly on `main`. Create the branch before the first commit of the change, not after.
+
 ## Testing against real Figma state
 
 When a change depends on real Figma variable/collection state (descriptions, scopes, codeSyntax, hiddenFromPublishing, naming collisions, etc.), set that state via the Figma MCP `use_figma` tool first, rather than walking through manual UI steps in the Variables panel — it's faster and repeatable. Example: `variable.description = "..."`, `variable.scopes = [...]`, `variable.setVariableCodeSyntax('WEB', '...')`, `variable.hiddenFromPublishing = true`, then run the plugin's export/import and inspect the result. Fall back to manual UI steps only for things the API can't set (or when the user wants to verify by eye in the Figma UI itself).

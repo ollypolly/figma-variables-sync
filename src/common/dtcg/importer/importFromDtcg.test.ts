@@ -240,6 +240,25 @@ describe("importFromDtcg", () => {
     expect(widthVar.scopes).toEqual(["WIDTH_HEIGHT"]);
   });
 
+  it("keeps the WIDTH_HEIGHT fallback for an existing dimension variable with no $extensions.figma.scopes, rather than resetting it to ALL_SCOPES", async () => {
+    const { figmaMock } = createMockFigma();
+    const col = figmaMock.variables.createVariableCollection("Tokens");
+    const existing = figmaMock.variables.createVariable("sizes/width", col.id, "FLOAT");
+    existing.scopes = ["WIDTH_HEIGHT"];
+
+    const dtcgJson = {
+      Tokens: {
+        sizes: {
+          width: dimension("16px"),
+        },
+      },
+    };
+
+    await importFromDtcg(JSON.stringify(dtcgJson), figmaMock);
+
+    expect(existing.scopes).toEqual(["WIDTH_HEIGHT"]);
+  });
+
   it("applies an explicit empty scopes array instead of leaving the variable untouched", async () => {
     const { figmaMock } = createMockFigma();
     const col = figmaMock.variables.createVariableCollection("Tokens");

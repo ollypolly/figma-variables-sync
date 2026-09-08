@@ -1,4 +1,4 @@
-import { Button, Container, VerticalSpace } from "@create-figma-plugin/ui";
+import { Button, Container, IconChevronDown16, IconReset16, VerticalSpace } from "@create-figma-plugin/ui";
 import { Fragment, h } from "preact";
 import { useState } from "preact/hooks";
 
@@ -6,6 +6,8 @@ import { WarningNotice } from "@components/WarningNotice";
 import { SyncConfirmDialog } from "@components/SyncConfirmDialog";
 import { DiffList } from "@components/DiffList";
 import { ExportPreviewModal } from "@components/ExportPreviewModal";
+import { FeedbackModal, useFeedback } from "@components/Feedback";
+import { OverflowMenu } from "@components/OverflowMenu";
 import { PrSelector } from "@components/PrSelector";
 import { StatusBanner } from "@components/StatusBanner";
 import { TabGuard } from "@components/TabGuard";
@@ -53,6 +55,7 @@ export function ProposalsTab() {
     loadExportPreview,
   } = useProposals();
 
+  const feedback = useFeedback();
   const [previewOpen, setPreviewOpen] = useState(false);
   const [confirmingSwitch, setConfirmingSwitch] = useState(false);
 
@@ -71,16 +74,27 @@ export function ProposalsTab() {
     collisionNotice || status || showForm || showStalenessNotice || showResetNotice || conflictNotice
   );
 
+  const resetTarget = activeProposal ? `PR #${activeProposal.number}` : baseBranch;
+
   const handleReset = () => {
-    const target = activeProposal ? `PR #${activeProposal.number}` : baseBranch;
     const count = diffItems.length;
-    if (window.confirm(`Discard all ${count} pending change${count === 1 ? "" : "s"} and reset Figma to match ${target}?`)) {
+    if (window.confirm(`Discard all ${count} pending change${count === 1 ? "" : "s"} and reset Figma to match ${resetTarget}?`)) {
       resetToGit();
     }
   };
 
+  const hasBranchActions = hasDeletedItems || diffItems.length > 0;
+
   return (
     <TabGuard loading={settingsLoading} isConfigured={isConfigured}>
+      <div style={{ position: "absolute", top: "6px", right: "8px", zIndex: 10 }}>
+        <OverflowMenu
+          items={[
+            { label: "View export", onClick: () => { setPreviewOpen(true); loadExportPreview(); } },
+            { label: "Give feedback", onClick: feedback.openModal, disabled: feedback.cooldown },
+          ]}
+        />
+      </div>
       <div class="flex flex-col h-full">
         <Container space="medium">
           <VerticalSpace space="small" />
@@ -91,6 +105,37 @@ export function ProposalsTab() {
             mainBranchLabel={baseBranch}
             disabled={submitting || switchLoading || mergingBranch}
           />
+          {hasBranchActions && (
+            <Fragment>
+              <VerticalSpace space="small" />
+              <div class="flex gap-2 items-center">
+                {hasDeletedItems && (
+                  <Button
+                    onClick={requestPullInDeletions}
+                    title="Pull in changes made directly on the branch that aren't in Figma yet"
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <IconChevronDown16 />
+                      Pull in changes?
+                    </span>
+                  </Button>
+                )}
+                {diffItems.length > 0 && (
+                  <Button
+                    onClick={handleReset}
+                    loading={resetting}
+                    disabled={submitting}
+                    title={`Reset Figma to match ${resetTarget}`}
+                  >
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                      <IconReset16 />
+                      Reset to {resetTarget}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            </Fragment>
+          )}
           <VerticalSpace space="small" />
         </Container>
 
@@ -186,29 +231,6 @@ export function ProposalsTab() {
                   <strong>{String(count)}</strong> change{count === 1 ? "" : "s"} to propose
                 </Fragment>
               )}
-              headerAction={
-                <Fragment>
-                  {hasDeletedItems && (
-                    <Button secondary onClick={requestPullInDeletions}>
-                      Pull in changes?
-                    </Button>
-                  )}
-                  {diffItems.length > 0 && (
-                    <Button secondary onClick={handleReset} loading={resetting} disabled={submitting}>
-                      Reset
-                    </Button>
-                  )}
-                  <Button
-                    secondary
-                    onClick={() => {
-                      setPreviewOpen(true);
-                      loadExportPreview();
-                    }}
-                  >
-                    View export
-                  </Button>
-                </Fragment>
-              }
             />
           </Container>
         </div>
@@ -229,6 +251,7 @@ export function ProposalsTab() {
         onConfirm={handleConfirmSwitch}
         onCancel={cancelPendingSync}
       />
+      <FeedbackModal {...feedback} />
     </TabGuard>
   );
 }

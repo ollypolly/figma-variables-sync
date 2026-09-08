@@ -1,4 +1,4 @@
-import { Button, LoadingIndicator, Muted, Text } from "@create-figma-plugin/ui";
+import { Button, IconButton, IconChevronDown16, IconChevronRight16, IconRefresh16, LoadingIndicator, Muted, Text } from "@create-figma-plugin/ui";
 import { h } from "preact";
 import type { ComponentChildren } from "preact";
 
@@ -17,7 +17,6 @@ interface DiffListProps {
   refreshDisabled?: boolean;
   emptyMessage: string;
   countLabel: (count: number) => ComponentChildren;
-  headerAction?: ComponentChildren;
 }
 
 export function DiffList({
@@ -29,7 +28,6 @@ export function DiffList({
   refreshDisabled,
   emptyMessage,
   countLabel,
-  headerAction,
 }: DiffListProps) {
   const tree = buildDiffTree(items);
   const { allGroupDotPaths, openGroups, toggleGroup, allExpanded, toggleAll } = useOpenGroups(
@@ -40,7 +38,18 @@ export function DiffList({
 
   return (
     <div style={{ padding: "8px 0" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 8px 6px" }}>
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+          backgroundColor: "var(--figma-color-bg)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "0 8px 6px",
+        }}
+      >
         <Text>
           <Muted>
             {checking
@@ -50,17 +59,23 @@ export function DiffList({
                 : countLabel(items.length)}
           </Muted>
         </Text>
-        <div style={{ display: "flex", gap: "8px" }}>
-          {headerAction}
+        <div style={{ display: "flex", gap: "4px" }}>
           {allGroupDotPaths.length > 0 && (
-            <Button onClick={toggleAll} secondary>
-              {allExpanded ? "Collapse all" : "Expand all"}
+            <Button onClick={toggleAll} secondary title={allExpanded ? "Collapse all groups" : "Expand all groups"}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                {allExpanded ? <IconChevronDown16 /> : <IconChevronRight16 />}
+                {allExpanded ? "Collapse all" : "Expand all"}
+              </span>
             </Button>
           )}
           {onRefresh && (
-            <Button onClick={onRefresh} disabled={checking || refreshDisabled} secondary>
-              Refresh
-            </Button>
+            <IconButton
+              onClick={onRefresh}
+              disabled={checking || refreshDisabled}
+              title="Check Figma and git for changes again"
+            >
+              <IconRefresh16 />
+            </IconButton>
           )}
         </div>
       </div>

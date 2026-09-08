@@ -250,6 +250,14 @@ describe("computeDiff", () => {
       expect(diffs).toEqual([]);
     });
 
+    it("should not report a scopes change for a dimension token with no explicit scopes on either side, since both imply WIDTH_HEIGHT", () => {
+      const gitContent = JSON.stringify({ Tokens: { sizes: { width: dimension("16px") } } });
+      const figmaContent = JSON.stringify({ Tokens: { sizes: { width: dimension("16px") } } });
+
+      const { diffs } = computeDiff(figmaContent, gitContent, "proposals");
+      expect(diffs).toEqual([]);
+    });
+
     it("should detect a codeSyntax-only change", () => {
       const withCodeSyntaxA = JSON.stringify({
         Tokens: {
@@ -340,6 +348,7 @@ describe("computeDiff", () => {
       expect(diffs).toHaveLength(1);
       expect(diffs[0].changedFields).toEqual([
         { field: "type", figmaVal: "dimension", gitVal: "color" },
+        { field: "scopes", figmaVal: "WIDTH_HEIGHT", gitVal: "ALL_SCOPES" },
       ]);
     });
 

@@ -7,7 +7,6 @@ import { useEffect, useState } from "preact/hooks";
 import { $activeProposalLoading } from "@stores/activeProposalStore";
 import { initProposalsSync } from "@stores/proposalsStore";
 import { $isConfigured } from "@stores/settingsStore";
-import { FeedbackButton } from "@components/FeedbackButton";
 import { ProposalsTab } from "@tabs/ProposalsTab";
 import { SettingsTab } from "@tabs/SettingsTab";
 
@@ -44,7 +43,6 @@ function Plugin() {
 
   return (
     <div class="flex flex-col h-screen overflow-hidden isolate">
-      <FeedbackButton />
       <Tabs
         options={tabOptions}
         value={tabValue}
