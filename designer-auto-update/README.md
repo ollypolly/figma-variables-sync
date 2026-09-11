@@ -8,8 +8,8 @@ a macOS notification.
 ## Install
 
 On the designer's machine: give their Claude Code the prompt in
-[`SETUP_PROMPT.md`](./SETUP_PROMPT.md) — it clones the repo if needed, builds it, and runs
-`install.sh` for them.
+[`SETUP_PROMPT.md`](./SETUP_PROMPT.md) — it finds their existing clone, runs `install.sh`,
+and retires their old `pull-figma-plugin` alias.
 
 To run it manually instead, once the repo is cloned:
 
