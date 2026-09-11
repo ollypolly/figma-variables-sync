@@ -12,7 +12,16 @@ Our goal is to build a lightweight, open-source solution that allows you to:
 - **Run on any Figma plan** by interacting via the Figma Plugin API.
 - **Produce W3C DTCG-compliant outputs** that slot directly into modern build tools like Style Dictionary v4.
 
-*Note: This project is currently in active development, and features are subject to iteration as we build.*
+## Development Status
+
+This project is currently in **active development**, not yet released to the Figma Community
+store. That's why installation is manual (import via `manifest.json`, see below) and why
+tooling like [`designer-auto-update/`](designer-auto-update/) exists — to keep a non-developer's
+local build in sync without them re-running install steps by hand every time.
+
+Once development slows down and the plugin is ready for wider use, it'll be published to the
+Figma store, at which point manual installs/rebuilds — and the auto-update workaround — won't
+be needed anymore.
 
 ## Getting Started
 
