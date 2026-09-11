@@ -7,7 +7,11 @@ a macOS notification.
 
 ## Install
 
-On the designer's machine, once the repo is cloned:
+On the designer's machine: give their Claude Code the prompt in
+[`SETUP_PROMPT.md`](./SETUP_PROMPT.md) — it clones the repo if needed, builds it, and runs
+`install.sh` for them.
+
+To run it manually instead, once the repo is cloned:
 
 ```
 ./designer-auto-update/install.sh
