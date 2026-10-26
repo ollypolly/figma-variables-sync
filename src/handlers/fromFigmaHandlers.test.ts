@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.hoisted(() => {
   (globalThis as any).figma = {
+    fileKey: "file-abc",
     variables: {
       getLocalVariableCollections: () => [],
       getLocalVariables: () => [],

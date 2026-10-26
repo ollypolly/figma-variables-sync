@@ -1,7 +1,7 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { exportToDtcg, NamingCollisionError } from "@common/dtcg";
 
-import { ACTIVE_PROPOSAL_KEY, DRAFT_DESCRIPTION_KEY, SETTINGS_KEY } from "./storageKeys";
+import { activeProposalKey, draftDescriptionKey, settingsKey } from "./storageKeys";
 import {
   DEFAULT_SETTINGS,
   trimSettings,
@@ -31,18 +31,18 @@ export function registerFromFigmaHandlers() {
   });
 
   on<LoadSettingsHandler>("LOAD_SETTINGS", async function () {
-    const stored = await figma.clientStorage.getAsync(SETTINGS_KEY);
+    const stored = await figma.clientStorage.getAsync(settingsKey());
     const settings = trimSettings({ ...DEFAULT_SETTINGS, ...stored });
     emit<SettingsLoadedHandler>("SETTINGS_LOADED", settings);
   });
 
   on<LoadActiveProposalHandler>("LOAD_ACTIVE_PROPOSAL", async function () {
-    const stored = await figma.clientStorage.getAsync(ACTIVE_PROPOSAL_KEY);
+    const stored = await figma.clientStorage.getAsync(activeProposalKey());
     emit<ActiveProposalLoadedHandler>("ACTIVE_PROPOSAL_LOADED", stored ?? null);
   });
 
   on<LoadDraftDescriptionHandler>("LOAD_DRAFT_DESCRIPTION", async function () {
-    const stored = await figma.clientStorage.getAsync(DRAFT_DESCRIPTION_KEY);
+    const stored = await figma.clientStorage.getAsync(draftDescriptionKey());
     emit<DraftDescriptionLoadedHandler>("DRAFT_DESCRIPTION_LOADED", stored ?? "");
   });
 }

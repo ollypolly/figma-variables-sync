@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 
 vi.hoisted(() => {
   (globalThis as any).figma = {
+    fileKey: "file-abc",
     clientStorage: { getAsync: async () => undefined, setAsync: async () => undefined },
     ui: { onmessage: undefined, postMessage: () => {}, resize: () => {} },
   };
@@ -97,7 +98,7 @@ describe("SAVE_ACTIVE_PROPOSAL handler", () => {
     (globalThis as any).figma.ui.onmessage(["SAVE_ACTIVE_PROPOSAL", activeProposal]);
 
     return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
-      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal", activeProposal);
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal:file-abc", activeProposal);
     });
   });
 
@@ -109,7 +110,7 @@ describe("SAVE_ACTIVE_PROPOSAL handler", () => {
     (globalThis as any).figma.ui.onmessage(["SAVE_ACTIVE_PROPOSAL", null]);
 
     return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
-      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal", null);
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-active-proposal:file-abc", null);
     });
   });
 });
@@ -123,7 +124,7 @@ describe("SAVE_DRAFT_DESCRIPTION handler", () => {
     (globalThis as any).figma.ui.onmessage(["SAVE_DRAFT_DESCRIPTION", "Update brand colors"]);
 
     return new Promise((resolve) => setTimeout(resolve, 0)).then(() => {
-      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-draft-description", "Update brand colors");
+      expect(setAsync).toHaveBeenCalledWith("figma-variables-sync-draft-description:file-abc", "Update brand colors");
     });
   });
 });
