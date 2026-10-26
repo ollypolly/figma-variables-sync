@@ -31,11 +31,11 @@ export function TabGuard({ loading, isConfigured, children }: TabGuardProps) {
       <Container space="medium">
         <VerticalSpace space="medium" />
         <Text>
-          <Bold>Not configured</Bold>
+          <Bold>Not set up for this file</Bold>
         </Text>
         <VerticalSpace space="extraSmall" />
         <Text>
-          <Muted>Set up your GitHub connection in the Settings tab.</Muted>
+          <Muted>Variables Sync isn't set up for this file. Add your GitHub connection in the Settings tab.</Muted>
         </Text>
       </Container>
     );

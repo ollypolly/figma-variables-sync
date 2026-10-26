@@ -1,7 +1,7 @@
 import { emit, on } from "@create-figma-plugin/utilities";
 import { importFromDtcg } from "@common/dtcg";
 
-import { ACTIVE_PROPOSAL_KEY, DRAFT_DESCRIPTION_KEY, SETTINGS_KEY } from "./storageKeys";
+import { activeProposalKey, draftDescriptionKey, settingsKey } from "./storageKeys";
 import {
   trimSettings,
   type ImportResultHandler,
@@ -30,16 +30,16 @@ export function registerToFigmaHandlers() {
   });
 
   on<SaveSettingsHandler>("SAVE_SETTINGS", async function (settings) {
-    await figma.clientStorage.setAsync(SETTINGS_KEY, trimSettings(settings));
+    await figma.clientStorage.setAsync(settingsKey(), trimSettings(settings));
     emit<SettingsSavedHandler>("SETTINGS_SAVED");
   });
 
   on<SaveActiveProposalHandler>("SAVE_ACTIVE_PROPOSAL", async function (activeProposal) {
-    await figma.clientStorage.setAsync(ACTIVE_PROPOSAL_KEY, activeProposal);
+    await figma.clientStorage.setAsync(activeProposalKey(), activeProposal);
   });
 
   on<SaveDraftDescriptionHandler>("SAVE_DRAFT_DESCRIPTION", async function (description) {
-    await figma.clientStorage.setAsync(DRAFT_DESCRIPTION_KEY, description);
+    await figma.clientStorage.setAsync(draftDescriptionKey(), description);
   });
 
   on<ResizeWindowHandler>("RESIZE_WINDOW", function (windowSize) {
